@@ -38,15 +38,15 @@ export default function Home() {
             <div className="absolute left-1/2 top-1/3 h-150 w-150 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/5 blur-3xl" />
           </div>
 
-          <h1 className="max-w-3xl text-4xl font-bold tracking-tight sm:text-6xl lg:text-7xl">
+          <h1 className="max-w-3xl text-4xl font-bold tracking-tight sm:text-6xl lg:text-7xl animate-fade-up">
             Your fitness,{" "}
             <span className="text-primary">tracked.</span>
           </h1>
-          <p className="mt-6 max-w-xl text-base text-muted-foreground sm:text-lg lg:text-xl">
+          <p className="mt-6 max-w-xl text-base text-muted-foreground sm:text-lg lg:text-xl animate-fade-up" style={{ animationDelay: "100ms" }}>
             Log progressive overload, hit your macros, track cardio, and monitor
             your goals — all in one focused place.
           </p>
-          <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-10 flex flex-col gap-3 sm:flex-row animate-fade-up" style={{ animationDelay: "200ms" }}>
             <Button size="lg" className="px-8" render={<a href="#" />}>
               Get Started
             </Button>
@@ -76,10 +76,11 @@ export default function Home() {
           </div>
 
           <div className="grid gap-6 md:grid-cols-3">
-            {features.map(({ icon: Icon, title, description }) => (
+            {features.map(({ icon: Icon, title, description }, i) => (
               <div
                 key={title}
-                className="flex flex-col gap-4 rounded-xl border border-border bg-card p-6 text-card-foreground"
+                className="flex flex-col gap-4 rounded-xl border border-border bg-card p-6 text-card-foreground animate-fade-up"
+                style={{ animationDelay: `${i * 100}ms` }}
               >
                 <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
                   <Icon className="size-5 text-primary" />

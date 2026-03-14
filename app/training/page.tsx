@@ -10,7 +10,7 @@ export default async function TrainingPage() {
 
   return (
     <div>
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8 flex items-center justify-between animate-fade-up">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Training</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -18,6 +18,9 @@ export default async function TrainingPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" render={<Link href="/training/analytics" />}>
+            Analytics
+          </Button>
           <Button size="sm" variant="outline" render={<Link href="/training/exercises" />}>
             Exercises
           </Button>
@@ -42,8 +45,8 @@ export default async function TrainingPage() {
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          {sessions.map((session) => (
-            <SessionCard key={session.id} session={session} />
+          {sessions.map((session, i) => (
+            <SessionCard key={session.id} session={session} index={i} />
           ))}
         </div>
       )}

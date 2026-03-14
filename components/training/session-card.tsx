@@ -9,9 +9,10 @@ import type { WorkoutSession } from "@/types";
 
 interface SessionCardProps {
   session: WorkoutSession;
+  index?: number;
 }
 
-export function SessionCard({ session }: SessionCardProps) {
+export function SessionCard({ session, index }: SessionCardProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [confirming, setConfirming] = useState(false);
@@ -31,7 +32,10 @@ export function SessionCard({ session }: SessionCardProps) {
   }
 
   return (
-    <div className="group relative">
+    <div
+      className="group relative animate-fade-up"
+      style={index !== undefined ? { animationDelay: `${index * 100}ms` } : undefined}
+    >
       <a
         href={`/training/${session.id}`}
         className="flex flex-col gap-2 rounded-xl border border-border bg-card p-5 text-card-foreground transition-colors hover:bg-muted/30"

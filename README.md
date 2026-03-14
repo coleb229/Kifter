@@ -20,6 +20,7 @@ A personal fitness tracking app for logging progressive overload, nutrition, car
   - Weight fields auto-fill with the last recorded weight when selecting an existing exercise
   - Full CRUD: edit/delete sessions (with confirmation), rename/delete exercises, edit/delete individual sets inline
   - Session list showing recent workouts with body target badge, exercise summary, and set count
+- **Analytics** — Per-exercise progress charts at `/training/analytics`; three visualization modes (Max Weight area chart, Volume bar chart, Reps line chart); stat cards for Personal Record, sessions, total volume, and avg reps; exercise selector with client-side data fetching
 - **Landing page** — Marketing page with hero section and feature overview
 
 ### Planned
@@ -122,6 +123,19 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Changelog
 
 ### 2026-03-14 (latest)
+- Site-wide entrance animations: fade-up with stagger on all list views (session cards, feature cards, analytics pills + stat cards)
+- Button hover effects: scale 103% + brightness 110% on primary buttons, scale-only on outline/ghost; active press scales to 97%
+- Custom `animate-fade-up` Tailwind utility added via `@utility` directive in globals.css
+
+### 2026-03-14
+- Analytics page at `/training/analytics` — per-exercise progress visualization
+- Three chart modes: Max Weight (gradient area chart), Volume (bar chart), Reps (line chart with dots)
+- Stat cards: Personal Record (with date), Sessions, Total Volume, Avg Reps per Set
+- Exercise selector as scrollable pill tabs; switches exercises client-side via server action
+- Unit normalization to lb for cross-unit volume/max weight comparisons
+- "Analytics" button added to `/training` header
+
+### 2026-03-14
 - Full CRUD on workout sessions: inline edit (name, date, body target, notes) and delete with confirmation on the session detail page
 - Full CRUD on exercises within a session: rename exercise inline, delete all sets for an exercise, edit individual sets (weight, unit, reps), delete individual sets — all with inline confirm flows
 - "Add set" button at the bottom of each exercise group — opens an inline input row pre-filled with the last set's weight and unit for fast entry
