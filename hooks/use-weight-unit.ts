@@ -6,7 +6,7 @@ import type { WeightUnit } from "@/lib/weight";
 const STORAGE_KEY = "kifted-weight-unit";
 
 export function useWeightUnit() {
-  const [unit, setUnitState] = useState<WeightUnit>("kg");
+  const [unit, setUnitState] = useState<WeightUnit>("lb");
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);

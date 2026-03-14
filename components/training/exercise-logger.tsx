@@ -1,19 +1,17 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { WeightUnitToggle } from "./weight-unit-toggle";
-import { useWeightUnit } from "@/hooks/use-weight-unit";
-import { toKg } from "@/lib/weight";
-import { addExerciseToSession } from "@/actions/workout-actions";
+import { addExerciseToSession, getLastWeightForExercise } from "@/actions/workout-actions";
+import type { WeightUnit } from "@/lib/weight";
 
 const schema = z.object({
-  exercise: z.string().min(1, "Exercise name required"),
+  exercise: z.string().min(1, "Exercise required"),
   sets: z
     .array(
       z.object({
@@ -31,12 +29,13 @@ const inputClass =
 
 interface ExerciseLoggerProps {
   sessionId: string;
+  exercises: string[];
 }
 
-export function ExerciseLogger({ sessionId }: ExerciseLoggerProps) {
+export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const { unit } = useWeightUnit();
+  const [unit, setUnit] = useState<WeightUnit>("lb");
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -51,13 +50,28 @@ export function ExerciseLogger({ sessionId }: ExerciseLoggerProps) {
     name: "sets",
   });
 
+  async function handleExerciseChange(name: string) {
+    form.setValue("exercise", name, { shouldValidate: true });
+    if (!name) return;
+    const result = await getLastWeightForExercise(name);
+    if (result.success && result.data) {
+      setUnit(result.data.unit);
+      const { weight } = result.data;
+      const currentSets = form.getValues("sets");
+      currentSets.forEach((_, i) => {
+        form.setValue(`sets.${i}.weight`, weight);
+      });
+    }
+  }
+
   function onSubmit(values: FormValues) {
     startTransition(async () => {
       const result = await addExerciseToSession(sessionId, {
         exercise: values.exercise,
         sets: values.sets.map((s, i) => ({
           setNumber: i + 1,
-          weight: toKg(s.weight, unit),
+          weight: s.weight,
+          weightUnit: unit,
           reps: s.reps,
         })),
       });
@@ -76,18 +90,49 @@ export function ExerciseLogger({ sessionId }: ExerciseLoggerProps) {
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Log Exercise
         </h2>
-        <WeightUnitToggle />
+        {/* Inline unit toggle — single source of truth */}
+        <div className="flex items-center rounded-lg border border-border bg-muted p-0.5 text-xs font-medium">
+          <button
+            type="button"
+            onClick={() => setUnit("kg")}
+            className={`rounded-md px-2.5 py-1 transition-colors ${
+              unit === "kg"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            kg
+          </button>
+          <button
+            type="button"
+            onClick={() => setUnit("lb")}
+            className={`rounded-md px-2.5 py-1 transition-colors ${
+              unit === "lb"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            lb
+          </button>
+        </div>
       </div>
 
       <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
-        {/* Exercise name */}
+        {/* Exercise select */}
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium">Exercise</label>
-          <input
-            {...form.register("exercise")}
-            placeholder="e.g. Bench Press"
+          <select
+            value={form.watch("exercise")}
+            onChange={(e) => handleExerciseChange(e.target.value)}
             className={inputClass}
-          />
+          >
+            <option value="">Select an exercise…</option>
+            {exercises.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
           {form.formState.errors.exercise && (
             <p className="text-xs text-destructive">
               {form.formState.errors.exercise.message}
@@ -159,7 +204,7 @@ export function ExerciseLogger({ sessionId }: ExerciseLoggerProps) {
         )}
 
         <Button type="submit" disabled={isPending} className="sm:self-end sm:px-8">
-          {isPending ? "Saving..." : "Log Exercise"}
+          {isPending ? "Saving…" : "Log Exercise"}
         </Button>
       </form>
     </div>

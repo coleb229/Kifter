@@ -17,10 +17,15 @@ export default async function TrainingPage() {
             Your recent workout sessions
           </p>
         </div>
-        <Button size="sm" render={<Link href="/training/new" />}>
-          <Plus className="size-4" />
-          Log Workout
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" render={<Link href="/training/exercises" />}>
+            Exercises
+          </Button>
+          <Button size="sm" render={<Link href="/training/new" />}>
+            <Plus className="size-4" />
+            Log Workout
+          </Button>
+        </div>
       </div>
 
       {sessions.length === 0 ? (

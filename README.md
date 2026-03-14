@@ -13,7 +13,12 @@ A personal fitness tracking app for logging progressive overload, nutrition, car
 - **Training Tracker**
   - Create a workout session with a name, date, body target (Push / Pull / Legs / etc.), and optional notes
   - Add exercises to a session with per-set weight and rep logging
-  - Weight unit toggle (kg / lb) — stored in kg, displayed in preferred unit. Preference persists in localStorage
+  - Weight unit stored per set (kg / lb) — unit persists alongside the weight value; no conversion ambiguity
+  - Default unit is lb; unit preference is remembered per exercise (snaps to last-used unit on select)
+  - Exercise dropdown populated from a per-user list (default exercises + custom additions)
+  - Custom exercise management at `/training/exercises` — add or remove exercises from your list
+  - Weight fields auto-fill with the last recorded weight when selecting an existing exercise
+  - Full CRUD: edit/delete sessions (with confirmation), rename/delete exercises, edit/delete individual sets inline
   - Session list showing recent workouts with body target badge, exercise summary, and set count
 - **Landing page** — Marketing page with hero section and feature overview
 
@@ -53,6 +58,8 @@ app/
     new/page.tsx            # New session form
     [id]/page.tsx           # Session detail + exercise logger
   api/auth/[...nextauth]/   # NextAuth route handler
+  training/
+    exercises/page.tsx      # Exercise list management
 
 components/
   navbar.tsx                # Auth-aware sticky nav
@@ -62,9 +69,10 @@ components/
   training/
     session-card.tsx        # Session list card
     session-form.tsx        # Create session form
-    session-exercises.tsx   # Exercise display with unit conversion
-    exercise-logger.tsx     # Log exercise + sets to existing session
-    weight-unit-toggle.tsx  # kg / lb toggle pill
+    session-exercises.tsx   # Exercise display — reads weightUnit per set
+    exercise-logger.tsx     # Log exercise + sets; inline unit toggle; last-weight pre-fill
+    exercise-manager.tsx    # Add / delete custom exercises
+    weight-unit-toggle.tsx  # kg / lb toggle pill (used standalone if needed)
 
 actions/
   auth-actions.ts           # signIn / signOut server actions
@@ -74,6 +82,7 @@ lib/
   mongodb.ts                # MongoDB client singleton
   db.ts                     # Typed collection helpers
   weight.ts                 # kg ↔ lb conversion utilities
+  exercises.ts              # DEFAULT_EXERCISES — edit to add app-wide defaults
 
 hooks/
   use-weight-unit.ts        # localStorage-backed unit preference hook
@@ -111,6 +120,24 @@ Open [http://localhost:3000](http://localhost:3000).
 ---
 
 ## Changelog
+
+### 2026-03-14 (latest)
+- Full CRUD on workout sessions: inline edit (name, date, body target, notes) and delete with confirmation on the session detail page
+- Full CRUD on exercises within a session: rename exercise inline, delete all sets for an exercise, edit individual sets (weight, unit, reps), delete individual sets — all with inline confirm flows
+- "Add set" button at the bottom of each exercise group — opens an inline input row pre-filled with the last set's weight and unit for fast entry
+- Delete session from the session list (trash icon appears on hover, with inline confirm)
+- New server actions: `updateSession`, `deleteSession`, `updateSet`, `deleteSet`, `renameExercise`, `deleteExerciseFromSession`
+
+### 2026-03-14
+- Weight unit stored per set — `weightUnit` field added to `WorkoutSet` documents (backwards-compatible, defaults to `lb` for old records)
+- Fixed weight unit toggle re-render: `ExerciseLogger` now manages unit state locally (single source of truth), eliminating the stale-display bug
+- Default weight unit changed from kg to lb
+- Exercise input replaced with a dropdown populated from a per-user exercise list
+- Added `lib/exercises.ts` with default exercises (Bench Press, Bicep Curl, Assisted Pull-up, Leg Press) — edit this file to add app-wide defaults
+- Added `userExercises` MongoDB collection for user-specific custom exercises
+- Added `/training/exercises` page for managing custom exercises (add / delete)
+- "Exercises" button added to the Training page header for quick access
+- Weight fields in the exercise logger now pre-fill with the last recorded weight when an exercise is selected, and the unit toggle snaps to the unit used that session
 
 ### 2026-03-14
 - Fixed Vercel build failure — TypeScript error in unused `workout-form.tsx` (referenced renamed server action)

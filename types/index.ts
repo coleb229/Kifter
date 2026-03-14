@@ -1,4 +1,5 @@
 import type { ObjectId } from "mongodb";
+import type { WeightUnit } from "@/lib/weight";
 
 // ── Body target options ───────────────────────────────────────────────────────
 
@@ -35,8 +36,16 @@ export interface WorkoutSetDoc {
   exercise: string;
   setNumber: number;
   weight: number;
+  weightUnit?: WeightUnit;
   reps: number;
   completed: boolean;
+  createdAt: Date;
+}
+
+export interface ExerciseDoc {
+  _id: ObjectId;
+  userId: string;
+  name: string;
   createdAt: Date;
 }
 
@@ -61,6 +70,7 @@ export interface WorkoutSet {
   exercise: string;
   setNumber: number;
   weight: number;
+  weightUnit: WeightUnit;
   reps: number;
   completed: boolean;
   createdAt: string;
@@ -71,6 +81,7 @@ export interface WorkoutSet {
 export interface SetInput {
   setNumber: number;
   weight: number;
+  weightUnit: WeightUnit;
   reps: number;
 }
 

@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
-import { format } from "date-fns";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { getWorkoutSession } from "@/actions/workout-actions";
+import { getWorkoutSession, getUserExercises } from "@/actions/workout-actions";
+import { DEFAULT_EXERCISES } from "@/lib/exercises";
 import { ExerciseLogger } from "@/components/training/exercise-logger";
 import { SessionExercises } from "@/components/training/session-exercises";
+import { EditableSessionHeader } from "@/components/training/editable-session-header";
 
 export default async function SessionPage({
   params,
@@ -12,12 +13,15 @@ export default async function SessionPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const result = await getWorkoutSession(id);
+  const [result, exercisesResult] = await Promise.all([
+    getWorkoutSession(id),
+    getUserExercises(),
+  ]);
 
   if (!result.success) notFound();
 
   const { session, sets } = result.data;
-  const date = new Date(session.date);
+  const exercises = exercisesResult.success ? exercisesResult.data : DEFAULT_EXERCISES;
 
   return (
     <div className="flex flex-col gap-8">
@@ -30,31 +34,14 @@ export default async function SessionPage({
         All sessions
       </Link>
 
-      {/* Session header */}
-      <div>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              {session.name ?? format(date, "EEEE, MMM d")}
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {format(date, "MMMM d, yyyy")}
-            </p>
-          </div>
-          <span className="mt-1 rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium">
-            {session.bodyTarget}
-          </span>
-        </div>
-        {session.notes && (
-          <p className="mt-3 text-sm text-muted-foreground">{session.notes}</p>
-        )}
-      </div>
+      {/* Session header — editable */}
+      <EditableSessionHeader session={session} />
 
-      {/* Logged exercises (client component — handles unit display) */}
-      <SessionExercises sets={sets} />
+      {/* Logged exercises */}
+      <SessionExercises sessionId={id} sets={sets} />
 
       {/* Log another exercise */}
-      <ExerciseLogger sessionId={id} />
+      <ExerciseLogger sessionId={id} exercises={exercises} />
     </div>
   );
 }

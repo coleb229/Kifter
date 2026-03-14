@@ -1,9 +1,19 @@
 "use client";
 
-import { useWeightUnit } from "@/hooks/use-weight-unit";
-import { toDisplay } from "@/lib/weight";
-import { WeightUnitToggle } from "./weight-unit-toggle";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { Pencil, Trash2, Check, X, Plus } from "lucide-react";
+import {
+  updateSet,
+  deleteSet,
+  renameExercise,
+  deleteExerciseFromSession,
+  addExerciseToSession,
+} from "@/actions/workout-actions";
 import type { WorkoutSet } from "@/types";
+import type { WeightUnit } from "@/lib/weight";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface ExerciseGroup {
   name: string;
@@ -19,43 +29,440 @@ function groupByExercise(sets: WorkoutSet[]): ExerciseGroup[] {
   return Array.from(map.entries()).map(([name, sets]) => ({ name, sets }));
 }
 
+type SetEditState =
+  | { type: "none" }
+  | { type: "editing"; weight: number; weightUnit: WeightUnit; reps: number }
+  | { type: "confirm-delete" };
+
+type ExerciseEditState =
+  | { type: "none" }
+  | { type: "renaming"; value: string }
+  | { type: "confirm-delete" };
+
+// ── Input class ───────────────────────────────────────────────────────────────
+
+const inputClass =
+  "h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50";
+
+// ── ExerciseGroupCard ─────────────────────────────────────────────────────────
+
+function ExerciseGroupCard({
+  sessionId,
+  group,
+}: {
+  sessionId: string;
+  group: ExerciseGroup;
+}) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [exerciseState, setExerciseState] = useState<ExerciseEditState>({ type: "none" });
+  const [setStates, setSetStates] = useState<Record<string, SetEditState>>({});
+  const lastSet = group.sets[group.sets.length - 1];
+  const [addingSet, setAddingSet] = useState<{ weight: number; weightUnit: WeightUnit; reps: number } | null>(null);
+
+  function getSetState(id: string): SetEditState {
+    return setStates[id] ?? { type: "none" };
+  }
+
+  function setSetState(id: string, state: SetEditState) {
+    setSetStates((prev) => ({ ...prev, [id]: state }));
+  }
+
+  // ── Exercise actions ─────────────────────────────────────────────────────
+
+  function handleRenameSubmit() {
+    if (exerciseState.type !== "renaming") return;
+    const newName = exerciseState.value.trim();
+    if (!newName || newName === group.name) {
+      setExerciseState({ type: "none" });
+      return;
+    }
+    startTransition(async () => {
+      await renameExercise(sessionId, group.name, newName);
+      setExerciseState({ type: "none" });
+      router.refresh();
+    });
+  }
+
+  function handleDeleteExercise() {
+    startTransition(async () => {
+      await deleteExerciseFromSession(sessionId, group.name);
+      router.refresh();
+    });
+  }
+
+  // ── Set actions ──────────────────────────────────────────────────────────
+
+  function handleSetSave(set: WorkoutSet) {
+    const state = getSetState(set.id);
+    if (state.type !== "editing") return;
+    startTransition(async () => {
+      await updateSet(set.id, {
+        weight: state.weight,
+        weightUnit: state.weightUnit,
+        reps: state.reps,
+      });
+      setSetState(set.id, { type: "none" });
+      router.refresh();
+    });
+  }
+
+  function handleSetDelete(setId: string) {
+    startTransition(async () => {
+      await deleteSet(setId);
+      router.refresh();
+    });
+  }
+
+  function handleAddSetOpen() {
+    setAddingSet({
+      weight: lastSet?.weight ?? 0,
+      weightUnit: lastSet?.weightUnit ?? "lb",
+      reps: lastSet?.reps ?? 0,
+    });
+  }
+
+  function handleAddSetSave() {
+    if (!addingSet) return;
+    startTransition(async () => {
+      await addExerciseToSession(sessionId, {
+        exercise: group.name,
+        sets: [{ setNumber: group.sets.length + 1, ...addingSet }],
+      });
+      setAddingSet(null);
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-5">
+      {/* Exercise header */}
+      <div className="mb-3 flex items-center gap-2">
+        {exerciseState.type === "renaming" ? (
+          <div className="flex flex-1 items-center gap-2">
+            <input
+              value={exerciseState.value}
+              onChange={(e) =>
+                setExerciseState({ type: "renaming", value: e.target.value })
+              }
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleRenameSubmit();
+                if (e.key === "Escape") setExerciseState({ type: "none" });
+              }}
+              autoFocus
+              className={inputClass + " font-semibold"}
+            />
+            <button
+              type="button"
+              onClick={handleRenameSubmit}
+              disabled={isPending}
+              className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+              aria-label="Save name"
+            >
+              <Check className="size-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setExerciseState({ type: "none" })}
+              className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+              aria-label="Cancel rename"
+            >
+              <X className="size-3.5" />
+            </button>
+          </div>
+        ) : exerciseState.type === "confirm-delete" ? (
+          <div className="flex flex-1 items-center gap-2 text-sm">
+            <span className="font-semibold">{group.name}</span>
+            <span className="text-muted-foreground">— delete all sets?</span>
+            <button
+              type="button"
+              onClick={handleDeleteExercise}
+              disabled={isPending}
+              className="font-medium text-destructive transition-colors hover:underline"
+            >
+              {isPending ? "Deleting…" : "Yes"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setExerciseState({ type: "none" })}
+              className="text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <>
+            <h3 className="flex-1 font-semibold">{group.name}</h3>
+            <button
+              type="button"
+              onClick={() =>
+                setExerciseState({ type: "renaming", value: group.name })
+              }
+              aria-label="Rename exercise"
+              className="rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <Pencil className="size-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setExerciseState({ type: "confirm-delete" })}
+              aria-label="Delete exercise"
+              className="rounded p-1 text-muted-foreground transition-colors hover:text-destructive"
+            >
+              <Trash2 className="size-3.5" />
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Sets */}
+      <div className="flex flex-col gap-1.5">
+        <div className="grid grid-cols-[2rem_1fr_1fr_4rem] items-center gap-2 text-xs font-medium text-muted-foreground">
+          <span className="text-center">#</span>
+          <span>Weight</span>
+          <span>Reps</span>
+          <span />
+        </div>
+
+        {group.sets.map((set) => {
+          const state = getSetState(set.id);
+
+          if (state.type === "editing") {
+            return (
+              <div
+                key={set.id}
+                className="grid grid-cols-[2rem_1fr_1fr_4rem] items-center gap-2"
+              >
+                <span className="text-center text-sm text-muted-foreground">
+                  {set.setNumber}
+                </span>
+                {/* Weight + unit */}
+                <div className="flex gap-1">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={state.weight}
+                    onChange={(e) =>
+                      setSetState(set.id, {
+                        ...state,
+                        weight: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    className={inputClass}
+                  />
+                  <select
+                    value={state.weightUnit}
+                    onChange={(e) =>
+                      setSetState(set.id, {
+                        ...state,
+                        weightUnit: e.target.value as WeightUnit,
+                      })
+                    }
+                    className="h-8 rounded-md border border-input bg-background px-1 text-xs focus-visible:outline-none"
+                  >
+                    <option value="lb">lb</option>
+                    <option value="kg">kg</option>
+                  </select>
+                </div>
+                <input
+                  type="number"
+                  min="1"
+                  value={state.reps}
+                  onChange={(e) =>
+                    setSetState(set.id, {
+                      ...state,
+                      reps: parseInt(e.target.value) || 1,
+                    })
+                  }
+                  className={inputClass}
+                />
+                <div className="flex items-center gap-0.5">
+                  <button
+                    type="button"
+                    onClick={() => handleSetSave(set)}
+                    disabled={isPending}
+                    aria-label="Save set"
+                    className="rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    <Check className="size-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSetState(set.id, { type: "none" })}
+                    aria-label="Cancel edit"
+                    className="rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                </div>
+              </div>
+            );
+          }
+
+          if (state.type === "confirm-delete") {
+            return (
+              <div
+                key={set.id}
+                className="flex items-center gap-2 py-0.5 text-sm"
+              >
+                <span className="text-muted-foreground">
+                  Set {set.setNumber} — delete?
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleSetDelete(set.id)}
+                  disabled={isPending}
+                  className="font-medium text-destructive transition-colors hover:underline"
+                >
+                  {isPending ? "Deleting…" : "Yes"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSetState(set.id, { type: "none" })}
+                  className="text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Cancel
+                </button>
+              </div>
+            );
+          }
+
+          return (
+            <div
+              key={set.id}
+              className="group grid grid-cols-[2rem_1fr_1fr_4rem] items-center gap-2"
+            >
+              <span className="text-center text-sm text-muted-foreground">
+                {set.setNumber}
+              </span>
+              <span className="text-sm">
+                {set.weight} {set.weightUnit}
+              </span>
+              <span className="text-sm">{set.reps}</span>
+              <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSetState(set.id, {
+                      type: "editing",
+                      weight: set.weight,
+                      weightUnit: set.weightUnit,
+                      reps: set.reps,
+                    })
+                  }
+                  aria-label="Edit set"
+                  className="rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  <Pencil className="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSetState(set.id, { type: "confirm-delete" })
+                  }
+                  aria-label="Delete set"
+                  className="rounded p-1 text-muted-foreground transition-colors hover:text-destructive"
+                >
+                  <Trash2 className="size-3.5" />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Add set inline row */}
+        {addingSet ? (
+          <div className="mt-1 grid grid-cols-[2rem_1fr_1fr_4rem] items-center gap-2">
+            <span className="text-center text-sm text-muted-foreground">
+              {group.sets.length + 1}
+            </span>
+            <div className="flex gap-1">
+              <input
+                type="number"
+                min="0"
+                step="0.5"
+                value={addingSet.weight}
+                onChange={(e) =>
+                  setAddingSet({ ...addingSet, weight: parseFloat(e.target.value) || 0 })
+                }
+                className={inputClass}
+                autoFocus
+              />
+              <select
+                value={addingSet.weightUnit}
+                onChange={(e) =>
+                  setAddingSet({ ...addingSet, weightUnit: e.target.value as WeightUnit })
+                }
+                className="h-8 rounded-md border border-input bg-background px-1 text-xs focus-visible:outline-none"
+              >
+                <option value="lb">lb</option>
+                <option value="kg">kg</option>
+              </select>
+            </div>
+            <input
+              type="number"
+              min="1"
+              value={addingSet.reps}
+              onChange={(e) =>
+                setAddingSet({ ...addingSet, reps: parseInt(e.target.value) || 1 })
+              }
+              className={inputClass}
+            />
+            <div className="flex items-center gap-0.5">
+              <button
+                type="button"
+                onClick={handleAddSetSave}
+                disabled={isPending}
+                aria-label="Save new set"
+                className="rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <Check className="size-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setAddingSet(null)}
+                aria-label="Cancel"
+                className="rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <X className="size-3.5" />
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={handleAddSetOpen}
+            className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <Plus className="size-3.5" />
+            Add set
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── SessionExercises ──────────────────────────────────────────────────────────
+
 interface SessionExercisesProps {
+  sessionId: string;
   sets: WorkoutSet[];
 }
 
-export function SessionExercises({ sets }: SessionExercisesProps) {
-  const { unit } = useWeightUnit();
+export function SessionExercises({ sessionId, sets }: SessionExercisesProps) {
   const exercises = groupByExercise(sets);
 
   if (exercises.length === 0) return null;
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Exercises
-        </h2>
-        <WeightUnitToggle />
-      </div>
-
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        Exercises
+      </h2>
       {exercises.map((group) => (
-        <div key={group.name} className="rounded-xl border border-border bg-card p-5">
-          <h3 className="mb-3 font-semibold">{group.name}</h3>
-          <div className="flex flex-col gap-1.5">
-            <div className="grid grid-cols-[2rem_1fr_1fr] gap-2 text-xs font-medium text-muted-foreground">
-              <span className="text-center">#</span>
-              <span>Weight ({unit})</span>
-              <span>Reps</span>
-            </div>
-            {group.sets.map((set) => (
-              <div key={set.id} className="grid grid-cols-[2rem_1fr_1fr] gap-2 text-sm">
-                <span className="text-center text-muted-foreground">{set.setNumber}</span>
-                <span>{toDisplay(set.weight, unit)}</span>
-                <span>{set.reps}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        <ExerciseGroupCard key={group.name} sessionId={sessionId} group={group} />
       ))}
     </div>
   );

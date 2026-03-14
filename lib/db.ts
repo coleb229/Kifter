@@ -1,5 +1,5 @@
 import clientPromise from "@/lib/mongodb";
-import type { WorkoutSessionDoc, WorkoutSetDoc } from "@/types";
+import type { ExerciseDoc, WorkoutSessionDoc, WorkoutSetDoc } from "@/types";
 
 const DB_NAME = process.env.MONGODB_DB ?? "Kifted";
 
@@ -16,4 +16,9 @@ export async function getSessionsCollection() {
 export async function getSetsCollection() {
   const db = await getDb();
   return db.collection<WorkoutSetDoc>("workoutSets");
+}
+
+export async function getExercisesCollection() {
+  const db = await getDb();
+  return db.collection<ExerciseDoc>("userExercises");
 }
