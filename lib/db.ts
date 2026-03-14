@@ -1,5 +1,5 @@
 import clientPromise from "@/lib/mongodb";
-import type { ExerciseDoc, WorkoutSessionDoc, WorkoutSetDoc } from "@/types";
+import type { ExerciseDoc, PostDoc, UserDoc, WorkoutSessionDoc, WorkoutSetDoc } from "@/types";
 
 const DB_NAME = process.env.MONGODB_DB ?? "Kifted";
 
@@ -21,4 +21,14 @@ export async function getSetsCollection() {
 export async function getExercisesCollection() {
   const db = await getDb();
   return db.collection<ExerciseDoc>("userExercises");
+}
+
+export async function getUsersCollection() {
+  const db = await getDb();
+  return db.collection<UserDoc>("users");
+}
+
+export async function getPostsCollection() {
+  const db = await getDb();
+  return db.collection<PostDoc>("posts");
 }

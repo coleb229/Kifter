@@ -1,6 +1,9 @@
-import { Dumbbell, Target, Utensils } from "lucide-react";
+import Link from "next/link";
+import { Dumbbell, Target, Utensils, ArrowRight, Zap } from "lucide-react";
+import { auth } from "@/auth";
 import { Navbar } from "@/components/navbar";
 import { Button } from "@/components/ui/button";
+import { signInWithGoogle } from "@/actions/auth-actions";
 
 const features = [
   {
@@ -23,7 +26,9 @@ const features = [
   },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const session = await auth();
+
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
@@ -31,25 +36,68 @@ export default function Home() {
       <main className="flex-1">
         {/* Hero */}
         <section className="relative flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center overflow-hidden px-4 text-center">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 -z-10"
-          >
-            <div className="absolute left-1/2 top-1/3 h-150 w-150 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/5 blur-3xl" />
+
+          {/* Desktop: flowing orbs from the right */}
+          <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 hidden overflow-hidden sm:block">
+            {/* Primary orb — large indigo */}
+            <div className="animate-orb-a absolute -right-35 top-[12%] h-160 w-160 rounded-full bg-indigo-500/12 blur-[110px] dark:bg-indigo-400/10" />
+            {/* Secondary orb — violet */}
+            <div className="animate-orb-b absolute right-15 -top-25 h-105 w-105 rounded-full bg-violet-500/10 blur-[90px] dark:bg-violet-400/8" />
+            {/* Accent — fuchsia undertone */}
+            <div
+              className="animate-orb-a absolute -right-20 top-[55%] h-80 w-80 rounded-full bg-fuchsia-500/7 blur-[80px] dark:bg-fuchsia-400/6"
+              style={{ animationDelay: "-13s" }}
+            />
           </div>
 
-          <h1 className="max-w-3xl text-4xl font-bold tracking-tight sm:text-6xl lg:text-7xl animate-fade-up">
+          {/* Mobile: centered breathing glow */}
+          <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 sm:hidden">
+            <div className="animate-mobile-breathe absolute left-1/2 top-1/2 h-105 w-105 rounded-full bg-indigo-500/18 blur-[90px] dark:bg-indigo-400/14" />
+          </div>
+
+          {/* Badge */}
+          <div
+            className="mb-6 inline-flex items-center gap-2 rounded-full border border-indigo-200/70 bg-indigo-50/80 px-4 py-1.5 text-sm font-medium text-indigo-700 backdrop-blur-sm dark:border-indigo-700/40 dark:bg-indigo-950/60 dark:text-indigo-300 animate-fade-up"
+          >
+            <span className="size-1.5 rounded-full bg-indigo-500 animate-pulse" />
+            Built for serious progress
+          </div>
+
+          <h1
+            className="max-w-3xl text-4xl font-bold tracking-tight sm:text-6xl lg:text-7xl animate-fade-up"
+            style={{ animationDelay: "80ms" }}
+          >
             Your fitness,{" "}
-            <span className="text-primary">tracked.</span>
+            <span className="bg-linear-to-r from-indigo-500 via-violet-500 to-purple-500 bg-clip-text text-transparent">
+              tracked.
+            </span>
           </h1>
-          <p className="mt-6 max-w-xl text-base text-muted-foreground sm:text-lg lg:text-xl animate-fade-up" style={{ animationDelay: "100ms" }}>
+
+          <p
+            className="mt-6 max-w-xl text-base text-muted-foreground sm:text-lg lg:text-xl animate-fade-up"
+            style={{ animationDelay: "160ms" }}
+          >
             Log progressive overload, hit your macros, track cardio, and monitor
             your goals — all in one focused place.
           </p>
-          <div className="mt-10 flex flex-col gap-3 sm:flex-row animate-fade-up" style={{ animationDelay: "200ms" }}>
-            <Button size="lg" className="px-8" render={<a href="#" />}>
-              Get Started
-            </Button>
+
+          <div
+            className="mt-10 flex flex-col gap-3 sm:flex-row animate-fade-up"
+            style={{ animationDelay: "260ms" }}
+          >
+            {session ? (
+              <Button size="lg" className="gap-2 px-8" render={<Link href="/training" />}>
+                <Zap className="size-4" />
+                Go to Dashboard
+              </Button>
+            ) : (
+              <form action={signInWithGoogle}>
+                <Button size="lg" type="submit" className="gap-2 px-8">
+                  Get Started Free
+                  <ArrowRight className="size-4" />
+                </Button>
+              </form>
+            )}
             <Button
               variant="outline"
               size="lg"

@@ -102,3 +102,68 @@ export interface AddExerciseInput {
 export type ActionResult<T = void> =
   | { success: true; data: T }
   | { success: false; error: string };
+
+// ── User roles ────────────────────────────────────────────────────────────────
+
+export type UserRole = "admin" | "member" | "restricted";
+
+// ── User document (NextAuth adapter `users` collection + custom fields) ───────
+
+export interface UserDoc {
+  _id: ObjectId;
+  name?: string;
+  email: string;
+  image?: string;
+  emailVerified?: Date | null;
+  // custom fields
+  role?: UserRole;
+  bio?: string;
+  displayName?: string;
+  profileImage?: string;
+  preferences?: {
+    defaultWeightUnit?: "lb" | "kg";
+  };
+  bannedAt?: Date;
+  createdAt?: Date;
+}
+
+// ── Serialized user (safe for client) ────────────────────────────────────────
+
+export interface UserSummary {
+  id: string;
+  name?: string;
+  email: string;
+  image?: string;
+  role: UserRole;
+  bio?: string;
+  displayName?: string;
+  profileImage?: string;
+  preferences?: {
+    defaultWeightUnit?: "lb" | "kg";
+  };
+  bannedAt?: string;
+  createdAt?: string;
+}
+
+// ── Post document ─────────────────────────────────────────────────────────────
+
+export interface PostDoc {
+  _id: ObjectId;
+  userId: string;
+  content: string;
+  type: "progress" | "general";
+  createdAt: Date;
+}
+
+// ── Serialized post (author joined) ──────────────────────────────────────────
+
+export interface Post {
+  id: string;
+  userId: string;
+  authorName: string;
+  authorImage?: string;
+  authorRole: UserRole;
+  content: string;
+  type: "progress" | "general";
+  createdAt: string;
+}

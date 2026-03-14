@@ -2,13 +2,15 @@
 
 import { Menu } from "@base-ui/react/menu";
 import { Avatar } from "@base-ui/react/avatar";
-import { ChevronDown, Dumbbell, LogOut } from "lucide-react";
+import { ChevronDown, Dumbbell, LogOut, Settings, Users, ShieldCheck } from "lucide-react";
 import { signOutAction } from "@/actions/auth-actions";
+import type { UserRole } from "@/types";
 
 interface UserMenuProps {
   name: string | null | undefined;
   email: string | null | undefined;
   image: string | null | undefined;
+  role?: UserRole;
 }
 
 function getInitials(name: string | null | undefined, email: string | null | undefined) {
@@ -23,7 +25,10 @@ function getInitials(name: string | null | undefined, email: string | null | und
   return email?.[0]?.toUpperCase() ?? "?";
 }
 
-export function UserMenu({ name, email, image }: UserMenuProps) {
+const menuItem =
+  "flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm outline-none hover:bg-muted focus-visible:bg-muted";
+
+export function UserMenu({ name, email, image, role }: UserMenuProps) {
   return (
     <Menu.Root>
       <Menu.Trigger
@@ -54,14 +59,29 @@ export function UserMenu({ name, email, image }: UserMenuProps) {
             </div>
             <Menu.Separator className="my-1 h-px bg-border" />
 
-            {/* Training link */}
-            <Menu.LinkItem
-              href="/training"
-              className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm outline-none hover:bg-muted focus-visible:bg-muted"
-            >
+            {/* Navigation links */}
+            <Menu.LinkItem href="/training" className={menuItem}>
               <Dumbbell className="size-4 text-muted-foreground" />
               Training
             </Menu.LinkItem>
+            <Menu.LinkItem href="/community" className={menuItem}>
+              <Users className="size-4 text-muted-foreground" />
+              Community
+            </Menu.LinkItem>
+            <Menu.LinkItem href="/settings" className={menuItem}>
+              <Settings className="size-4 text-muted-foreground" />
+              Settings
+            </Menu.LinkItem>
+
+            {role === "admin" && (
+              <>
+                <Menu.Separator className="my-1 h-px bg-border" />
+                <Menu.LinkItem href="/admin" className={menuItem}>
+                  <ShieldCheck className="size-4 text-indigo-500" />
+                  <span className="text-indigo-600 dark:text-indigo-400">Admin Panel</span>
+                </Menu.LinkItem>
+              </>
+            )}
 
             <Menu.Separator className="my-1 h-px bg-border" />
 

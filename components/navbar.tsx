@@ -25,9 +25,14 @@ export function Navbar() {
             </a>
           )}
           {session && (
-            <a href="/training" className="transition-colors hover:text-foreground">
-              Training
-            </a>
+            <>
+              <a href="/training" className="transition-colors hover:text-foreground">
+                Training
+              </a>
+              <a href="/community" className="transition-colors hover:text-foreground">
+                Community
+              </a>
+            </>
           )}
         </nav>
 
@@ -52,6 +57,7 @@ export function Navbar() {
               name={session.user?.name}
               email={session.user?.email}
               image={session.user?.image}
+              role={session.user?.role}
             />
           )}
         </div>

@@ -169,34 +169,34 @@ export function AnalyticsChart({ data, isPending }: Props) {
           <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="weightGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.35} />
-                <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                <stop offset="5%" stopColor="#818cf8" stopOpacity={0.45} />
+                <stop offset="95%" stopColor="#818cf8" stopOpacity={0.04} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#888" strokeOpacity={0.15} vertical={false} />
             <XAxis
               dataKey="date"
-              tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+              tick={{ fontSize: 12, fill: "#888" }}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
-              tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+              tick={{ fontSize: 12, fill: "#888" }}
               axisLine={false}
               tickLine={false}
               tickFormatter={tickFormatter}
-              label={{ value: yLabel, angle: -90, position: "insideLeft", fontSize: 11, fill: "hsl(var(--muted-foreground))", dx: -2 }}
+              label={{ value: yLabel, angle: -90, position: "insideLeft", fontSize: 11, fill: "#888", dx: -2 }}
               width={48}
             />
             <Tooltip content={<CustomTooltip mode={mode} />} />
             <Area
               type="monotone"
               dataKey={yDataKey}
-              stroke="#6366f1"
-              strokeWidth={2.5}
+              stroke="#818cf8"
+              strokeWidth={3}
               fill="url(#weightGradient)"
-              dot={{ fill: "#6366f1", r: 3, strokeWidth: 0 }}
-              activeDot={{ fill: "#6366f1", r: 5, strokeWidth: 2, stroke: "#fff" }}
+              dot={{ fill: "#818cf8", r: 4, strokeWidth: 2, stroke: "#fff" }}
+              activeDot={{ fill: "#818cf8", r: 6, strokeWidth: 2, stroke: "#fff" }}
             />
           </AreaChart>
         </ResponsiveContainer>
@@ -205,23 +205,23 @@ export function AnalyticsChart({ data, isPending }: Props) {
           <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="volumeGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#10b981" stopOpacity={1} />
-                <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.8} />
+                <stop offset="0%" stopColor="#34d399" stopOpacity={1} />
+                <stop offset="100%" stopColor="#22d3ee" stopOpacity={0.85} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#888" strokeOpacity={0.15} vertical={false} />
             <XAxis
               dataKey="date"
-              tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+              tick={{ fontSize: 12, fill: "#888" }}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
-              tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+              tick={{ fontSize: 12, fill: "#888" }}
               axisLine={false}
               tickLine={false}
               tickFormatter={tickFormatter}
-              label={{ value: yLabel, angle: -90, position: "insideLeft", fontSize: 11, fill: "hsl(var(--muted-foreground))", dx: -2 }}
+              label={{ value: yLabel, angle: -90, position: "insideLeft", fontSize: 11, fill: "#888", dx: -2 }}
               width={48}
             />
             <Tooltip content={<CustomTooltip mode={mode} />} />
@@ -236,29 +236,29 @@ export function AnalyticsChart({ data, isPending }: Props) {
       ) : (
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#888" strokeOpacity={0.15} vertical={false} />
             <XAxis
               dataKey="date"
-              tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+              tick={{ fontSize: 12, fill: "#888" }}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
-              tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+              tick={{ fontSize: 12, fill: "#888" }}
               axisLine={false}
               tickLine={false}
               tickFormatter={tickFormatter}
-              label={{ value: yLabel, angle: -90, position: "insideLeft", fontSize: 11, fill: "hsl(var(--muted-foreground))", dx: -2 }}
+              label={{ value: yLabel, angle: -90, position: "insideLeft", fontSize: 11, fill: "#888", dx: -2 }}
               width={48}
             />
             <Tooltip content={<CustomTooltip mode={mode} />} />
             <Line
               type="monotone"
               dataKey={yDataKey}
-              stroke="#f59e0b"
-              strokeWidth={2.5}
-              dot={{ fill: "#ef4444", r: 4, strokeWidth: 2, stroke: "#fff" }}
-              activeDot={{ fill: "#ef4444", r: 6, strokeWidth: 2, stroke: "#fff" }}
+              stroke="#fbbf24"
+              strokeWidth={3}
+              dot={{ fill: "#f87171", r: 4, strokeWidth: 2, stroke: "#fff" }}
+              activeDot={{ fill: "#f87171", r: 6, strokeWidth: 2, stroke: "#fff" }}
             />
           </LineChart>
         </ResponsiveContainer>

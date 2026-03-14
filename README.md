@@ -8,8 +8,9 @@ A personal fitness tracking app for logging progressive overload, nutrition, car
 
 ### Currently Implemented
 
-- **Authentication** — Google OAuth via NextAuth v5. Sessions stored as JWT. User records persisted in MongoDB.
+- **Authentication** — Google OAuth via NextAuth v5. Sessions stored as JWT. User records persisted in MongoDB. Live role fetching on every session check (no stale permissions after role changes).
 - **Theme** — Light / Dark / System preference toggle. Persists across sessions.
+- **Roles & Access Control** — Three-tier role system: `admin`, `member`, `restricted`. Admins manage all users from the admin panel; restricted users lose access to Community.
 - **Training Tracker**
   - Create a workout session with a name, date, body target (Push / Pull / Legs / etc.), and optional notes
   - Add exercises to a session with per-set weight and rep logging
@@ -21,14 +22,18 @@ A personal fitness tracking app for logging progressive overload, nutrition, car
   - Full CRUD: edit/delete sessions (with confirmation), rename/delete exercises, edit/delete individual sets inline
   - Session list showing recent workouts with body target badge, exercise summary, and set count
 - **Analytics** — Per-exercise progress charts at `/training/analytics`; three visualization modes (Max Weight area chart, Volume bar chart, Reps line chart); stat cards for Personal Record, sessions, total volume, and avg reps; exercise selector with client-side data fetching
-- **Landing page** — Marketing page with hero section and feature overview
+- **Community Feed** — Shared post feed at `/community`; two post types (Progress Update / General); per-user delete; admins can delete any post; restricted users see a locked view
+- **User Settings**
+  - Profile at `/settings/profile`: display name, bio (up to 280 chars), custom profile photo via UploadThing (overrides Google avatar)
+  - Preferences at `/settings/preferences`: default weight unit (lb / kg) stored in user document
+- **Admin Panel** — User management at `/admin` (admin-only); view all users; change roles via dropdown; ban/unban with timestamped `bannedAt` field; own row is protected from self-demotion or self-ban
+- **Landing page** — Animated hero: slow-moving floating gradient orbs on desktop (right-anchored), breathing glow pulse on mobile; auth-aware CTA (Go to Dashboard for signed-in users, Get Started Free for guests)
 
 ### Planned
 
 - Nutrition / macro tracking
 - Cardio logging
-- Goals and progress analytics
-- Charts for progressive overload over time
+- Goals and progress milestones
 
 ---
 
@@ -42,8 +47,8 @@ A personal fitness tracking app for logging progressive overload, nutrition, car
 | UI primitives | @base-ui/react |
 | Auth | NextAuth v5 (Google provider) |
 | Database | MongoDB (Atlas) |
+| File uploads | UploadThing |
 | Deployment | Vercel |
-| Forms | React Hook Form + Zod |
 
 ---
 
@@ -51,21 +56,34 @@ A personal fitness tracking app for logging progressive overload, nutrition, car
 
 ```
 app/
-  page.tsx                  # Landing page
+  page.tsx                  # Landing page (animated hero, auth-aware CTA)
   layout.tsx                # Root layout (SessionProvider, ThemeProvider)
   training/
     layout.tsx              # Auth-guarded training layout
     page.tsx                # Session list
     new/page.tsx            # New session form
     [id]/page.tsx           # Session detail + exercise logger
-  api/auth/[...nextauth]/   # NextAuth route handler
-  training/
+    analytics/page.tsx      # Per-exercise progress charts
     exercises/page.tsx      # Exercise list management
+  settings/
+    layout.tsx              # Settings layout with Profile / Preferences tabs
+    profile/page.tsx        # Display name, bio, profile photo upload
+    preferences/page.tsx    # Default weight unit toggle
+  admin/
+    layout.tsx              # Admin-only guard (redirects non-admins)
+    page.tsx                # User management table
+  community/
+    layout.tsx              # Auth + restricted-access guard
+    page.tsx                # Post feed
+    new/page.tsx            # Create post form
+  api/
+    auth/[...nextauth]/     # NextAuth route handler
+    uploadthing/            # UploadThing file router
 
 components/
-  navbar.tsx                # Auth-aware sticky nav
+  navbar.tsx                # Auth-aware sticky nav with Community link
   theme-toggle.tsx          # Light/dark/system toggle
-  user-menu.tsx             # Avatar + dropdown (Training link, Sign Out)
+  user-menu.tsx             # Avatar + dropdown (Training, Community, Settings, Admin, Sign Out)
   ui/button.tsx             # Base button component
   training/
     session-card.tsx        # Session list card
@@ -73,24 +91,39 @@ components/
     session-exercises.tsx   # Exercise display — reads weightUnit per set
     exercise-logger.tsx     # Log exercise + sets; inline unit toggle; last-weight pre-fill
     exercise-manager.tsx    # Add / delete custom exercises
-    weight-unit-toggle.tsx  # kg / lb toggle pill (used standalone if needed)
+    weight-unit-toggle.tsx  # kg / lb toggle pill
+    analytics-chart.tsx     # Recharts area/bar/line chart with mode toggle
+  settings/
+    profile-form.tsx        # Display name, bio, UploadButton for profile photo
+    preferences-form.tsx    # Weight unit pill toggle
+  admin/
+    user-table.tsx          # Role select, ban/unban, "You" badge on own row
+  community/
+    post-card.tsx           # Author avatar, role badge, type chip, delete confirm
+    create-post-form.tsx    # Post type selector, textarea with char counter
 
 actions/
   auth-actions.ts           # signIn / signOut server actions
-  workout-actions.ts        # createSession, addExerciseToSession, getWorkoutSessions, getWorkoutSession
+  workout-actions.ts        # createSession, addExerciseToSession, getWorkoutSessions, etc.
+  analytics-actions.ts      # getExerciseAnalytics, getUserExercises
+  user-actions.ts           # getCurrentUser, updateProfile, updatePreferences
+  admin-actions.ts          # getAllUsers, setUserRole, toggleBan
+  post-actions.ts           # createPost, getPosts, deletePost
 
 lib/
   mongodb.ts                # MongoDB client singleton
-  db.ts                     # Typed collection helpers
+  db.ts                     # Typed collection helpers (workouts, users, posts, etc.)
   weight.ts                 # kg ↔ lb conversion utilities
   exercises.ts              # DEFAULT_EXERCISES — edit to add app-wide defaults
+  uploadthing.ts            # UploadThing file router (server)
+  uploadthing-client.ts     # Typed UploadButton (client)
 
 hooks/
   use-weight-unit.ts        # localStorage-backed unit preference hook
 
 types/
-  index.ts                  # Shared TypeScript interfaces
-  next-auth.d.ts            # Session type augmentation
+  index.ts                  # Shared TypeScript interfaces (UserDoc, PostDoc, UserRole, etc.)
+  next-auth.d.ts            # Session type augmentation (id, role)
 ```
 
 ---
@@ -105,7 +138,21 @@ AUTH_GOOGLE_ID=       # Google Cloud Console OAuth client ID
 AUTH_GOOGLE_SECRET=   # Google Cloud Console OAuth client secret
 MONGODB_URI=          # MongoDB Atlas connection string
 MONGODB_DB=Kifted     # Database name
+UPLOADTHING_TOKEN=    # UploadThing dashboard → project → API key
 ```
+
+---
+
+## Admin Bootstrap
+
+There is no signup flow for the admin role. To make yourself an admin:
+
+1. Sign in once so your user document is created in MongoDB.
+2. Open MongoDB Atlas → `Kifted` db → `users` collection → find your document.
+3. Add (or set) the field `role: "admin"`.
+4. Sign out and back in — the Admin Panel link will appear in your user menu.
+
+You can then promote or restrict other users from `/admin`.
 
 ---
 
@@ -123,6 +170,16 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Changelog
 
 ### 2026-03-14 (latest)
+- Community feed at `/community` — Progress Update and General post types; chronological feed; per-user and admin delete
+- User settings at `/settings/profile` (display name, bio, UploadThing profile photo) and `/settings/preferences` (default weight unit)
+- Admin panel at `/admin` — role management (admin/member/restricted), ban/unban, self-protection on own row
+- Animated landing page hero — floating gradient orbs on desktop, breathing glow on mobile; auth-aware CTA
+- Role system: `admin | member | restricted`; live role fetched from DB on every session (no stale JWT role); restricted users locked out of Community
+- Navigation updates: Community link in navbar + user menu; Admin Panel link in user menu (admin only); Settings link in user menu
+- Fixed analytics chart axis label and grid rendering — replaced `hsl(var(--muted-foreground))` (unreliable in SVG paint attributes) with static colors
+- Improved analytics chart palette — brighter 400-level colors for all three modes so charts are visible on dark card backgrounds
+
+### 2026-03-14
 - Site-wide entrance animations: fade-up with stagger on all list views (session cards, feature cards, analytics pills + stat cards)
 - Button hover effects: scale 103% + brightness 110% on primary buttons, scale-only on outline/ghost; active press scales to 97%
 - Custom `animate-fade-up` Tailwind utility added via `@utility` directive in globals.css

@@ -142,3 +142,35 @@
 @utility animate-fade-up {
   animation: fade-up 0.4s ease-out both;
 }
+
+/* ── Hero background orb animations ─────────────────────────────────────── */
+
+@keyframes orb-a {
+  0%, 100% { transform: translate(0px, 0px) scale(1); }
+  30%       { transform: translate(-80px, 55px) scale(1.07); }
+  65%       { transform: translate(-25px, -50px) scale(0.94); }
+}
+
+@keyframes orb-b {
+  0%, 100% { transform: translate(0px, 0px) scale(1.04); }
+  40%       { transform: translate(-55px, -65px) scale(0.91); }
+  72%       { transform: translate(45px, 35px) scale(1.11); }
+}
+
+@keyframes mobile-breathe {
+  0%, 100% { opacity: 0.2; transform: translate(-50%, -50%) scale(1); }
+  50%       { opacity: 0.38; transform: translate(-50%, -50%) scale(1.22); }
+}
+
+@utility animate-orb-a {
+  animation: orb-a 24s ease-in-out infinite;
+}
+
+@utility animate-orb-b {
+  animation: orb-b 19s ease-in-out infinite;
+  animation-delay: -9s;
+}
+
+@utility animate-mobile-breathe {
+  animation: mobile-breathe 7s ease-in-out infinite;
+}
