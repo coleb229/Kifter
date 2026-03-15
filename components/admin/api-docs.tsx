@@ -8,7 +8,7 @@ export function ApiDocs() {
   const domain = API_DOCS.find((d) => d.id === activeId) ?? API_DOCS[0];
 
   return (
-    <div className="flex gap-6">
+    <div className="flex flex-col gap-4 md:flex-row md:gap-6">
       {/* Sidebar */}
       <nav className="hidden w-40 shrink-0 flex-col gap-1 md:flex">
         {API_DOCS.map((d) => (

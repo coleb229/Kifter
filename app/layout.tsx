@@ -4,6 +4,7 @@ import { ThemeProvider } from "next-themes";
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/auth";
 import { getCurrentUser } from "@/actions/user-actions";
+import { AdminFab } from "@/components/admin-fab";
 import "./globals.css";
 
 const geistMono = Geist_Mono({
@@ -47,6 +48,7 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             {children}
+            <AdminFab />
           </ThemeProvider>
         </SessionProvider>
       </body>
