@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2, Check, X, Plus, PlayCircle, Link2, Share2 } from "lucide-react";
+import { Pencil, Trash2, Check, X, Plus, PlayCircle, Link2, Share2, Wand2, Loader2 } from "lucide-react";
 import {
   updateSet,
   deleteSet,
@@ -12,6 +12,8 @@ import {
   setExerciseVideoUrl,
 } from "@/actions/workout-actions";
 import { shareWorkoutSession } from "@/actions/post-actions";
+import { getExerciseSubstitutions } from "@/actions/ai-actions";
+import type { ExerciseSubstitute } from "@/actions/ai-actions";
 import type { WorkoutSet } from "@/types";
 import type { WeightUnit } from "@/lib/weight";
 
@@ -65,6 +67,10 @@ function ExerciseGroupCard({
   const [addingSet, setAddingSet] = useState<{ weight: number; weightUnit: WeightUnit; reps: number } | null>(null);
   const [editingVideo, setEditingVideo] = useState(false);
   const [videoUrlInput, setVideoUrlInput] = useState(videoUrl ?? "");
+  const [showSubs, setShowSubs] = useState(false);
+  const [substitutes, setSubstitutes] = useState<ExerciseSubstitute[] | null>(null);
+  const [subsError, setSubsError] = useState<string | null>(null);
+  const [isLoadingSubs, startSubsTransition] = useTransition();
 
   function handleVideoSave() {
     startTransition(async () => {
@@ -72,6 +78,19 @@ function ExerciseGroupCard({
       setEditingVideo(false);
       router.refresh();
     });
+  }
+
+  function handleGetSubstitutes() {
+    if (showSubs && substitutes) { setShowSubs(false); return; }
+    setShowSubs(true);
+    setSubsError(null);
+    if (!substitutes) {
+      startSubsTransition(async () => {
+        const result = await getExerciseSubstitutions(group.name);
+        if (result.success) setSubstitutes(result.data);
+        else setSubsError(result.error);
+      });
+    }
   }
 
   function getSetState(id: string): SetEditState {
@@ -256,6 +275,14 @@ function ExerciseGroupCard({
               className="rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
             >
               <Link2 className="size-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={handleGetSubstitutes}
+              aria-label="Get AI exercise substitutes"
+              className="rounded p-1 text-muted-foreground transition-colors hover:text-indigo-500"
+            >
+              {isLoadingSubs ? <Loader2 className="size-3.5 animate-spin" /> : <Wand2 className="size-3.5" />}
             </button>
             <button
               type="button"
@@ -504,6 +531,31 @@ function ExerciseGroupCard({
           </button>
         )}
       </div>
+
+      {/* AI Substitutes panel */}
+      {showSubs && (
+        <div className="mt-3 border-t border-border pt-3">
+          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            AI Substitutes
+          </p>
+          {isLoadingSubs && (
+            <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
+              <Loader2 className="size-3.5 animate-spin" /> Thinking…
+            </div>
+          )}
+          {subsError && <p className="text-xs text-destructive">{subsError}</p>}
+          {substitutes && (
+            <div className="flex flex-col gap-2">
+              {substitutes.map((sub, i) => (
+                <div key={i} className="rounded-lg border border-border bg-muted/30 px-3 py-2">
+                  <p className="text-xs font-semibold">{sub.name}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{sub.reason}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -314,3 +314,56 @@ ${JSON.stringify(dietData, null, 2)}`,
     return { success: false, error: (e as Error).message ?? "Failed to generate nutrition tips" };
   }
 }
+
+// ── getExerciseSubstitutions ──────────────────────────────────────────────────
+
+export interface ExerciseSubstitute {
+  name: string;
+  reason: string;
+}
+
+export async function getExerciseSubstitutions(
+  exerciseName: string
+): Promise<ActionResult<ExerciseSubstitute[]>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+
+  const rateCheck = await checkAndIncrementAiUsage(session.user.id);
+  if (!rateCheck.allowed) return { success: false, error: rateCheck.error ?? "AI request blocked." };
+
+  try {
+    const client = getClient();
+    const message = await client.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 512,
+      messages: [
+        {
+          role: "user",
+          content: `You are a fitness coach. The user wants alternatives to "${exerciseName}".
+List 4 substitute exercises that work similar muscle groups.
+For each, respond in exactly this format:
+1. Exercise Name: One sentence explaining why it's a good substitute.
+Be concise. No extra commentary.`,
+        },
+      ],
+    });
+
+    const text = message.content[0].type === "text" ? message.content[0].text : "";
+    const lines = text.split("\n").filter((l) => /^\d+\./.test(l.trim()));
+    const substitutes: ExerciseSubstitute[] = lines
+      .map((line) => {
+        const withoutNum = line.replace(/^\d+\.\s*/, "").trim();
+        const colonIdx = withoutNum.indexOf(":");
+        if (colonIdx === -1) return null;
+        const name = withoutNum.slice(0, colonIdx).trim();
+        const reason = withoutNum.slice(colonIdx + 1).trim();
+        return name && reason ? { name, reason } : null;
+      })
+      .filter((s): s is ExerciseSubstitute => s !== null);
+
+    if (substitutes.length === 0) return { success: false, error: "Could not parse substitutions" };
+    return { success: true, data: substitutes };
+  } catch (e) {
+    return { success: false, error: (e as Error).message ?? "Failed to get substitutions" };
+  }
+}
