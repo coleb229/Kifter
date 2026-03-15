@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Avatar } from "@base-ui/react/avatar";
-import { Dumbbell, Utensils, Activity, CalendarDays, ShieldCheck } from "lucide-react";
+import { Dumbbell, Utensils, Activity, CalendarDays, ShieldCheck, Scale } from "lucide-react";
 import { getPublicProfile } from "@/actions/user-actions";
 import { format, parseISO } from "date-fns";
 
@@ -18,9 +18,10 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
   const displayName = user.displayName ?? user.name ?? "Kifted User";
   const avatarSrc = user.profileImage ?? user.image ?? undefined;
   const visibility = user.preferences?.profileVisibility;
-  const showTraining  = visibility?.showTraining  ?? true;
-  const showNutrition = visibility?.showNutrition ?? true;
-  const showCardio    = visibility?.showCardio    ?? true;
+  const showTraining     = visibility?.showTraining     ?? true;
+  const showNutrition    = visibility?.showNutrition    ?? true;
+  const showCardio       = visibility?.showCardio       ?? true;
+  const showBodyMetrics  = visibility?.showBodyMetrics  ?? false;
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6">
@@ -85,12 +86,31 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
             <p className="text-xs text-muted-foreground">Cardio logs shared</p>
           </div>
         )}
-        {!showTraining && !showNutrition && !showCardio && (
+        {!showTraining && !showNutrition && !showCardio && !showBodyMetrics && (
           <div className="col-span-3 rounded-xl border border-dashed border-border p-8 text-center">
             <p className="text-sm text-muted-foreground">This user hasn&apos;t shared any data publicly.</p>
           </div>
         )}
       </div>
+
+      {/* Body metrics badge */}
+      {showBodyMetrics && user.latestWeight && (
+        <div className="mt-4 flex justify-center">
+          <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-5 py-3">
+            <div className="flex size-9 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-950/40">
+              <Scale className="size-4 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div>
+              <p className="text-sm font-medium">
+                {user.latestWeight.weight} {user.latestWeight.weightUnit}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Body weight · {format(parseISO(user.latestWeight.date), "MMM d, yyyy")}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -30,9 +30,10 @@ export function PreferencesForm({ user }: Props) {
   const [theme, setThemeState]    = useState<Theme>(user?.preferences?.theme ?? "system");
   const [accent, setAccent]       = useState<AccentColor>(user?.preferences?.accentColor ?? "indigo");
   const [visibility, setVisibility] = useState({
-    showTraining:  user?.preferences?.profileVisibility?.showTraining  ?? true,
-    showNutrition: user?.preferences?.profileVisibility?.showNutrition ?? true,
-    showCardio:    user?.preferences?.profileVisibility?.showCardio    ?? true,
+    showTraining:     user?.preferences?.profileVisibility?.showTraining     ?? true,
+    showNutrition:    user?.preferences?.profileVisibility?.showNutrition    ?? true,
+    showCardio:       user?.preferences?.profileVisibility?.showCardio       ?? true,
+    showBodyMetrics:  user?.preferences?.profileVisibility?.showBodyMetrics  ?? false,
   });
 
   const [saved, setSaved]   = useState(false);
@@ -141,9 +142,10 @@ export function PreferencesForm({ user }: Props) {
         <div className="flex flex-col gap-2">
           {(
             [
-              { key: "showTraining",  label: "Training sessions" },
-              { key: "showNutrition", label: "Nutrition logs" },
-              { key: "showCardio",    label: "Cardio sessions" },
+              { key: "showTraining",    label: "Training sessions" },
+              { key: "showNutrition",   label: "Nutrition logs" },
+              { key: "showCardio",      label: "Cardio sessions" },
+              { key: "showBodyMetrics", label: "Body weight" },
             ] as const
           ).map(({ key, label }) => (
             <label key={key} className="flex cursor-pointer items-center justify-between rounded-lg border border-border bg-card px-4 py-3">

@@ -129,6 +129,7 @@ export interface UserDoc {
       showTraining?: boolean;
       showNutrition?: boolean;
       showCardio?: boolean;
+      showBodyMetrics?: boolean;
     };
   };
   restrictions?: {
@@ -161,6 +162,7 @@ export interface UserSummary {
       showTraining?: boolean;
       showNutrition?: boolean;
       showCardio?: boolean;
+      showBodyMetrics?: boolean;
     };
   };
   restrictions?: {

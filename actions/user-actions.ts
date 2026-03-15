@@ -2,7 +2,7 @@
 
 import { ObjectId } from "mongodb";
 import { auth } from "@/auth";
-import { getUsersCollection } from "@/lib/db";
+import { getUsersCollection, getBodyWeightCollection } from "@/lib/db";
 import type { ActionResult, UserSummary } from "@/types";
 
 // ── Get current user (for settings prefill) ───────────────────────────────────
@@ -76,6 +76,7 @@ export async function updatePreferences(data: {
     showTraining?: boolean;
     showNutrition?: boolean;
     showCardio?: boolean;
+    showBodyMetrics?: boolean;
   };
 }): Promise<ActionResult> {
   const session = await auth();
@@ -137,8 +138,9 @@ export async function getPublicProfile(userId: string): Promise<ActionResult<{
   role: import("@/types").UserRole;
   createdAt?: string;
   preferences?: {
-    profileVisibility?: { showTraining?: boolean; showNutrition?: boolean; showCardio?: boolean };
+    profileVisibility?: { showTraining?: boolean; showNutrition?: boolean; showCardio?: boolean; showBodyMetrics?: boolean };
   };
+  latestWeight?: { weight: number; weightUnit: string; date: string };
 }>> {
   try {
     const col = await getUsersCollection();
@@ -147,6 +149,16 @@ export async function getPublicProfile(userId: string): Promise<ActionResult<{
       { projection: { name: 1, displayName: 1, bio: 1, profileImage: 1, image: 1, role: 1, createdAt: 1, "preferences.profileVisibility": 1 } }
     );
     if (!user) return { success: false, error: "User not found" };
+
+    let latestWeight: { weight: number; weightUnit: string; date: string } | undefined;
+    if (user.preferences?.profileVisibility?.showBodyMetrics) {
+      const bwCol = await getBodyWeightCollection();
+      const entry = await bwCol.findOne({ userId }, { sort: { date: -1 } });
+      if (entry) {
+        latestWeight = { weight: entry.weight, weightUnit: entry.weightUnit, date: String(entry.date).slice(0, 10) };
+      }
+    }
+
     return {
       success: true,
       data: {
@@ -159,6 +171,7 @@ export async function getPublicProfile(userId: string): Promise<ActionResult<{
         role: user.role ?? "member",
         createdAt: user.createdAt?.toISOString(),
         preferences: user.preferences ? { profileVisibility: user.preferences.profileVisibility } : undefined,
+        latestWeight,
       },
     };
   } catch {
