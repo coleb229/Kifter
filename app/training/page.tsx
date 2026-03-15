@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import Link from "next/link";
 import { Plus, BookOpen, ChevronRight } from "lucide-react";
 import { getWorkoutSessions } from "@/actions/workout-actions";

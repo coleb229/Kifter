@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { Dumbbell, Target, Utensils, ArrowRight, Zap } from "lucide-react";
 import { auth } from "@/auth";
 import { Navbar } from "@/components/navbar";
 import { Button } from "@/components/ui/button";
 import { signInWithGoogle } from "@/actions/auth-actions";
+import { UserOverview } from "@/components/dashboard/user-overview";
 
 const features = [
   {
@@ -108,6 +110,28 @@ export default async function Home() {
             </Button>
           </div>
         </section>
+
+        {/* Dashboard for authenticated users */}
+        {session && (
+          <Suspense
+            fallback={
+              <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
+                <div className="h-8 w-40 animate-pulse rounded-lg bg-muted mb-6" />
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-6">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="h-24 animate-pulse rounded-xl bg-muted" />
+                  ))}
+                </div>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="h-56 animate-pulse rounded-xl bg-muted" />
+                  <div className="h-56 animate-pulse rounded-xl bg-muted" />
+                </div>
+              </div>
+            }
+          >
+            <UserOverview />
+          </Suspense>
+        )}
 
         {/* Features */}
         <section

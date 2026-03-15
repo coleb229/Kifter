@@ -155,6 +155,89 @@ export interface PostDoc {
   createdAt: Date;
 }
 
+// ── Diet / Nutrition ─────────────────────────────────────────────────────────
+
+export const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"] as const;
+export type MealType = (typeof MEAL_TYPES)[number];
+
+export interface DietEntryDoc {
+  _id: ObjectId;
+  userId: string;
+  date: Date;
+  mealType: MealType;
+  food: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  notes?: string;
+  createdAt: Date;
+}
+
+export interface DietEntry {
+  id: string;
+  userId: string;
+  date: string;
+  mealType: MealType;
+  food: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface MacroTargetDoc {
+  _id: ObjectId;
+  userId: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  updatedAt: Date;
+}
+
+export interface MacroTarget {
+  id: string;
+  userId: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  updatedAt: string;
+}
+
+export interface CreateDietEntryInput {
+  date: string;
+  mealType: MealType;
+  food: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  notes?: string;
+}
+
+export interface UpdateDietEntryInput {
+  mealType?: MealType;
+  food?: string;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+  notes?: string;
+}
+
+export interface DietDaySummary {
+  date: string; // "yyyy-MM-dd"
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  entryCount: number;
+}
+
 // ── AI Insights ──────────────────────────────────────────────────────────────
 
 export type InsightType = "progress" | "suggestion" | "warning" | "achievement";
