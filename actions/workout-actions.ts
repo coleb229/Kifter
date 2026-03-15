@@ -727,6 +727,121 @@ export async function getDeloadRecommendation(): Promise<ActionResult<DeloadReco
   };
 }
 
+// ── getPersonalRecords ────────────────────────────────────────────────────────
+
+export interface PersonalRecord {
+  exercise: string;
+  weight: number;
+  weightUnit: WeightUnit;
+  reps: number;
+  estimated1RM: number; // Epley, in lb
+  sessionDate: string;  // ISO string
+  sessionId: string;
+}
+
+export async function getPersonalRecords(): Promise<ActionResult<PersonalRecord[]>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+
+  const userId = session.user.id;
+  const setsCol = await getSetsCollection();
+
+  const allSets = await setsCol.find({ userId, completed: true }).toArray();
+
+  // Group by exercise, keep set with highest Epley 1RM
+  const bestByExercise = new Map<string, typeof allSets[0]>();
+  for (const s of allSets) {
+    const epley = toLb(s.weight, s.weightUnit ?? "lb") * (1 + s.reps / 30);
+    const best = bestByExercise.get(s.exercise);
+    if (!best) {
+      bestByExercise.set(s.exercise, s);
+    } else {
+      const bestEpley = toLb(best.weight, best.weightUnit ?? "lb") * (1 + best.reps / 30);
+      if (epley > bestEpley) bestByExercise.set(s.exercise, s);
+    }
+  }
+
+  if (bestByExercise.size === 0) return { success: true, data: [] };
+
+  // Batch-fetch sessions for dates
+  const sessionIds = [...new Set([...bestByExercise.values()].map((s) => s.sessionId))];
+  const sessionsCol = await getSessionsCollection();
+  const sessionDocs = await sessionsCol
+    .find({ _id: { $in: sessionIds.map((id) => new ObjectId(id)) } })
+    .project<{ _id: import("mongodb").ObjectId; date: Date }>({ date: 1 })
+    .toArray();
+  const sessionDateMap = new Map(sessionDocs.map((d) => [d._id.toHexString(), d.date.toISOString()]));
+
+  const records: PersonalRecord[] = [...bestByExercise.entries()].map(([exercise, s]) => ({
+    exercise,
+    weight: s.weight,
+    weightUnit: (s.weightUnit ?? "lb") as WeightUnit,
+    reps: s.reps,
+    estimated1RM: Math.round(toLb(s.weight, s.weightUnit ?? "lb") * (1 + s.reps / 30) * 10) / 10,
+    sessionDate: sessionDateMap.get(s.sessionId) ?? new Date(0).toISOString(),
+    sessionId: s.sessionId,
+  }));
+
+  records.sort((a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime());
+
+  return { success: true, data: records };
+}
+
+// ── getBodyTargetDistribution ─────────────────────────────────────────────────
+
+export interface BodyTargetVolume {
+  target: BodyTarget;
+  volume: number;
+  sessionCount: number;
+  percentage: number;
+}
+
+export async function getBodyTargetDistribution(): Promise<ActionResult<BodyTargetVolume[]>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+
+  const userId = session.user.id;
+  const cutoff = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000);
+
+  const sessionsCol = await getSessionsCollection();
+  const sessionDocs = await sessionsCol.find({ userId, date: { $gte: cutoff } }).toArray();
+
+  if (sessionDocs.length === 0) return { success: true, data: [] };
+
+  const sessionTargetMap = new Map<string, BodyTarget>();
+  for (const doc of sessionDocs) {
+    sessionTargetMap.set(doc._id.toHexString(), doc.bodyTarget);
+  }
+
+  const sessionIds = sessionDocs.map((d) => d._id.toHexString());
+  const setsCol = await getSetsCollection();
+  const sets = await setsCol.find({ userId, sessionId: { $in: sessionIds }, completed: true }).toArray();
+
+  const volumeMap = new Map<BodyTarget, { volume: number; sessions: Set<string> }>();
+  for (const s of sets) {
+    const target = sessionTargetMap.get(s.sessionId);
+    if (!target) continue;
+    const entry = volumeMap.get(target) ?? { volume: 0, sessions: new Set() };
+    entry.volume += toLb(s.weight, s.weightUnit ?? "lb") * s.reps;
+    entry.sessions.add(s.sessionId);
+    volumeMap.set(target, entry);
+  }
+
+  const totalVolume = [...volumeMap.values()].reduce((sum, e) => sum + e.volume, 0);
+  if (totalVolume === 0) return { success: true, data: [] };
+
+  const result: BodyTargetVolume[] = [...volumeMap.entries()]
+    .map(([target, { volume, sessions }]) => ({
+      target,
+      volume: Math.round(volume),
+      sessionCount: sessions.size,
+      percentage: Math.round((volume / totalVolume) * 100),
+    }))
+    .sort((a, b) => b.volume - a.volume);
+
+  return { success: true, data: result };
+}
+
 // ── getSessionDates ────────────────────────────────────────────────────────────
 // Lightweight: returns only date strings for the heatmap (no set details)
 

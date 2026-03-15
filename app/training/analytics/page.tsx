@@ -4,21 +4,27 @@ import {
   getExercisesWithHistory,
   getExerciseHistory,
 } from "@/actions/analytics-actions";
-import { getSessionDates, getDeloadRecommendation } from "@/actions/workout-actions";
+import { getSessionDates, getDeloadRecommendation, getPersonalRecords, getBodyTargetDistribution } from "@/actions/workout-actions";
 import { AnalyticsDashboard } from "@/components/training/analytics-dashboard";
 import { AIInsights } from "@/components/training/ai-insights";
 import { TrainingHeatmap } from "@/components/training/training-heatmap";
 import { DeloadRecommendation } from "@/components/training/deload-recommendation";
+import { PersonalRecords } from "@/components/training/personal-records";
+import { BodyTargetChart } from "@/components/training/body-target-chart";
 
 export default async function AnalyticsPage() {
-  const [exercisesResult, sessionDatesResult, deloadResult] = await Promise.all([
+  const [exercisesResult, sessionDatesResult, deloadResult, prResult, bodyTargetResult] = await Promise.all([
     getExercisesWithHistory(),
     getSessionDates(365),
     getDeloadRecommendation(),
+    getPersonalRecords(),
+    getBodyTargetDistribution(),
   ]);
   const exercises = exercisesResult.success ? exercisesResult.data : [];
   const sessionDates = sessionDatesResult.success ? sessionDatesResult.data : [];
   const deloadData = deloadResult.success ? deloadResult.data : null;
+  const prData = prResult.success ? prResult.data : [];
+  const bodyTargetData = bodyTargetResult.success ? bodyTargetResult.data : [];
 
   let initialData = null;
   if (exercises.length > 0) {
@@ -54,6 +60,8 @@ export default async function AnalyticsPage() {
         </div>
       )}
 
+      {bodyTargetData.length > 0 && <BodyTargetChart data={bodyTargetData} />}
+
       {exercises.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border p-16 text-center">
           <p className="font-medium">No data yet</p>
@@ -71,6 +79,8 @@ export default async function AnalyticsPage() {
           <AIInsights />
         </>
       )}
+
+      <PersonalRecords records={prData} />
     </div>
   );
 }
