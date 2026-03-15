@@ -77,7 +77,7 @@ export function CardioAnalyticsChart({ sessions }: Props) {
     .map((s) => ({
       date: format(parseISO(s.date), "MMM d"),
       duration: s.duration,
-      distance: s.distance !== undefined
+      distance: s.distance != null
         ? (s.distanceUnit === "mi" ? parseFloat((s.distance * 1.60934).toFixed(2)) : s.distance)
         : 0,
       calories: s.caloriesBurned ?? 0,
@@ -107,7 +107,7 @@ export function CardioAnalyticsChart({ sessions }: Props) {
       </div>
 
       {data.length < 2 ? (
-        <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
+        <div className="flex h-75 items-center justify-center text-sm text-muted-foreground">
           {data.length === 0
             ? "No data yet."
             : "Log at least 2 sessions to see a trend."}

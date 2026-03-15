@@ -32,12 +32,12 @@ function serializeSession(doc: {
     date: doc.date.toISOString(),
     activityType: doc.activityType,
     duration: doc.duration,
-    distance: doc.distance,
-    distanceUnit: doc.distanceUnit,
+    distance: doc.distance ?? undefined,
+    distanceUnit: doc.distanceUnit ?? undefined,
     intensity: doc.intensity,
-    caloriesBurned: doc.caloriesBurned,
-    avgHeartRate: doc.avgHeartRate,
-    notes: doc.notes,
+    caloriesBurned: doc.caloriesBurned ?? undefined,
+    avgHeartRate: doc.avgHeartRate ?? undefined,
+    notes: doc.notes ?? undefined,
     createdAt: doc.createdAt.toISOString(),
   };
 }

@@ -95,16 +95,16 @@ export function CardioSessionDetail({ session }: Props) {
             value: session.intensity.charAt(0).toUpperCase() + session.intensity.slice(1),
             extraClass: intensityStyles[session.intensity],
           },
-          session.distance !== undefined
+          session.distance != null
             ? {
                 label: "Distance",
                 value: `${session.distance.toFixed(1)} ${session.distanceUnit ?? "km"}`,
               }
             : null,
-          session.caloriesBurned !== undefined
+          session.caloriesBurned != null
             ? { label: "Calories", value: `${session.caloriesBurned} kcal` }
             : null,
-          session.avgHeartRate !== undefined
+          session.avgHeartRate != null
             ? { label: "Avg HR", value: `${session.avgHeartRate} bpm` }
             : null,
         ]

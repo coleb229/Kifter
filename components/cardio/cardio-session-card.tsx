@@ -91,15 +91,15 @@ export function CardioSessionCard({ session, index }: Props) {
 
         {/* Metrics row */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-          {session.distance !== undefined && (
+          {session.distance != null && (
             <span>
               {session.distance.toFixed(1)} {session.distanceUnit ?? "km"}
             </span>
           )}
-          {session.caloriesBurned !== undefined && (
+          {session.caloriesBurned != null && (
             <span>{session.caloriesBurned} kcal</span>
           )}
-          {session.avgHeartRate !== undefined && (
+          {session.avgHeartRate != null && (
             <span>avg {session.avgHeartRate} bpm</span>
           )}
           {session.notes && (

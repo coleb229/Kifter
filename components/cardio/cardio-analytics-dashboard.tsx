@@ -21,7 +21,7 @@ export function CardioAnalyticsDashboard({ sessions }: Props) {
   const totalMinutes = sessions.reduce((s, e) => s + e.duration, 0);
 
   const totalDistanceKm = sessions.reduce((s, e) => {
-    if (e.distance === undefined) return s;
+    if (e.distance == null) return s;
     return s + (e.distanceUnit === "mi" ? e.distance * 1.60934 : e.distance);
   }, 0);
 
