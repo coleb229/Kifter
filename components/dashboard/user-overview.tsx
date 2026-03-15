@@ -81,7 +81,7 @@ export async function UserOverview() {
   const weekEnd = format(new Date(), "MMM d");
 
   return (
-    <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
+    <section id="dashboard" className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
       {/* Section header */}
       <div className="mb-6 animate-fade-up">
         <h2 className="text-2xl font-bold tracking-tight">Your Week</h2>

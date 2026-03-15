@@ -9,7 +9,14 @@ import { format } from "date-fns";
 import { addCardioSession, updateCardioSession } from "@/actions/cardio-actions";
 import { Button } from "@/components/ui/button";
 import { CARDIO_ACTIVITIES, CARDIO_INTENSITIES } from "@/types";
-import type { CardioSession } from "@/types";
+import type { CardioSession, CardioIntensity } from "@/types";
+
+const INTENSITY_STYLES: Record<CardioIntensity, { active: string; inactive: string }> = {
+  easy:     { active: "bg-emerald-500 border-emerald-500 text-white",  inactive: "border-emerald-200 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/40" },
+  moderate: { active: "bg-amber-500 border-amber-500 text-white",      inactive: "border-amber-200 text-amber-600 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/40" },
+  hard:     { active: "bg-orange-500 border-orange-500 text-white",    inactive: "border-orange-200 text-orange-600 hover:bg-orange-50 dark:border-orange-800 dark:text-orange-400 dark:hover:bg-orange-950/40" },
+  max:      { active: "bg-rose-500 border-rose-500 text-white",        inactive: "border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-950/40" },
+};
 
 const schema = z.object({
   date: z.string().min(1, "Date required"),
@@ -47,6 +54,8 @@ export function CardioSessionForm({ editingSession }: Props) {
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -141,11 +150,25 @@ export function CardioSessionForm({ editingSession }: Props) {
         </div>
         <div>
           <label className={labelClass}>Intensity</label>
-          <select {...register("intensity")} className={selectClass}>
-            {CARDIO_INTENSITIES.map((i) => (
-              <option key={i} value={i}>{i.charAt(0).toUpperCase() + i.slice(1)}</option>
-            ))}
-          </select>
+          <div className="flex gap-2">
+            {CARDIO_INTENSITIES.map((level) => {
+              const styles = INTENSITY_STYLES[level];
+              const isSelected = watch("intensity") === level;
+              return (
+                <button
+                  key={level}
+                  type="button"
+                  onClick={() => setValue("intensity", level, { shouldValidate: true })}
+                  className={`flex-1 rounded-full border py-1 text-sm font-medium capitalize transition-colors ${
+                    isSelected ? styles.active : styles.inactive
+                  }`}
+                >
+                  {level}
+                </button>
+              );
+            })}
+          </div>
+          {errors.intensity && <p className={errorClass}>{errors.intensity.message}</p>}
         </div>
       </div>
 

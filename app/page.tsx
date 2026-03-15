@@ -88,7 +88,7 @@ export default async function Home() {
             style={{ animationDelay: "260ms" }}
           >
             {session ? (
-              <Button size="lg" className="gap-2 px-8" render={<Link href="/training" />}>
+              <Button size="lg" className="gap-2 px-8" render={<a href="#dashboard" />}>
                 <Zap className="size-4" />
                 Go to Dashboard
               </Button>

@@ -36,11 +36,23 @@ interface Props {
 }
 
 const inputClass =
-  "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-colors placeholder:text-muted-foreground";
-const selectClass =
-  "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-colors";
+  "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-colors placeholder:text-muted-foreground";
 const labelClass = "block text-xs font-medium text-muted-foreground mb-1";
 const errorClass = "mt-1 text-xs text-rose-500";
+
+const MEAL_TYPE_STYLES: Record<string, { active: string; inactive: string }> = {
+  breakfast: { active: "bg-amber-500 border-amber-500 text-white",   inactive: "border-amber-200 text-amber-600 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/40" },
+  lunch:     { active: "bg-emerald-500 border-emerald-500 text-white", inactive: "border-emerald-200 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/40" },
+  dinner:    { active: "bg-indigo-500 border-indigo-500 text-white",  inactive: "border-indigo-200 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-400 dark:hover:bg-indigo-950/40" },
+  snack:     { active: "bg-orange-500 border-orange-500 text-white",  inactive: "border-orange-200 text-orange-600 hover:bg-orange-50 dark:border-orange-800 dark:text-orange-400 dark:hover:bg-orange-950/40" },
+};
+
+const MACRO_LABELS: Record<string, { label: string; color: string }> = {
+  calories: { label: "Calories",   color: "text-amber-600 dark:text-amber-400" },
+  protein:  { label: "Protein (g)", color: "text-emerald-600 dark:text-emerald-400" },
+  carbs:    { label: "Carbs (g)",   color: "text-sky-600 dark:text-sky-400" },
+  fat:      { label: "Fat (g)",     color: "text-orange-600 dark:text-orange-400" },
+};
 
 export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry, onClose }: Props) {
   const router = useRouter();
@@ -170,76 +182,58 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
           </div>
         )}
 
-        {/* Food name + meal type */}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div>
-            <label className={labelClass}>Food name</label>
-            <input
-              value={foodName ?? ""}
-              onChange={handleFoodNameChange}
-              placeholder="e.g. Chicken breast"
-              className={inputClass}
-            />
-            {errors.food && <p className={errorClass}>{errors.food.message}</p>}
-          </div>
-          <div>
-            <label className={labelClass}>Meal</label>
-            <select {...register("mealType")} className={selectClass}>
-              {MEAL_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t.charAt(0).toUpperCase() + t.slice(1)}
-                </option>
-              ))}
-            </select>
+        {/* Food name */}
+        <div>
+          <label className={labelClass}>Food name</label>
+          <input
+            value={foodName ?? ""}
+            onChange={handleFoodNameChange}
+            placeholder="e.g. Chicken breast"
+            className={inputClass}
+          />
+          {errors.food && <p className={errorClass}>{errors.food.message}</p>}
+        </div>
+
+        {/* Meal type — colored pills */}
+        <div>
+          <label className={labelClass}>Meal</label>
+          <div className="flex flex-wrap gap-2">
+            {MEAL_TYPES.map((t) => {
+              const styles = MEAL_TYPE_STYLES[t];
+              const isSelected = watch("mealType") === t;
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setValue("mealType", t, { shouldValidate: true })}
+                  className={`rounded-full border px-3.5 py-1 text-sm font-medium capitalize transition-colors ${
+                    isSelected ? styles.active : styles.inactive
+                  }`}
+                >
+                  {t}
+                </button>
+              );
+            })}
           </div>
         </div>
 
         {/* Macros row */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div>
-            <label className={labelClass}>Calories</label>
-            <input
-              {...register("calories", { valueAsNumber: true })}
-              type="number"
-              min={0}
-              placeholder="0"
-              className={inputClass}
-            />
-            {errors.calories && <p className={errorClass}>{errors.calories.message}</p>}
-          </div>
-          <div>
-            <label className={labelClass}>Protein (g)</label>
-            <input
-              {...register("protein", { valueAsNumber: true })}
-              type="number"
-              min={0}
-              placeholder="0"
-              className={inputClass}
-            />
-            {errors.protein && <p className={errorClass}>{errors.protein.message}</p>}
-          </div>
-          <div>
-            <label className={labelClass}>Carbs (g)</label>
-            <input
-              {...register("carbs", { valueAsNumber: true })}
-              type="number"
-              min={0}
-              placeholder="0"
-              className={inputClass}
-            />
-            {errors.carbs && <p className={errorClass}>{errors.carbs.message}</p>}
-          </div>
-          <div>
-            <label className={labelClass}>Fat (g)</label>
-            <input
-              {...register("fat", { valueAsNumber: true })}
-              type="number"
-              min={0}
-              placeholder="0"
-              className={inputClass}
-            />
-            {errors.fat && <p className={errorClass}>{errors.fat.message}</p>}
-          </div>
+          {(["calories", "protein", "carbs", "fat"] as const).map((field) => (
+            <div key={field}>
+              <label className={`${labelClass} ${MACRO_LABELS[field].color}`}>
+                {MACRO_LABELS[field].label}
+              </label>
+              <input
+                {...register(field, { valueAsNumber: true })}
+                type="number"
+                min={0}
+                placeholder="0"
+                className={inputClass}
+              />
+              {errors[field] && <p className={errorClass}>{errors[field]!.message}</p>}
+            </div>
+          ))}
         </div>
 
         {/* Advanced (serving + notes) — collapsible */}
