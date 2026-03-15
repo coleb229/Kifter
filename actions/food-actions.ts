@@ -162,3 +162,63 @@ export async function deleteCommunityFood(id: string): Promise<ActionResult> {
   }
   return { success: true, data: undefined };
 }
+
+// ── lookupBarcode ─────────────────────────────────────────────────────────────
+
+export async function lookupBarcode(
+  barcode: string
+): Promise<ActionResult<FoodSearchResult | null>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+
+  const clean = barcode.trim().replace(/\D/g, "");
+  if (!clean) return { success: false, error: "Invalid barcode" };
+
+  try {
+    const res = await fetch(
+      `https://world.openfoodfacts.org/api/v2/product/${clean}.json?fields=product_name,nutriments,serving_size,serving_quantity`,
+      { next: { revalidate: 3600 } }
+    );
+    if (!res.ok) return { success: true, data: null };
+
+    const json = await res.json() as {
+      status: number;
+      product?: {
+        product_name?: string;
+        serving_size?: string;
+        serving_quantity?: number;
+        nutriments?: {
+          "energy-kcal_100g"?: number;
+          "proteins_100g"?: number;
+          "carbohydrates_100g"?: number;
+          "fat_100g"?: number;
+        };
+      };
+    };
+
+    if (json.status !== 1 || !json.product) return { success: true, data: null };
+
+    const p = json.product;
+    const n = p.nutriments ?? {};
+    const serving = p.serving_quantity ?? 100;
+
+    // Normalize to per-serving values
+    const factor = serving / 100;
+    return {
+      success: true,
+      data: {
+        id: `barcode-${clean}`,
+        name: p.product_name ?? `Product ${clean}`,
+        calories: Math.round((n["energy-kcal_100g"] ?? 0) * factor),
+        protein: Math.round((n["proteins_100g"] ?? 0) * factor * 10) / 10,
+        carbs: Math.round((n["carbohydrates_100g"] ?? 0) * factor * 10) / 10,
+        fat: Math.round((n["fat_100g"] ?? 0) * factor * 10) / 10,
+        servingSize: serving,
+        servingUnit: "g",
+        source: "preset",
+      },
+    };
+  } catch {
+    return { success: false, error: "Failed to fetch barcode data" };
+  }
+}

@@ -9,6 +9,7 @@ import { X, ChevronDown, ChevronUp } from "lucide-react";
 import { addDietEntry, updateDietEntry } from "@/actions/diet-actions";
 import { submitCommunityFood } from "@/actions/food-actions";
 import { FoodSearch } from "@/components/diet/food-search";
+import { BarcodeScanner } from "@/components/diet/barcode-scanner";
 import { Button } from "@/components/ui/button";
 import { MEAL_TYPES } from "@/types";
 import { MEAL_TYPE_STYLES } from "@/lib/label-colors";
@@ -166,13 +167,18 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-        {/* Food search (only when adding, not editing) */}
+        {/* Food search + barcode scanner (only when adding, not editing) */}
         {!isEditing && (
-          <div>
+          <div className="flex flex-col gap-2">
             <label className={labelClass}>Search food library</label>
-            <FoodSearch onSelect={handleFoodSelect} />
-            <p className="mt-1 text-[11px] text-muted-foreground">
-              Select from library to auto-fill macros, or enter a custom food below.
+            <div className="flex items-start gap-2">
+              <div className="flex-1">
+                <FoodSearch onSelect={handleFoodSelect} />
+              </div>
+              <BarcodeScanner onSelect={handleFoodSelect} />
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Search the library, scan a barcode, or enter a custom food below.
             </p>
           </div>
         )}
