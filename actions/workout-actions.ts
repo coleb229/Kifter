@@ -8,10 +8,31 @@ import type { WeightUnit } from "@/lib/weight";
 import type {
   ActionResult,
   AddExerciseInput,
+  BodyTarget,
   CreateSessionInput,
   WorkoutSession,
   WorkoutSet,
 } from "@/types";
+
+// Recovery thresholds in hours per body target
+const RECOVERY_HOURS: Record<BodyTarget, number> = {
+  Push: 48,
+  Pull: 48,
+  Legs: 48,
+  "Upper Body": 48,
+  "Lower Body": 48,
+  "Full Body": 72,
+  Core: 24,
+  Cardio: 24,
+  Other: 24,
+};
+
+export interface RestDaySuggestion {
+  bodyTarget: BodyTarget;
+  lastTrainedDate: string | null; // ISO date or null
+  hoursSince: number | null;
+  recommendation: "rest" | "ready" | "never";
+}
 
 // ── createSession ─────────────────────────────────────────────────────────────
 
@@ -417,4 +438,47 @@ export async function getLastWeightForExercise(
     success: true,
     data: { weight: lastSet.weight, unit: lastSet.weightUnit ?? "lb" },
   };
+}
+
+// ── getRestDaySuggestions ──────────────────────────────────────────────────────
+
+export async function getRestDaySuggestions(): Promise<ActionResult<RestDaySuggestion[]>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+
+  const userId = session.user.id;
+  const sessionsCol = await getSessionsCollection();
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 30);
+
+  const docs = await sessionsCol
+    .find({ userId, date: { $gte: cutoff } })
+    .sort({ date: -1 })
+    .toArray();
+
+  // Find most recent session per body target
+  const lastByTarget = new Map<BodyTarget, Date>();
+  for (const doc of docs) {
+    if (!lastByTarget.has(doc.bodyTarget)) {
+      lastByTarget.set(doc.bodyTarget, doc.date);
+    }
+  }
+
+  const now = Date.now();
+  const suggestions: RestDaySuggestion[] = (Object.keys(RECOVERY_HOURS) as BodyTarget[]).map((target) => {
+    const lastDate = lastByTarget.get(target) ?? null;
+    if (!lastDate) {
+      return { bodyTarget: target, lastTrainedDate: null, hoursSince: null, recommendation: "never" };
+    }
+    const hoursSince = (now - lastDate.getTime()) / 3_600_000;
+    const threshold = RECOVERY_HOURS[target];
+    return {
+      bodyTarget: target,
+      lastTrainedDate: lastDate.toISOString(),
+      hoursSince: Math.round(hoursSince * 10) / 10,
+      recommendation: hoursSince >= threshold ? "ready" : "rest",
+    };
+  });
+
+  return { success: true, data: suggestions };
 }

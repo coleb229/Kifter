@@ -2,13 +2,18 @@ export const dynamic = 'force-dynamic';
 
 import Link from "next/link";
 import { Plus, BookOpen, ChevronRight } from "lucide-react";
-import { getWorkoutSessions } from "@/actions/workout-actions";
+import { getWorkoutSessions, getRestDaySuggestions } from "@/actions/workout-actions";
 import { SessionsView } from "@/components/training/sessions-view";
+import { RestDaySuggestions } from "@/components/training/rest-day-suggestions";
 import { Button } from "@/components/ui/button";
 
 export default async function TrainingPage() {
-  const result = await getWorkoutSessions();
+  const [result, suggestionsResult] = await Promise.all([
+    getWorkoutSessions(),
+    getRestDaySuggestions(),
+  ]);
   const sessions = result.success ? result.data : [];
+  const suggestions = suggestionsResult.success ? suggestionsResult.data : [];
 
   return (
     <div>
@@ -35,6 +40,8 @@ export default async function TrainingPage() {
           </Button>
         </div>
       </div>
+
+      {suggestions.length > 0 && <RestDaySuggestions suggestions={suggestions} />}
 
       {/* Guides promo card */}
       <Link
