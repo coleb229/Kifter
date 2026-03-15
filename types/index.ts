@@ -276,6 +276,86 @@ export interface SubmitCommunityFoodInput {
   servingUnit: string;
 }
 
+// ── Cardio ────────────────────────────────────────────────────────────────────
+
+export const CARDIO_ACTIVITIES = [
+  "Run",
+  "Cycle",
+  "Walk",
+  "Swim",
+  "Row",
+  "HIIT",
+  "Elliptical",
+  "Jump Rope",
+  "Stairs",
+  "Other",
+] as const;
+export type CardioActivity = (typeof CARDIO_ACTIVITIES)[number];
+
+export const CARDIO_INTENSITIES = ["easy", "moderate", "hard", "max"] as const;
+export type CardioIntensity = (typeof CARDIO_INTENSITIES)[number];
+
+export interface CardioSessionDoc {
+  _id: ObjectId;
+  userId: string;
+  date: Date;
+  activityType: CardioActivity;
+  duration: number; // minutes
+  distance?: number;
+  distanceUnit?: "km" | "mi";
+  intensity: CardioIntensity;
+  caloriesBurned?: number;
+  avgHeartRate?: number;
+  notes?: string;
+  createdAt: Date;
+}
+
+export interface CardioSession {
+  id: string;
+  userId: string;
+  date: string;
+  activityType: CardioActivity;
+  duration: number;
+  distance?: number;
+  distanceUnit?: "km" | "mi";
+  intensity: CardioIntensity;
+  caloriesBurned?: number;
+  avgHeartRate?: number;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface CreateCardioSessionInput {
+  date: string;
+  activityType: CardioActivity;
+  duration: number;
+  distance?: number;
+  distanceUnit?: "km" | "mi";
+  intensity: CardioIntensity;
+  caloriesBurned?: number;
+  avgHeartRate?: number;
+  notes?: string;
+}
+
+export interface UpdateCardioSessionInput {
+  date?: string;
+  activityType?: CardioActivity;
+  duration?: number;
+  distance?: number;
+  distanceUnit?: "km" | "mi";
+  intensity?: CardioIntensity;
+  caloriesBurned?: number;
+  avgHeartRate?: number;
+  notes?: string;
+}
+
+export interface CardioWeekSummary {
+  date: string; // "yyyy-MM-dd"
+  totalMinutes: number;
+  sessionCount: number;
+  totalDistance: number; // always in km for consistency
+}
+
 // ── AI Insights ──────────────────────────────────────────────────────────────
 
 export type InsightType = "progress" | "suggestion" | "warning" | "achievement";

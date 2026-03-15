@@ -1,25 +1,32 @@
 import Link from "next/link";
 import { format, subDays, parseISO } from "date-fns";
-import { Dumbbell, Flame, TrendingUp, Calendar, Plus, Utensils } from "lucide-react";
+import { Dumbbell, Flame, TrendingUp, Calendar, Plus, Utensils, Activity } from "lucide-react";
 import { getWorkoutSessions } from "@/actions/workout-actions";
 import { getDietEntries, getMacroTargets, getDietHistory } from "@/actions/diet-actions";
+import { getCardioHistory, getCardioSessions } from "@/actions/cardio-actions";
 import { TrainingWeekChart } from "@/components/dashboard/training-week-chart";
 import { MacroWeekChart } from "@/components/dashboard/macro-week-chart";
+import { CardioWeekChart } from "@/components/dashboard/cardio-week-chart";
 import { Button } from "@/components/ui/button";
 
 export async function UserOverview() {
   const today = format(new Date(), "yyyy-MM-dd");
-  const [sessionsResult, dietResult, targetsResult, historyResult] = await Promise.all([
-    getWorkoutSessions(30),
-    getDietEntries(today),
-    getMacroTargets(),
-    getDietHistory(7),
-  ]);
+  const [sessionsResult, dietResult, targetsResult, historyResult, cardioHistoryResult, cardioSessionsResult] =
+    await Promise.all([
+      getWorkoutSessions(30),
+      getDietEntries(today),
+      getMacroTargets(),
+      getDietHistory(7),
+      getCardioHistory(7),
+      getCardioSessions(30),
+    ]);
 
   const sessions = sessionsResult.success ? sessionsResult.data : [];
   const dietEntries = dietResult.success ? dietResult.data : [];
   const targets = targetsResult.success ? targetsResult.data : null;
   const dietHistory = historyResult.success ? historyResult.data : [];
+  const cardioHistory = cardioHistoryResult.success ? cardioHistoryResult.data : [];
+  const cardioSessions = cardioSessionsResult.success ? cardioSessionsResult.data : [];
 
   // Build last-7-days date keys
   const last7 = Array.from({ length: 7 }, (_, i) => format(subDays(new Date(), 6 - i), "yyyy-MM-dd"));
@@ -48,12 +55,19 @@ export async function UserOverview() {
     target: targets?.calories ?? 0,
   }));
 
+  // Cardio chart data
+  const cardioChartData = cardioHistory.map((d) => ({
+    day: format(parseISO(d.date), "EEE"),
+    minutes: d.totalMinutes,
+  }));
+
   // Stats
   const workoutsThisWeek = last7.reduce((sum, d) => sum + (sessionsByDay.get(d) ?? 0), 0);
   const todayKcal = dietEntries.reduce((s, e) => s + e.calories, 0);
   const todayProtein = dietEntries.reduce((s, e) => s + e.protein, 0);
+  const cardioThisWeek = cardioHistory.reduce((s, d) => s + d.sessionCount, 0);
 
-  // Streak: consecutive days with at least one session going back from today
+  // Streak: consecutive days with at least one workout session going back from today
   let streak = 0;
   for (let i = 0; i < 30; i++) {
     const key = format(subDays(new Date(), i), "yyyy-MM-dd");
@@ -63,7 +77,6 @@ export async function UserOverview() {
   }
 
   const recentSessions = sessions.slice(0, 3);
-
   const weekStart = format(subDays(new Date(), 6), "MMM d");
   const weekEnd = format(new Date(), "MMM d");
 
@@ -75,8 +88,8 @@ export async function UserOverview() {
         <p className="mt-1 text-sm text-muted-foreground">{weekStart} – {weekEnd}</p>
       </div>
 
-      {/* Stats row */}
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {/* Stats row — 5 cards */}
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
         {[
           {
             label: "Workouts",
@@ -85,6 +98,14 @@ export async function UserOverview() {
             icon: Dumbbell,
             color: "text-indigo-600 dark:text-indigo-400",
             bg: "bg-indigo-100 dark:bg-indigo-950/40",
+          },
+          {
+            label: "Cardio",
+            value: cardioThisWeek,
+            suffix: "this week",
+            icon: Activity,
+            color: "text-sky-600 dark:text-sky-400",
+            bg: "bg-sky-100 dark:bg-sky-950/40",
           },
           {
             label: "Kcal Today",
@@ -128,8 +149,29 @@ export async function UserOverview() {
         ))}
       </div>
 
-      {/* Charts */}
-      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 animate-fade-up" style={{ animationDelay: "240ms" }}>
+      {/* Diet — full width, prominent */}
+      <div
+        className="mb-4 rounded-xl border border-border bg-card p-5 animate-fade-up"
+        style={{ animationDelay: "300ms" }}
+      >
+        <div className="mb-1 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Utensils className="size-4 text-amber-500" />
+            <h3 className="text-sm font-semibold">Nutrition</h3>
+          </div>
+          <Link href="/diet" className="text-xs text-muted-foreground transition-colors hover:text-foreground">
+            View log
+          </Link>
+        </div>
+        <p className="mb-4 text-xs text-muted-foreground">Daily macros — last 7 days</p>
+        <MacroWeekChart data={macroChartData} height={220} />
+      </div>
+
+      {/* Training + Cardio side by side */}
+      <div
+        className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 animate-fade-up"
+        style={{ animationDelay: "380ms" }}
+      >
         <div className="rounded-xl border border-border bg-card p-5">
           <div className="mb-1 flex items-center gap-2">
             <Dumbbell className="size-4 text-indigo-500" />
@@ -140,16 +182,16 @@ export async function UserOverview() {
         </div>
         <div className="rounded-xl border border-border bg-card p-5">
           <div className="mb-1 flex items-center gap-2">
-            <Utensils className="size-4 text-amber-500" />
-            <h3 className="text-sm font-semibold">Nutrition</h3>
+            <Activity className="size-4 text-sky-500" />
+            <h3 className="text-sm font-semibold">Cardio</h3>
           </div>
-          <p className="mb-4 text-xs text-muted-foreground">Daily macros</p>
-          <MacroWeekChart data={macroChartData} />
+          <p className="mb-4 text-xs text-muted-foreground">Active minutes per day</p>
+          <CardioWeekChart data={cardioChartData} />
         </div>
       </div>
 
       {/* Recent workouts + Quick actions */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 animate-fade-up" style={{ animationDelay: "320ms" }}>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 animate-fade-up" style={{ animationDelay: "460ms" }}>
         {/* Recent sessions */}
         <div className="rounded-xl border border-border bg-card p-5">
           <div className="mb-3 flex items-center justify-between">
@@ -202,6 +244,15 @@ export async function UserOverview() {
             >
               <Plus className="size-4 text-indigo-500" />
               Log Workout
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="justify-start gap-2"
+              render={<Link href="/cardio/new" />}
+            >
+              <Activity className="size-4 text-sky-500" />
+              Log Cardio
             </Button>
             <Button
               variant="outline"

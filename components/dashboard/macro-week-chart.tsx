@@ -22,6 +22,7 @@ interface DayData {
 
 interface Props {
   data: DayData[];
+  height?: number;
 }
 
 interface TooltipEntry {
@@ -56,7 +57,7 @@ function CustomTooltip({
   );
 }
 
-export function MacroWeekChart({ data }: Props) {
+export function MacroWeekChart({ data, height = 160 }: Props) {
   const hasData = data.some((d) => d.calories > 0);
 
   if (!hasData) {
@@ -70,7 +71,7 @@ export function MacroWeekChart({ data }: Props) {
   const hasTarget = data.some((d) => d.target > 0);
 
   return (
-    <ResponsiveContainer width="100%" height={160}>
+    <ResponsiveContainer width="100%" height={height}>
       <ComposedChart data={data} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
         <XAxis

@@ -29,6 +29,9 @@ export function Navbar() {
               <a href="/training" className="transition-colors hover:text-foreground">
                 Training
               </a>
+              <a href="/cardio" className="transition-colors hover:text-foreground">
+                Cardio
+              </a>
               <a href="/diet" className="transition-colors hover:text-foreground">
                 Diet
               </a>
