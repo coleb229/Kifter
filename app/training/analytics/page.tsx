@@ -4,18 +4,21 @@ import {
   getExercisesWithHistory,
   getExerciseHistory,
 } from "@/actions/analytics-actions";
-import { getSessionDates } from "@/actions/workout-actions";
+import { getSessionDates, getDeloadRecommendation } from "@/actions/workout-actions";
 import { AnalyticsDashboard } from "@/components/training/analytics-dashboard";
 import { AIInsights } from "@/components/training/ai-insights";
 import { TrainingHeatmap } from "@/components/training/training-heatmap";
+import { DeloadRecommendation } from "@/components/training/deload-recommendation";
 
 export default async function AnalyticsPage() {
-  const [exercisesResult, sessionDatesResult] = await Promise.all([
+  const [exercisesResult, sessionDatesResult, deloadResult] = await Promise.all([
     getExercisesWithHistory(),
     getSessionDates(365),
+    getDeloadRecommendation(),
   ]);
   const exercises = exercisesResult.success ? exercisesResult.data : [];
   const sessionDates = sessionDatesResult.success ? sessionDatesResult.data : [];
+  const deloadData = deloadResult.success ? deloadResult.data : null;
 
   let initialData = null;
   if (exercises.length > 0) {
@@ -39,6 +42,8 @@ export default async function AnalyticsPage() {
           Track your progress over time
         </p>
       </div>
+
+      {deloadData && <DeloadRecommendation recommendation={deloadData} />}
 
       {/* Training frequency heatmap — shown regardless of exercise data */}
       {sessionDates.length > 0 && (

@@ -1,6 +1,7 @@
 "use server";
 
 import { ObjectId } from "mongodb";
+import { format } from "date-fns";
 import { auth } from "@/auth";
 import { getSessionsCollection, getSetsCollection, getExercisesCollection } from "@/lib/db";
 import { DEFAULT_EXERCISES } from "@/lib/exercises";
@@ -13,6 +14,10 @@ import type {
   WorkoutSession,
   WorkoutSet,
 } from "@/types";
+
+function toLb(weight: number, unit: WeightUnit): number {
+  return unit === "kg" ? weight * 2.20462 : weight;
+}
 
 // Recovery thresholds in hours per body target
 const RECOVERY_HOURS: Record<BodyTarget, number> = {
@@ -481,6 +486,116 @@ export async function getRestDaySuggestions(): Promise<ActionResult<RestDaySugge
   });
 
   return { success: true, data: suggestions };
+}
+
+// ── getDeloadRecommendation ────────────────────────────────────────────────────
+
+export interface DeloadRecommendation {
+  shouldDeload: boolean;
+  reason: string;
+  intensity: "low" | "moderate" | "high";
+  weeklyVolumes: { label: string; volume: number }[];
+}
+
+export async function getDeloadRecommendation(): Promise<ActionResult<DeloadRecommendation>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+
+  const userId = session.user.id;
+
+  // Compute Monday-aligned week start for the current week
+  function getWeekStart(d: Date): Date {
+    const day = d.getUTCDay(); // 0=Sun
+    const diff = day === 0 ? -6 : 1 - day;
+    const mon = new Date(d);
+    mon.setUTCDate(d.getUTCDate() + diff);
+    mon.setUTCHours(0, 0, 0, 0);
+    return mon;
+  }
+
+  const now = new Date();
+  const currentWeekStart = getWeekStart(now);
+
+  // Build boundaries for 6 complete weeks before the current week
+  const weeks: { start: Date; end: Date; label: string }[] = [];
+  for (let i = 6; i >= 1; i--) {
+    const start = new Date(currentWeekStart);
+    start.setUTCDate(currentWeekStart.getUTCDate() - i * 7);
+    const end = new Date(start);
+    end.setUTCDate(start.getUTCDate() + 7);
+    weeks.push({ start, end, label: `Wk of ${format(start, "MMM d")}` });
+  }
+
+  const sixWeeksAgo = weeks[0].start;
+
+  const setsCol = await getSetsCollection();
+  const allSets = await setsCol
+    .find({ userId, completed: true, createdAt: { $gte: sixWeeksAgo } })
+    .toArray();
+
+  // Bucket sets by completed week
+  const weeklyVolumes = weeks.map(({ start, end, label }) => {
+    const volume = allSets
+      .filter((s) => s.createdAt >= start && s.createdAt < end)
+      .reduce((sum, s) => sum + toLb(s.weight, s.weightUnit ?? "lb") * s.reps, 0);
+    return { label, volume: Math.round(volume) };
+  });
+
+  const currentWeekVolume = allSets
+    .filter((s) => s.createdAt >= currentWeekStart)
+    .reduce((sum, s) => sum + toLb(s.weight, s.weightUnit ?? "lb") * s.reps, 0);
+
+  const weeksWithData = weeklyVolumes.filter((w) => w.volume > 0).length;
+
+  if (weeksWithData < 3) {
+    return {
+      success: true,
+      data: {
+        shouldDeload: false,
+        reason: "Not enough training history yet",
+        intensity: "low",
+        weeklyVolumes,
+      },
+    };
+  }
+
+  const avg6 = weeklyVolumes.reduce((s, w) => s + w.volume, 0) / weeksWithData;
+
+  // Condition A: current week already 30%+ above average
+  if (currentWeekVolume > avg6 * 1.3) {
+    return {
+      success: true,
+      data: {
+        shouldDeload: true,
+        reason: "Current week is already 30%+ above your recent average — consider a lighter week",
+        intensity: "high",
+        weeklyVolumes,
+      },
+    };
+  }
+
+  // Condition B: 4+ consecutive complete weeks above average (most recent first)
+  let consecutive = 0;
+  for (let i = weeklyVolumes.length - 1; i >= 0; i--) {
+    if (weeklyVolumes[i].volume > avg6) consecutive++;
+    else break;
+  }
+  if (consecutive >= 4) {
+    return {
+      success: true,
+      data: {
+        shouldDeload: true,
+        reason: `${consecutive} consecutive high-volume weeks detected — your body will benefit from a recovery week`,
+        intensity: "moderate",
+        weeklyVolumes,
+      },
+    };
+  }
+
+  return {
+    success: true,
+    data: { shouldDeload: false, reason: "Volume looks balanced", intensity: "low", weeklyVolumes },
+  };
 }
 
 // ── getSessionDates ────────────────────────────────────────────────────────────
