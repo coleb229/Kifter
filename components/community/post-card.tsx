@@ -3,9 +3,10 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@base-ui/react/avatar";
-import { Trash2, Dumbbell, MessageCircle } from "lucide-react";
+import { Trash2, Dumbbell, MessageCircle, UserX } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { deletePost } from "@/actions/post-actions";
+import { blockUser } from "@/actions/block-actions";
 import type { Post, UserRole } from "@/types";
 
 interface Props {
@@ -51,8 +52,10 @@ export function PostCard({ post, currentUserId, currentUserRole, index }: Props)
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [confirming, setConfirming] = useState(false);
+  const [blockConfirming, setBlockConfirming] = useState(false);
 
   const canDelete = post.userId === currentUserId || currentUserRole === "admin";
+  const canBlock = post.userId !== currentUserId && currentUserRole !== "admin";
   const badge = roleBadge[post.authorRole];
   const chip = typeChip[post.type];
   const ChipIcon = chip.icon;
@@ -114,10 +117,49 @@ export function PostCard({ post, currentUserId, currentUserRole, index }: Props)
       {/* Content */}
       <p className="mt-4 text-sm leading-relaxed whitespace-pre-wrap">{post.content}</p>
 
-      {/* Delete control */}
-      {canDelete && (
-        <div className="absolute right-3 bottom-3 flex items-center gap-2">
-          {confirming ? (
+      {/* Actions */}
+      <div className="absolute right-3 bottom-3 flex items-center gap-2">
+        {/* Block user */}
+        {canBlock && (
+          blockConfirming ? (
+            <>
+              <span className="text-xs text-muted-foreground">Block user?</span>
+              <button
+                type="button"
+                onClick={() => {
+                  startTransition(async () => {
+                    await blockUser(post.userId);
+                    router.refresh();
+                  });
+                }}
+                disabled={isPending}
+                className="text-xs font-medium text-destructive transition-colors hover:underline"
+              >
+                {isPending ? "Blocking…" : "Yes"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setBlockConfirming(false)}
+                className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setBlockConfirming(true)}
+              aria-label="Block user"
+              className="rounded p-1 text-muted-foreground opacity-0 transition-all hover:text-destructive group-hover:opacity-100"
+            >
+              <UserX className="size-3.5" />
+            </button>
+          )
+        )}
+
+        {/* Delete post */}
+        {canDelete && !blockConfirming && (
+          confirming ? (
             <>
               <span className="text-xs text-muted-foreground">Delete?</span>
               <button
@@ -145,9 +187,9 @@ export function PostCard({ post, currentUserId, currentUserRole, index }: Props)
             >
               <Trash2 className="size-3.5" />
             </button>
-          )}
-        </div>
-      )}
+          )
+        )}
+      </div>
     </div>
   );
 }

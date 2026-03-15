@@ -2,7 +2,7 @@
 
 import { ObjectId } from "mongodb";
 import { auth } from "@/auth";
-import { getPostsCollection, getUsersCollection } from "@/lib/db";
+import { getPostsCollection, getUsersCollection, getUserBlocksCollection } from "@/lib/db";
 import type { ActionResult, Post, PostDoc } from "@/types";
 
 // ── Create post ───────────────────────────────────────────────────────────────
@@ -44,9 +44,17 @@ export async function getPosts(): Promise<ActionResult<Post[]>> {
   try {
     const postsCol = await getPostsCollection();
     const usersCol = await getUsersCollection();
+    const blocksCol = await getUserBlocksCollection();
+
+    const blockedIds = await blocksCol
+      .find({ blockerId: session.user.id }, { projection: { blockedId: 1 } })
+      .toArray()
+      .then((docs) => docs.map((d) => d.blockedId));
+
+    const query = blockedIds.length > 0 ? { userId: { $nin: blockedIds } } : {};
 
     const docs = await postsCol
-      .find({})
+      .find(query)
       .sort({ createdAt: 1 })
       .limit(100)
       .toArray();

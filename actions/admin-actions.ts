@@ -2,7 +2,7 @@
 
 import { ObjectId } from "mongodb";
 import { auth } from "@/auth";
-import { getUsersCollection } from "@/lib/db";
+import { getUsersCollection, getSessionsCollection, getSetsCollection, getDietEntriesCollection, getPostsCollection, getCardioSessionsCollection } from "@/lib/db";
 import type { ActionResult, UserRole, UserSummary } from "@/types";
 
 async function requireAdmin() {
@@ -29,6 +29,7 @@ export async function getAllUsers(): Promise<ActionResult<UserSummary[]>> {
       bio: u.bio,
       displayName: u.displayName,
       profileImage: u.profileImage,
+      restrictions: u.restrictions,
       bannedAt: u.bannedAt?.toISOString(),
       createdAt: u.createdAt?.toISOString(),
     }));
@@ -88,6 +89,53 @@ export async function toggleBan(userId: string): Promise<ActionResult> {
       );
     }
     return { success: true, data: undefined };
+  } catch (e) {
+    return { success: false, error: (e as Error).message };
+  }
+}
+
+// ── Set user restrictions ──────────────────────────────────────────────────────
+
+export async function setUserRestrictions(
+  userId: string,
+  restrictions: { training?: boolean; nutrition?: boolean; cardio?: boolean; community?: boolean }
+): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    const col = await getUsersCollection();
+    await col.updateOne(
+      { _id: new ObjectId(userId) },
+      { $set: { restrictions } }
+    );
+    return { success: true, data: undefined };
+  } catch (e) {
+    return { success: false, error: (e as Error).message };
+  }
+}
+
+// ── Get user data summary ──────────────────────────────────────────────────────
+
+export async function getUserData(userId: string): Promise<ActionResult<{
+  workoutSessions: number;
+  dietEntries: number;
+  cardioSessions: number;
+  posts: number;
+}>> {
+  try {
+    await requireAdmin();
+    const [sessionsCol, dietCol, cardioCol, postsCol] = await Promise.all([
+      getSessionsCollection(),
+      getDietEntriesCollection(),
+      getCardioSessionsCollection(),
+      getPostsCollection(),
+    ]);
+    const [workoutSessions, dietEntries, cardioSessions, posts] = await Promise.all([
+      sessionsCol.countDocuments({ userId }),
+      dietCol.countDocuments({ userId }),
+      cardioCol.countDocuments({ userId }),
+      postsCol.countDocuments({ userId }),
+    ]);
+    return { success: true, data: { workoutSessions, dietEntries, cardioSessions, posts } };
   } catch (e) {
     return { success: false, error: (e as Error).message };
   }

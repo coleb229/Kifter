@@ -1,14 +1,20 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/auth";
+import { getCurrentUser } from "@/actions/user-actions";
 import "./globals.css";
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
 
 export const metadata: Metadata = {
   title: "Kifted",
@@ -21,12 +27,25 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const session = await auth();
+  const userResult = session ? await getCurrentUser() : null;
+  const accentColor = userResult?.success ? userResult.data.preferences?.accentColor : undefined;
+  const theme = userResult?.success ? userResult.data.preferences?.theme : undefined;
 
   return (
-    <html lang="en" suppressHydrationWarning className="scroll-smooth">
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className="scroll-smooth"
+      {...(accentColor && accentColor !== "indigo" ? { "data-accent": accentColor } : {})}
+    >
       <body className={`${geistMono.variable} antialiased`}>
         <SessionProvider session={session}>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme={theme ?? "system"}
+            enableSystem
+            disableTransitionOnChange
+          >
             {children}
           </ThemeProvider>
         </SessionProvider>

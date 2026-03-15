@@ -120,8 +120,22 @@ export interface UserDoc {
   bio?: string;
   displayName?: string;
   profileImage?: string;
+  profileImages?: string[];
   preferences?: {
     defaultWeightUnit?: "lb" | "kg";
+    theme?: "light" | "dark" | "system";
+    accentColor?: "indigo" | "violet" | "rose" | "emerald" | "amber";
+    profileVisibility?: {
+      showTraining?: boolean;
+      showNutrition?: boolean;
+      showCardio?: boolean;
+    };
+  };
+  restrictions?: {
+    training?: boolean;
+    nutrition?: boolean;
+    cardio?: boolean;
+    community?: boolean;
   };
   bannedAt?: Date;
   createdAt?: Date;
@@ -138,11 +152,47 @@ export interface UserSummary {
   bio?: string;
   displayName?: string;
   profileImage?: string;
+  profileImages?: string[];
   preferences?: {
     defaultWeightUnit?: "lb" | "kg";
+    theme?: "light" | "dark" | "system";
+    accentColor?: "indigo" | "violet" | "rose" | "emerald" | "amber";
+    profileVisibility?: {
+      showTraining?: boolean;
+      showNutrition?: boolean;
+      showCardio?: boolean;
+    };
+  };
+  restrictions?: {
+    training?: boolean;
+    nutrition?: boolean;
+    cardio?: boolean;
+    community?: boolean;
   };
   bannedAt?: string;
   createdAt?: string;
+}
+
+// ── User block document ───────────────────────────────────────────────────────
+
+export interface UserBlockDoc {
+  _id: ObjectId;
+  blockerId: string;
+  blockedId: string;
+  createdAt: Date;
+}
+
+// ── Site settings document ────────────────────────────────────────────────────
+
+export interface SiteSettingsDoc {
+  _id: string; // "global"
+  maintenanceMode: boolean;
+  features: {
+    training: boolean;
+    nutrition: boolean;
+    cardio: boolean;
+    community: boolean;
+  };
 }
 
 // ── Post document ─────────────────────────────────────────────────────────────

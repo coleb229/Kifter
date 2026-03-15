@@ -21,9 +21,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           const col = await getUsersCollection();
           const u = await col.findOne(
             { _id: new ObjectId(token.sub) },
-            { projection: { role: 1 } }
+            { projection: { role: 1, profileImage: 1 } }
           );
           session.user.role = u?.role ?? "member";
+          if (u?.profileImage) session.user.image = u.profileImage;
         } catch {
           session.user.role = "member";
         }

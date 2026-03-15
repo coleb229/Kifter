@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@base-ui/react/avatar";
-import { updateProfile } from "@/actions/user-actions";
+import { updateProfile, addProfileImageToHistory } from "@/actions/user-actions";
 import { UploadButton } from "@/lib/uploadthing-client";
 import type { UserSummary } from "@/types";
 
@@ -62,7 +62,10 @@ export function ProfileForm({ user }: Props) {
           <UploadButton
             endpoint="profileImage"
             onClientUploadComplete={(res) => {
-              if (res[0]?.url) setProfileImage(res[0].url);
+              if (res[0]?.url) {
+                setProfileImage(res[0].url);
+                addProfileImageToHistory(res[0].url);
+              }
             }}
             onUploadError={(err) => setError(err.message)}
             appearance={{
@@ -75,6 +78,30 @@ export function ProfileForm({ user }: Props) {
           <p className="text-xs text-muted-foreground">JPG, PNG up to 4MB</p>
         </div>
       </div>
+
+      {/* Previous uploads gallery */}
+      {(user?.profileImages?.length ?? 0) > 1 && (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-xs font-medium text-muted-foreground">Previous photos</p>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {user!.profileImages!.map((url) => (
+              <button
+                key={url}
+                type="button"
+                onClick={() => setProfileImage(url)}
+                className={`relative size-12 shrink-0 overflow-hidden rounded-lg border-2 transition-all ${
+                  profileImage === url
+                    ? "border-ring"
+                    : "border-transparent opacity-60 hover:opacity-100"
+                }`}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={url} alt="Previous photo" className="size-full object-cover" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Display name */}
       <div className="flex flex-col gap-1.5">

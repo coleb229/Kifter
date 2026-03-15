@@ -171,6 +171,37 @@
   animation-delay: -9s;
 }
 
+/* ── Accent color overrides ────────────────────────────────────────────────── */
+/* Each data-accent value remaps --primary (and ring) to the chosen hue.        */
+/* Values use Tailwind CSS v4 oklch tokens where available; fallback to hex.    */
+
+[data-accent="violet"] {
+  --primary: oklch(0.606 0.25 293);
+  --primary-foreground: oklch(0.98 0 0);
+  --ring: oklch(0.606 0.25 293);
+}
+[data-accent="rose"] {
+  --primary: oklch(0.645 0.246 16);
+  --primary-foreground: oklch(0.98 0 0);
+  --ring: oklch(0.645 0.246 16);
+}
+[data-accent="emerald"] {
+  --primary: oklch(0.696 0.17 162);
+  --primary-foreground: oklch(0.15 0 0);
+  --ring: oklch(0.696 0.17 162);
+}
+[data-accent="amber"] {
+  --primary: oklch(0.769 0.188 70);
+  --primary-foreground: oklch(0.15 0 0);
+  --ring: oklch(0.769 0.188 70);
+}
+/* "indigo" is the default — no override needed */
+
+/* Prevent iOS Safari from zooming on input focus (font-size < 16px triggers zoom) */
+@media (max-width: 640px) {
+  input, textarea, select { font-size: 16px; }
+}
+
 @utility animate-mobile-breathe {
   animation: mobile-breathe 7s ease-in-out infinite;
 }
