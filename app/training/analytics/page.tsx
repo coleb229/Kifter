@@ -48,7 +48,7 @@ export default async function AnalyticsPage() {
             initialExercise={exercises[0]}
             initialData={initialData ?? []}
           />
-          {/*<AIInsights />*/}
+          <AIInsights />
         </>
       )}
     </div>
