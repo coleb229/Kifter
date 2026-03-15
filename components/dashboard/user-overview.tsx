@@ -5,6 +5,7 @@ import { getWorkoutSessions } from "@/actions/workout-actions";
 import { getDietEntries, getMacroTargets, getDietHistory } from "@/actions/diet-actions";
 import { getCardioHistory, getCardioSessions } from "@/actions/cardio-actions";
 import { TrainingWeekChart } from "@/components/dashboard/training-week-chart";
+import { BODY_TARGET_STYLES } from "@/lib/label-colors";
 import { MacroWeekChart } from "@/components/dashboard/macro-week-chart";
 import { CardioWeekChart } from "@/components/dashboard/cardio-week-chart";
 import { Button } from "@/components/ui/button";
@@ -223,7 +224,7 @@ export async function UserOverview() {
                       )}
                     </div>
                   </div>
-                  <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-medium shrink-0">
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0 ${BODY_TARGET_STYLES[s.bodyTarget].badge}`}>
                     {s.bodyTarget}
                   </span>
                 </Link>

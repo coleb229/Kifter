@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { Dumbbell, Trash2 } from "lucide-react";
 import { deleteSession } from "@/actions/workout-actions";
 import type { WorkoutSession } from "@/types";
+import { BODY_TARGET_STYLES } from "@/lib/label-colors";
 
 interface SessionCardProps {
   session: WorkoutSession;
@@ -50,7 +51,7 @@ export function SessionCard({ session, index }: SessionCardProps) {
             </p>
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1">
-            <span className="rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs font-medium">
+            <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${BODY_TARGET_STYLES[session.bodyTarget].badge}`}>
               {session.bodyTarget}
             </span>
             <span className="text-xs text-muted-foreground">

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { BODY_TARGETS } from "@/types";
 import { updateSession, deleteSession } from "@/actions/workout-actions";
 import type { WorkoutSession } from "@/types";
+import { BODY_TARGET_STYLES } from "@/lib/label-colors";
 
 const schema = z.object({
   name: z.string().optional(),
@@ -93,13 +94,24 @@ export function EditableSessionHeader({ session }: Props) {
               <p className="text-xs text-destructive">{form.formState.errors.date.message}</p>
             )}
           </div>
-          <div className="flex flex-col gap-1.5 sm:col-span-2">
+          <div className="flex flex-col gap-2 sm:col-span-2">
             <label className="text-sm font-medium">Body target</label>
-            <select {...form.register("bodyTarget")} className={inputClass}>
-              {BODY_TARGETS.map((t) => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
+            <div className="flex flex-wrap gap-2">
+              {BODY_TARGETS.map((t) => {
+                const colors = BODY_TARGET_STYLES[t].pill;
+                const isSelected = form.watch("bodyTarget") === t;
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => form.setValue("bodyTarget", t, { shouldValidate: true })}
+                    className={`rounded-full border px-3.5 py-1 text-sm font-medium transition-colors ${isSelected ? colors.active : colors.inactive}`}
+                  >
+                    {t}
+                  </button>
+                );
+              })}
+            </div>
           </div>
           <div className="flex flex-col gap-1.5 sm:col-span-2">
             <label className="text-sm font-medium">
@@ -137,7 +149,7 @@ export function EditableSessionHeader({ session }: Props) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium">
+          <span className={`rounded-full px-3 py-1 text-xs font-medium ${BODY_TARGET_STYLES[session.bodyTarget].badge}`}>
             {session.bodyTarget}
           </span>
           <button

@@ -11,6 +11,7 @@ import { submitCommunityFood } from "@/actions/food-actions";
 import { FoodSearch } from "@/components/diet/food-search";
 import { Button } from "@/components/ui/button";
 import { MEAL_TYPES } from "@/types";
+import { MEAL_TYPE_STYLES } from "@/lib/label-colors";
 import type { FoodSearchResult } from "@/actions/food-actions";
 import type { DietEntry, MealType } from "@/types";
 
@@ -40,12 +41,6 @@ const inputClass =
 const labelClass = "block text-xs font-medium text-muted-foreground mb-1";
 const errorClass = "mt-1 text-xs text-rose-500";
 
-const MEAL_TYPE_STYLES: Record<string, { active: string; inactive: string }> = {
-  breakfast: { active: "bg-amber-500 border-amber-500 text-white",   inactive: "border-amber-200 text-amber-600 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/40" },
-  lunch:     { active: "bg-emerald-500 border-emerald-500 text-white", inactive: "border-emerald-200 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/40" },
-  dinner:    { active: "bg-indigo-500 border-indigo-500 text-white",  inactive: "border-indigo-200 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-400 dark:hover:bg-indigo-950/40" },
-  snack:     { active: "bg-orange-500 border-orange-500 text-white",  inactive: "border-orange-200 text-orange-600 hover:bg-orange-50 dark:border-orange-800 dark:text-orange-400 dark:hover:bg-orange-950/40" },
-};
 
 const MACRO_LABELS: Record<string, { label: string; color: string }> = {
   calories: { label: "Calories",   color: "text-amber-600 dark:text-amber-400" },
@@ -199,7 +194,7 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
           <label className={labelClass}>Meal</label>
           <div className="flex flex-wrap gap-2">
             {MEAL_TYPES.map((t) => {
-              const styles = MEAL_TYPE_STYLES[t];
+              const styles = MEAL_TYPE_STYLES[t].pill;
               const isSelected = watch("mealType") === t;
               return (
                 <button

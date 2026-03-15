@@ -24,6 +24,7 @@ import { MacroTargetForm } from "@/components/diet/macro-target-form";
 import { DietHistoryChart } from "@/components/diet/diet-history-chart";
 import { Button } from "@/components/ui/button";
 import { MEAL_TYPES } from "@/types";
+import { MEAL_TYPE_STYLES } from "@/lib/label-colors";
 import type { DietDaySummary, DietEntry, MacroTarget, MealType } from "@/types";
 
 interface Props {
@@ -249,8 +250,8 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
                   {/* Meal header */}
                   <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
                     <div className="flex items-center gap-2">
-                      <Icon className="size-4 text-muted-foreground" />
-                      <span className="text-sm font-semibold">{label}</span>
+                      <Icon className={`size-4 ${MEAL_TYPE_STYLES[mealType].icon}`} />
+                      <span className={`text-sm font-semibold ${MEAL_TYPE_STYLES[mealType].header}`}>{label}</span>
                       {mealKcal > 0 && (
                         <span className="text-xs text-muted-foreground">{Math.round(mealKcal)} kcal</span>
                       )}
