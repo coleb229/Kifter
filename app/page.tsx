@@ -6,6 +6,7 @@ import { Navbar } from "@/components/navbar";
 import { Button } from "@/components/ui/button";
 import { signInWithGoogle } from "@/actions/auth-actions";
 import { UserOverview } from "@/components/dashboard/user-overview";
+import { ChangelogTimeline } from "@/components/landing/changelog-timeline";
 
 const features = [
   {
@@ -167,6 +168,9 @@ export default async function Home() {
             ))}
           </div>
         </section>
+
+        {/* Changelog */}
+        <ChangelogTimeline />
       </main>
 
       {/* Footer */}

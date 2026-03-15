@@ -157,7 +157,7 @@ export async function getWorkoutSession(
   const setsCol = await getSetsCollection();
   const setDocs = await setsCol
     .find({ sessionId: id })
-    .sort({ exercise: 1, setNumber: 1 })
+    .sort({ createdAt: 1, setNumber: 1 })
     .toArray();
 
   return {
