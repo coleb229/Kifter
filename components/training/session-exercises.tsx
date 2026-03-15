@@ -2,13 +2,14 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2, Check, X, Plus } from "lucide-react";
+import { Pencil, Trash2, Check, X, Plus, PlayCircle, Link2 } from "lucide-react";
 import {
   updateSet,
   deleteSet,
   renameExercise,
   deleteExerciseFromSession,
   addExerciseToSession,
+  setExerciseVideoUrl,
 } from "@/actions/workout-actions";
 import type { WorkoutSet } from "@/types";
 import type { WeightUnit } from "@/lib/weight";
@@ -49,9 +50,11 @@ const inputClass =
 function ExerciseGroupCard({
   sessionId,
   group,
+  videoUrl,
 }: {
   sessionId: string;
   group: ExerciseGroup;
+  videoUrl?: string;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -59,6 +62,16 @@ function ExerciseGroupCard({
   const [setStates, setSetStates] = useState<Record<string, SetEditState>>({});
   const lastSet = group.sets[group.sets.length - 1];
   const [addingSet, setAddingSet] = useState<{ weight: number; weightUnit: WeightUnit; reps: number } | null>(null);
+  const [editingVideo, setEditingVideo] = useState(false);
+  const [videoUrlInput, setVideoUrlInput] = useState(videoUrl ?? "");
+
+  function handleVideoSave() {
+    startTransition(async () => {
+      await setExerciseVideoUrl(group.name, videoUrlInput.trim());
+      setEditingVideo(false);
+      router.refresh();
+    });
+  }
 
   function getSetState(id: string): SetEditState {
     return setStates[id] ?? { type: "none" };
@@ -190,9 +203,59 @@ function ExerciseGroupCard({
               Cancel
             </button>
           </div>
+        ) : editingVideo ? (
+          <div className="flex flex-1 items-center gap-2">
+            <input
+              value={videoUrlInput}
+              onChange={(e) => setVideoUrlInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleVideoSave();
+                if (e.key === "Escape") setEditingVideo(false);
+              }}
+              placeholder="https://youtube.com/watch?v=..."
+              autoFocus
+              className={inputClass + " text-xs"}
+            />
+            <button
+              type="button"
+              onClick={handleVideoSave}
+              disabled={isPending}
+              className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+              aria-label="Save video URL"
+            >
+              <Check className="size-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditingVideo(false)}
+              className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+              aria-label="Cancel"
+            >
+              <X className="size-3.5" />
+            </button>
+          </div>
         ) : (
           <>
             <h3 className="flex-1 font-semibold">{group.name}</h3>
+            {videoUrl && (
+              <a
+                href={videoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`Watch ${group.name} demo`}
+                className="rounded p-1 text-red-500 transition-colors hover:text-red-600"
+              >
+                <PlayCircle className="size-3.5" />
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={() => { setVideoUrlInput(videoUrl ?? ""); setEditingVideo(true); }}
+              aria-label="Set video URL"
+              className="rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <Link2 className="size-3.5" />
+            </button>
             <button
               type="button"
               onClick={() =>
@@ -449,9 +512,10 @@ function ExerciseGroupCard({
 interface SessionExercisesProps {
   sessionId: string;
   sets: WorkoutSet[];
+  videoUrls?: Record<string, string>;
 }
 
-export function SessionExercises({ sessionId, sets }: SessionExercisesProps) {
+export function SessionExercises({ sessionId, sets, videoUrls = {} }: SessionExercisesProps) {
   const exercises = groupByExercise(sets);
 
   if (exercises.length === 0) return null;
@@ -462,7 +526,7 @@ export function SessionExercises({ sessionId, sets }: SessionExercisesProps) {
         Exercises
       </h2>
       {exercises.map((group) => (
-        <ExerciseGroupCard key={group.name} sessionId={sessionId} group={group} />
+        <ExerciseGroupCard key={group.name} sessionId={sessionId} group={group} videoUrl={videoUrls[group.name]} />
       ))}
     </div>
   );

@@ -46,6 +46,7 @@ export interface ExerciseDoc {
   _id: ObjectId;
   userId: string;
   name: string;
+  videoUrl?: string;
   createdAt: Date;
 }
 

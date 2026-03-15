@@ -488,6 +488,59 @@ export async function getRestDaySuggestions(): Promise<ActionResult<RestDaySugge
   return { success: true, data: suggestions };
 }
 
+// ── setExerciseVideoUrl ────────────────────────────────────────────────────────
+
+const YOUTUBE_REGEX = /^https:\/\/(www\.)?(youtube\.com\/watch|youtu\.be\/)/;
+
+export async function setExerciseVideoUrl(
+  exerciseName: string,
+  videoUrl: string
+): Promise<ActionResult> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+
+  const trimmed = videoUrl.trim();
+  if (trimmed && !YOUTUBE_REGEX.test(trimmed)) {
+    return { success: false, error: "Only YouTube URLs are supported" };
+  }
+
+  const exercisesCol = await getExercisesCollection();
+  if (trimmed) {
+    await exercisesCol.updateOne(
+      { userId: session.user.id, name: exerciseName },
+      { $set: { videoUrl: trimmed }, $setOnInsert: { _id: new ObjectId(), createdAt: new Date() } },
+      { upsert: true }
+    );
+  } else {
+    await exercisesCol.updateOne(
+      { userId: session.user.id, name: exerciseName },
+      { $unset: { videoUrl: "" } }
+    );
+  }
+
+  return { success: true, data: undefined };
+}
+
+// ── getExerciseVideos ──────────────────────────────────────────────────────────
+
+export async function getExerciseVideos(): Promise<ActionResult<Record<string, string>>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+
+  const exercisesCol = await getExercisesCollection();
+  const docs = await exercisesCol
+    .find({ userId: session.user.id, videoUrl: { $exists: true } })
+    .project<{ name: string; videoUrl: string }>({ name: 1, videoUrl: 1 })
+    .toArray();
+
+  const map: Record<string, string> = {};
+  for (const doc of docs) {
+    if (doc.videoUrl) map[doc.name] = doc.videoUrl;
+  }
+
+  return { success: true, data: map };
+}
+
 // ── getProgressiveOverloadSuggestions ─────────────────────────────────────────
 
 export interface ProgressiveOverloadSuggestion {
