@@ -513,6 +513,39 @@ export interface GoalAlert {
   progressPct: number;
 }
 
+// ── Workout Programs ─────────────────────────────────────────────────────────
+
+export interface ProgramExercise {
+  exercise: string;
+  sets: number;
+  reps: number;
+  weight?: number;
+  weightUnit?: WeightUnit;
+}
+
+export interface ProgramDay {
+  dayLabel: string;
+  bodyTarget: BodyTarget;
+  exercises: ProgramExercise[];
+}
+
+export interface WorkoutProgramDoc {
+  _id: ObjectId;
+  userId: string;
+  name: string;
+  description?: string;
+  days: ProgramDay[];
+  createdAt: Date;
+}
+
+export interface WorkoutProgram {
+  id: string;
+  name: string;
+  description?: string;
+  days: ProgramDay[];
+  createdAt: string;
+}
+
 // ── AI Insights ──────────────────────────────────────────────────────────────
 
 export type InsightType = "progress" | "suggestion" | "warning" | "achievement";

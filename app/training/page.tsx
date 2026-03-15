@@ -26,6 +26,9 @@ export default async function TrainingPage() {
           <Button size="sm" variant="outline" render={<Link href="/training/exercises" />}>
             Exercises
           </Button>
+          <Button size="sm" variant="outline" render={<Link href="/training/programs" />}>
+            Programs
+          </Button>
           <Button size="sm" render={<Link href="/training/new" />}>
             <Plus className="size-4" />
             Log Workout
