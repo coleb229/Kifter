@@ -1,14 +1,17 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { X } from "lucide-react";
+import { X, ChevronDown, ChevronUp } from "lucide-react";
 import { addDietEntry, updateDietEntry } from "@/actions/diet-actions";
+import { submitCommunityFood } from "@/actions/food-actions";
+import { FoodSearch } from "@/components/diet/food-search";
 import { Button } from "@/components/ui/button";
 import { MEAL_TYPES } from "@/types";
+import type { FoodSearchResult } from "@/actions/food-actions";
 import type { DietEntry, MealType } from "@/types";
 
 const schema = z.object({
@@ -18,6 +21,8 @@ const schema = z.object({
   protein: z.number().min(0).max(999),
   carbs: z.number().min(0).max(999),
   fat: z.number().min(0).max(999),
+  servingSize: z.number().min(0.1).max(9999),
+  servingUnit: z.string().min(1),
   notes: z.string().optional(),
 });
 
@@ -40,11 +45,16 @@ const errorClass = "mt-1 text-xs text-rose-500";
 export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry, onClose }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [saveToLibrary, setSaveToLibrary] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [selectedFromSearch, setSelectedFromSearch] = useState(false);
   const isEditing = !!editingEntry;
 
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -56,6 +66,8 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
           protein: editingEntry.protein,
           carbs: editingEntry.carbs,
           fat: editingEntry.fat,
+          servingSize: 1,
+          servingUnit: "serving",
           notes: editingEntry.notes ?? "",
         }
       : {
@@ -64,16 +76,69 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
           protein: 0,
           carbs: 0,
           fat: 0,
+          servingSize: 1,
+          servingUnit: "serving",
         },
   });
+
+  const foodName = watch("food");
+
+  function handleFoodSelect(food: FoodSearchResult) {
+    setValue("food", food.name, { shouldValidate: true });
+    setValue("calories", food.calories);
+    setValue("protein", food.protein);
+    setValue("carbs", food.carbs);
+    setValue("fat", food.fat);
+    setValue("servingSize", food.servingSize);
+    setValue("servingUnit", food.servingUnit);
+    setSelectedFromSearch(true);
+    setSaveToLibrary(false); // already in library
+  }
+
+  // When user manually types a food name (not from search), offer save-to-library
+  function handleFoodNameChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setSelectedFromSearch(false);
+    setValue("food", e.target.value, { shouldValidate: true });
+  }
 
   function onSubmit(data: FormData) {
     startTransition(async () => {
       if (isEditing && editingEntry) {
-        await updateDietEntry(editingEntry.id, data);
+        await updateDietEntry(editingEntry.id, {
+          mealType: data.mealType,
+          food: data.food,
+          calories: data.calories,
+          protein: data.protein,
+          carbs: data.carbs,
+          fat: data.fat,
+          notes: data.notes,
+        });
       } else {
-        await addDietEntry({ ...data, date });
+        await addDietEntry({
+          date,
+          mealType: data.mealType,
+          food: data.food,
+          calories: data.calories,
+          protein: data.protein,
+          carbs: data.carbs,
+          fat: data.fat,
+          notes: data.notes,
+        });
+
+        // Optionally save to community food library
+        if (saveToLibrary) {
+          await submitCommunityFood({
+            name: data.food,
+            calories: data.calories,
+            protein: data.protein,
+            carbs: data.carbs,
+            fat: data.fat,
+            servingSize: data.servingSize,
+            servingUnit: data.servingUnit,
+          });
+        }
       }
+
       router.refresh();
       onClose();
     });
@@ -81,6 +146,7 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
 
   return (
     <div className="rounded-xl border border-border bg-card p-4 animate-fade-up">
+      {/* Header */}
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-sm font-semibold">{isEditing ? "Edit Food" : "Add Food"}</h3>
         <button
@@ -93,15 +159,26 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+        {/* Food search (only when adding, not editing) */}
+        {!isEditing && (
+          <div>
+            <label className={labelClass}>Search food library</label>
+            <FoodSearch onSelect={handleFoodSelect} />
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Select from library to auto-fill macros, or enter a custom food below.
+            </p>
+          </div>
+        )}
+
         {/* Food name + meal type */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className={labelClass}>Food name</label>
             <input
-              {...register("food")}
+              value={foodName ?? ""}
+              onChange={handleFoodNameChange}
               placeholder="e.g. Chicken breast"
               className={inputClass}
-              autoFocus
             />
             {errors.food && <p className={errorClass}>{errors.food.message}</p>}
           </div>
@@ -165,15 +242,65 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
           </div>
         </div>
 
-        {/* Notes */}
-        <div>
-          <label className={labelClass}>Notes (optional)</label>
-          <input
-            {...register("notes")}
-            placeholder="e.g. 200g cooked"
-            className={inputClass}
-          />
-        </div>
+        {/* Advanced (serving + notes) — collapsible */}
+        <button
+          type="button"
+          onClick={() => setShowAdvanced((v) => !v)}
+          className="flex items-center gap-1 self-start text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
+          {showAdvanced ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+          {showAdvanced ? "Hide" : "Serving size & notes"}
+        </button>
+
+        {showAdvanced && (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div>
+              <label className={labelClass}>Serving size</label>
+              <input
+                {...register("servingSize", { valueAsNumber: true })}
+                type="number"
+                min={0.1}
+                step={0.1}
+                placeholder="1"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Unit</label>
+              <input
+                {...register("servingUnit")}
+                placeholder="g / oz / cup / piece"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Notes (optional)</label>
+              <input
+                {...register("notes")}
+                placeholder="e.g. 200g cooked"
+                className={inputClass}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Save to community library (only for new, manually-entered foods) */}
+        {!isEditing && !selectedFromSearch && (
+          <label className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-border bg-muted/30 px-3 py-2.5 transition-colors hover:bg-muted/50">
+            <input
+              type="checkbox"
+              checked={saveToLibrary}
+              onChange={(e) => setSaveToLibrary(e.target.checked)}
+              className="size-3.5 accent-emerald-500"
+            />
+            <div>
+              <p className="text-xs font-medium">Save to community food library</p>
+              <p className="text-[10px] text-muted-foreground">
+                Share this food with all Kifted users so they can find it too.
+              </p>
+            </div>
+          </label>
+        )}
 
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" size="sm" onClick={onClose}>

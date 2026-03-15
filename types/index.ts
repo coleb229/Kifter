@@ -238,6 +238,44 @@ export interface DietDaySummary {
   entryCount: number;
 }
 
+// ── Community Foods ───────────────────────────────────────────────────────────
+
+export interface CommunityFoodDoc {
+  _id: ObjectId;
+  submittedBy: string;   // userId
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  servingSize: number;
+  servingUnit: string;
+  createdAt: Date;
+}
+
+export interface CommunityFood {
+  id: string;
+  submittedBy: string;
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  servingSize: number;
+  servingUnit: string;
+  createdAt: string;
+}
+
+export interface SubmitCommunityFoodInput {
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  servingSize: number;
+  servingUnit: string;
+}
+
 // ── AI Insights ──────────────────────────────────────────────────────────────
 
 export type InsightType = "progress" | "suggestion" | "warning" | "achievement";
