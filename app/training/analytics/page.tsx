@@ -5,6 +5,7 @@ import {
   getExerciseHistory,
 } from "@/actions/analytics-actions";
 import { AnalyticsDashboard } from "@/components/training/analytics-dashboard";
+import { AIInsights } from "@/components/training/ai-insights";
 
 export default async function AnalyticsPage() {
   const exercisesResult = await getExercisesWithHistory();
@@ -41,11 +42,14 @@ export default async function AnalyticsPage() {
           </p>
         </div>
       ) : (
-        <AnalyticsDashboard
-          exercises={exercises}
-          initialExercise={exercises[0]}
-          initialData={initialData ?? []}
-        />
+        <>
+          <AnalyticsDashboard
+            exercises={exercises}
+            initialExercise={exercises[0]}
+            initialData={initialData ?? []}
+          />
+          {/*<AIInsights />*/}
+        </>
       )}
     </div>
   );

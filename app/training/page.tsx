@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, BookOpen, ChevronRight } from "lucide-react";
 import { getWorkoutSessions } from "@/actions/workout-actions";
-import { SessionCard } from "@/components/training/session-card";
+import { SessionsView } from "@/components/training/sessions-view";
 import { Button } from "@/components/ui/button";
 
 export default async function TrainingPage() {
@@ -14,7 +14,7 @@ export default async function TrainingPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Training</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Your recent workout sessions
+            {sessions.length} workout{sessions.length !== 1 ? "s" : ""} logged
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -31,6 +31,24 @@ export default async function TrainingPage() {
         </div>
       </div>
 
+      {/* Guides promo card */}
+      <Link
+        href="/training/guides"
+        className="group mb-6 flex items-center gap-4 overflow-hidden rounded-xl border border-border bg-card p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md animate-fade-up"
+        style={{ animationDelay: "100ms" }}
+      >
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-indigo-500 to-violet-600">
+          <BookOpen className="size-5 text-white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold">Guides & Resources</p>
+          <p className="text-xs text-muted-foreground">
+            36 guides on technique, programming, nutrition, and recovery
+          </p>
+        </div>
+        <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5" />
+      </Link>
+
       {sessions.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border p-12 text-center">
           <p className="text-sm text-muted-foreground">No workouts logged yet.</p>
@@ -44,11 +62,7 @@ export default async function TrainingPage() {
           </Button>
         </div>
       ) : (
-        <div className="flex flex-col gap-4">
-          {sessions.map((session, i) => (
-            <SessionCard key={session.id} session={session} index={i} />
-          ))}
-        </div>
+        <SessionsView sessions={sessions} />
       )}
     </div>
   );

@@ -1,6 +1,7 @@
 import { ShieldCheck } from "lucide-react";
 import { getAllUsers } from "@/actions/admin-actions";
 import { UserTable } from "@/components/admin/user-table";
+import { AISiteInsights } from "@/components/admin/ai-site-insights";
 import { auth } from "@/auth";
 
 export default async function AdminPage() {
@@ -27,7 +28,12 @@ export default async function AdminPage() {
           Failed to load users: {result.error}
         </div>
       ) : (
-        <UserTable users={users} currentUserId={session!.user.id} />
+        <>
+          <UserTable users={users} currentUserId={session!.user.id} />
+          <div className="mt-8">
+            <AISiteInsights />
+          </div>
+        </>
       )}
     </div>
   );

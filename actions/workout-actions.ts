@@ -92,7 +92,7 @@ export async function addExerciseToSession(
 // ── getWorkoutSessions ────────────────────────────────────────────────────────
 
 export async function getWorkoutSessions(
-  limit = 20
+  limit = 0
 ): Promise<ActionResult<WorkoutSession[]>> {
   const session = await auth();
   if (!session?.user?.id) {
@@ -103,11 +103,9 @@ export async function getWorkoutSessions(
   const sessionsCol = await getSessionsCollection();
   const setsCol = await getSetsCollection();
 
-  const docs = await sessionsCol
-    .find({ userId })
-    .sort({ createdAt: -1 })
-    .limit(limit)
-    .toArray();
+  const query = sessionsCol.find({ userId }).sort({ date: -1 });
+  if (limit > 0) query.limit(limit);
+  const docs = await query.toArray();
 
   const sessions = await Promise.all(
     docs.map(async (doc) => {

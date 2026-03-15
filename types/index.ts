@@ -155,6 +155,16 @@ export interface PostDoc {
   createdAt: Date;
 }
 
+// ── AI Insights ──────────────────────────────────────────────────────────────
+
+export type InsightType = "progress" | "suggestion" | "warning" | "achievement";
+
+export interface AIInsight {
+  type: InsightType;
+  title: string;
+  body: string;
+}
+
 // ── Serialized post (author joined) ──────────────────────────────────────────
 
 export interface Post {
