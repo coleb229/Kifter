@@ -3,7 +3,8 @@ import { Plus, Users } from "lucide-react";
 import { auth } from "@/auth";
 import { getPosts } from "@/actions/post-actions";
 import { Button } from "@/components/ui/button";
-import { PostCard } from "@/components/community/post-card";
+import { PostFeed } from "@/components/community/post-feed";
+
 
 export default async function CommunityPage() {
   const session = await auth();
@@ -30,31 +31,11 @@ export default async function CommunityPage() {
         </Button>
       </div>
 
-      {posts.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border p-12 text-center">
-          <p className="text-sm text-muted-foreground">No posts yet. Be the first!</p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-4"
-            render={<Link href="/community/new" />}
-          >
-            Create a post
-          </Button>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {posts.map((post, i) => (
-            <PostCard
-              key={post.id}
-              post={post}
-              currentUserId={session!.user.id}
-              currentUserRole={session!.user.role}
-              index={i}
-            />
-          ))}
-        </div>
-      )}
+      <PostFeed
+        posts={posts}
+        currentUserId={session!.user.id}
+        currentUserRole={session!.user.role}
+      />
     </div>
   );
 }
