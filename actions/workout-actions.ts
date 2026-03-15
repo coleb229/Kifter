@@ -408,7 +408,7 @@ export async function getLastWeightForExercise(
   const setsCol = await getSetsCollection();
   const lastSet = await setsCol.findOne(
     { userId: session.user.id, exercise: exerciseName },
-    { sort: { createdAt: -1 } }
+    { sort: { weight: -1 } }
   );
 
   if (!lastSet) return { success: true, data: null };
