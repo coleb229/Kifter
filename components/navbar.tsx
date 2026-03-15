@@ -35,6 +35,12 @@ export function Navbar() {
               <a href="/diet" className="transition-colors hover:text-foreground">
                 Diet
               </a>
+              <a href="/body" className="transition-colors hover:text-foreground">
+                Body
+              </a>
+              <a href="/goals" className="transition-colors hover:text-foreground">
+                Goals
+              </a>
               <a href="/training/guides" className="transition-colors hover:text-foreground">
                 Guides
               </a>

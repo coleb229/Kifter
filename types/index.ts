@@ -406,6 +406,94 @@ export interface CardioWeekSummary {
   totalDistance: number; // always in km for consistency
 }
 
+// ── Body weight ───────────────────────────────────────────────────────────────
+
+export interface BodyWeightDoc {
+  _id: ObjectId;
+  userId: string;
+  date: string; // "YYYY-MM-DD"
+  weight: number;
+  weightUnit: WeightUnit;
+  notes?: string;
+  createdAt: Date;
+}
+
+export interface BodyWeightEntry {
+  id: string;
+  date: string;
+  weight: number;
+  weightUnit: WeightUnit;
+  notes?: string;
+  createdAt: string;
+}
+
+// ── Meal templates ────────────────────────────────────────────────────────────
+
+export interface MealTemplateItem {
+  food: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  mealType: MealType;
+}
+
+export interface MealTemplateDoc {
+  _id: ObjectId;
+  userId: string;
+  name: string;
+  items: MealTemplateItem[];
+  createdAt: Date;
+}
+
+export interface MealTemplate {
+  id: string;
+  name: string;
+  items: MealTemplateItem[];
+  createdAt: string;
+}
+
+// ── Goals ─────────────────────────────────────────────────────────────────────
+
+export type GoalType = "body_weight" | "workout_count" | "cardio_distance" | "exercise_1rm";
+export type GoalStatus = "active" | "achieved" | "cancelled";
+
+export interface GoalDoc {
+  _id: ObjectId;
+  userId: string;
+  type: GoalType;
+  title: string;
+  targetValue: number;
+  unit: string;
+  exerciseName?: string; // for exercise_1rm goals
+  currentValue?: number;
+  status: GoalStatus;
+  targetDate?: string;
+  achievedAt?: Date;
+  createdAt: Date;
+}
+
+export interface Goal {
+  id: string;
+  type: GoalType;
+  title: string;
+  targetValue: number;
+  unit: string;
+  exerciseName?: string;
+  currentValue?: number;
+  status: GoalStatus;
+  targetDate?: string;
+  achievedAt?: string;
+  createdAt: string;
+}
+
+export interface GoalAlert {
+  goalId: string;
+  title: string;
+  type: "approaching" | "achieved";
+  progressPct: number;
+}
+
 // ── AI Insights ──────────────────────────────────────────────────────────────
 
 export type InsightType = "progress" | "suggestion" | "warning" | "achievement";

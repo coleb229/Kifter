@@ -16,8 +16,12 @@ import {
   Sun,
   Sunset,
   Cookie,
+  BookTemplate,
+  X,
+  Save,
 } from "lucide-react";
 import { deleteDietEntry, getDietEntries, getDietHistory } from "@/actions/diet-actions";
+import { getMealTemplates, createMealTemplate, deleteMealTemplate, applyMealTemplate } from "@/actions/meal-template-actions";
 import { MacroRings } from "@/components/diet/macro-rings";
 import { AddFoodForm } from "@/components/diet/add-food-form";
 import { MacroTargetForm } from "@/components/diet/macro-target-form";
@@ -25,7 +29,7 @@ import { DietHistoryChart } from "@/components/diet/diet-history-chart";
 import { Button } from "@/components/ui/button";
 import { MEAL_TYPES } from "@/types";
 import { MEAL_TYPE_STYLES } from "@/lib/label-colors";
-import type { DietDaySummary, DietEntry, MacroTarget, MealType } from "@/types";
+import type { DietDaySummary, DietEntry, MacroTarget, MealTemplate, MealType } from "@/types";
 
 interface Props {
   initialEntries: DietEntry[];
@@ -52,8 +56,12 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
   const [addMealType, setAddMealType] = useState<MealType>("breakfast");
   const [editingEntry, setEditingEntry] = useState<DietEntry | undefined>(undefined);
   const [showTargetForm, setShowTargetForm] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [templates, setTemplates] = useState<MealTemplate[]>([]);
+  const [templateName, setTemplateName] = useState("");
   const [isDateLoading, startDateTransition] = useTransition();
   const [, startDeleteTransition] = useTransition();
+  const [isPendingTemplate, startTemplateTransition] = useTransition();
 
   const today = format(new Date(), "yyyy-MM-dd");
   const isToday = selectedDate === today;
@@ -135,6 +143,49 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
     setEditingEntry(entry);
   }
 
+  async function openTemplates() {
+    const result = await getMealTemplates();
+    if (result.success) setTemplates(result.data);
+    setShowTemplates(true);
+  }
+
+  function handleApplyTemplate(id: string) {
+    startTemplateTransition(async () => {
+      await applyMealTemplate(id, selectedDate);
+      const result = await getDietEntries(selectedDate);
+      if (result.success) setEntries(result.data);
+      setShowTemplates(false);
+    });
+  }
+
+  function handleDeleteTemplate(id: string) {
+    startTemplateTransition(async () => {
+      await deleteMealTemplate(id);
+      const result = await getMealTemplates();
+      if (result.success) setTemplates(result.data);
+    });
+  }
+
+  function handleSaveAsTemplate() {
+    if (!templateName.trim() || !entries.length) return;
+    startTemplateTransition(async () => {
+      await createMealTemplate(
+        templateName.trim(),
+        entries.map((e) => ({
+          food: e.food,
+          calories: e.calories,
+          protein: e.protein,
+          carbs: e.carbs,
+          fat: e.fat,
+          mealType: e.mealType,
+        }))
+      );
+      setTemplateName("");
+      const result = await getMealTemplates();
+      if (result.success) setTemplates(result.data);
+    });
+  }
+
   return (
     <div className="flex flex-col gap-5">
       {/* View toggle */}
@@ -210,17 +261,76 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
             />
           </div>
 
-          {/* Add food button */}
-          <div className="animate-fade-up" style={{ animationDelay: "100ms" }}>
-            <Button
-              size="sm"
-              onClick={() => openAddForm("breakfast")}
-              className="gap-1.5"
-            >
+          {/* Add food + Templates buttons */}
+          <div className="flex items-center gap-2 animate-fade-up" style={{ animationDelay: "100ms" }}>
+            <Button size="sm" onClick={() => openAddForm("breakfast")} className="gap-1.5">
               <Plus className="size-3.5" />
               Add Food
             </Button>
+            <Button size="sm" variant="outline" onClick={openTemplates} className="gap-1.5">
+              <BookTemplate className="size-3.5" />
+              Templates
+            </Button>
           </div>
+
+          {/* Templates overlay */}
+          {showTemplates && (
+            <>
+              <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setShowTemplates(false)} />
+              <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-sm flex-col bg-background shadow-xl">
+                <div className="flex items-center justify-between border-b border-border px-5 py-4">
+                  <p className="font-semibold">Meal Templates</p>
+                  <button type="button" onClick={() => setShowTemplates(false)} className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
+                    <X className="size-4" />
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-5">
+                  {/* Saved templates */}
+                  {templates.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No templates saved yet.</p>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      {templates.map((t) => {
+                        const totalKcal = t.items.reduce((s, i) => s + i.calories, 0);
+                        return (
+                          <div key={t.id} className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3">
+                            <div>
+                              <p className="text-sm font-medium">{t.name}</p>
+                              <p className="text-xs text-muted-foreground">{t.items.length} item{t.items.length !== 1 ? "s" : ""} · {Math.round(totalKcal)} kcal</p>
+                            </div>
+                            <div className="flex gap-2">
+                              <button type="button" onClick={() => handleApplyTemplate(t.id)} disabled={isPendingTemplate} className="rounded-lg bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:brightness-110 disabled:opacity-50">Apply</button>
+                              <button type="button" onClick={() => handleDeleteTemplate(t.id)} disabled={isPendingTemplate} className="rounded-lg border border-border p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"><Trash2 className="size-3.5" /></button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Save today as template */}
+                  {entries.length > 0 && (
+                    <div className="border-t border-border pt-4">
+                      <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">Save today as template</p>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Template name"
+                          value={templateName}
+                          onChange={(e) => setTemplateName(e.target.value)}
+                          className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
+                        />
+                        <button type="button" onClick={handleSaveAsTemplate} disabled={isPendingTemplate || !templateName.trim()} className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:brightness-110 disabled:opacity-50">
+                          <Save className="size-3.5" />
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Add / Edit form */}
           {(showAddForm || editingEntry) && (

@@ -5,11 +5,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Navbar } from "@/components/navbar";
-import { User, Sliders } from "lucide-react";
+import { User, Sliders, Database } from "lucide-react";
 
 const tabs = [
   { href: "/settings/profile", label: "Profile", icon: User },
   { href: "/settings/preferences", label: "Preferences", icon: Sliders },
+  { href: "/settings/data", label: "Data", icon: Database },
 ];
 
 export default function SettingsLayout({

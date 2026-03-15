@@ -13,10 +13,11 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  ReferenceDot,
 } from "recharts";
 import type { SessionDataPoint } from "@/actions/analytics-actions";
 
-type ChartMode = "weight" | "volume" | "reps";
+type ChartMode = "weight" | "volume" | "reps" | "1rm";
 
 interface Props {
   data: SessionDataPoint[];
@@ -58,6 +59,10 @@ function CustomTooltip({
     displayValue = value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value.toString();
     unit = "lb";
     subtitle = `${point.totalReps} total reps`;
+  } else if (mode === "1rm") {
+    displayValue = value.toString();
+    unit = "lb est.";
+    subtitle = `${point.setCount} set${point.setCount !== 1 ? "s" : ""}`;
   } else {
     displayValue = value.toString();
     unit = "reps";
@@ -100,6 +105,12 @@ const MODES: { id: ChartMode; label: string; color: string; activeClass: string 
     color: "#f59e0b",
     activeClass: "bg-amber-500 text-white shadow",
   },
+  {
+    id: "1rm",
+    label: "1RM Est.",
+    color: "#e879f9",
+    activeClass: "bg-fuchsia-500 text-white shadow",
+  },
 ];
 
 // ── Skeleton ───────────────────────────────────────────────────────────────────
@@ -125,16 +136,22 @@ export function AnalyticsChart({ data, isPending }: Props) {
   const activeMode = MODES.find((m) => m.id === mode)!;
 
   const yDataKey =
-    mode === "weight"
-      ? "maxWeightLb"
-      : mode === "volume"
-      ? "totalVolumeLb"
-      : "totalReps";
+    mode === "weight" ? "maxWeightLb"
+    : mode === "volume" ? "totalVolumeLb"
+    : mode === "1rm" ? "estimated1RM"
+    : "totalReps";
 
-  const yLabel = mode === "weight" ? "lb" : mode === "volume" ? "lb" : "reps";
+  const yLabel = mode === "volume" ? "lb" : mode === "reps" ? "reps" : "lb";
 
   const tickFormatter = (v: number) =>
     mode === "volume" && v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v);
+
+  // PR point — highest value across all data
+  const prPoint = data.reduce<SessionDataPoint | null>((best, p) => {
+    const val = mode === "weight" ? p.maxWeightLb : mode === "volume" ? p.totalVolumeLb : mode === "1rm" ? p.estimated1RM : p.totalReps;
+    const bestVal = best ? (mode === "weight" ? best.maxWeightLb : mode === "volume" ? best.totalVolumeLb : mode === "1rm" ? best.estimated1RM : best.totalReps) : -Infinity;
+    return val > bestVal ? p : best;
+  }, null);
 
   return (
     <div className="rounded-xl border border-border bg-card p-5">
@@ -164,7 +181,7 @@ export function AnalyticsChart({ data, isPending }: Props) {
             ? "No data for this exercise."
             : "Log at least 2 sessions to see a trend."}
         </div>
-      ) : mode === "weight" ? (
+      ) : mode === "weight" || mode === "1rm" ? (
         <ResponsiveContainer width="100%" height={300}>
           <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
             <defs>
@@ -172,14 +189,13 @@ export function AnalyticsChart({ data, isPending }: Props) {
                 <stop offset="5%" stopColor="#818cf8" stopOpacity={0.45} />
                 <stop offset="95%" stopColor="#818cf8" stopOpacity={0.04} />
               </linearGradient>
+              <linearGradient id="irmGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#e879f9" stopOpacity={0.45} />
+                <stop offset="95%" stopColor="#e879f9" stopOpacity={0.04} />
+              </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#888" strokeOpacity={0.15} vertical={false} />
-            <XAxis
-              dataKey="date"
-              tick={{ fontSize: 12, fill: "#888" }}
-              axisLine={false}
-              tickLine={false}
-            />
+            <XAxis dataKey="date" tick={{ fontSize: 12, fill: "#888" }} axisLine={false} tickLine={false} />
             <YAxis
               tick={{ fontSize: 12, fill: "#888" }}
               axisLine={false}
@@ -192,12 +208,23 @@ export function AnalyticsChart({ data, isPending }: Props) {
             <Area
               type="monotone"
               dataKey={yDataKey}
-              stroke="#818cf8"
+              stroke={mode === "1rm" ? "#e879f9" : "#818cf8"}
               strokeWidth={3}
-              fill="url(#weightGradient)"
-              dot={{ fill: "#818cf8", r: 4, strokeWidth: 2, stroke: "#fff" }}
-              activeDot={{ fill: "#818cf8", r: 6, strokeWidth: 2, stroke: "#fff" }}
+              fill={mode === "1rm" ? "url(#irmGradient)" : "url(#weightGradient)"}
+              dot={{ fill: mode === "1rm" ? "#e879f9" : "#818cf8", r: 4, strokeWidth: 2, stroke: "#fff" }}
+              activeDot={{ fill: mode === "1rm" ? "#e879f9" : "#818cf8", r: 6, strokeWidth: 2, stroke: "#fff" }}
             />
+            {prPoint && (
+              <ReferenceDot
+                x={prPoint.date}
+                y={mode === "1rm" ? prPoint.estimated1RM : prPoint.maxWeightLb}
+                r={7}
+                fill={mode === "1rm" ? "#e879f9" : "#818cf8"}
+                stroke="#fff"
+                strokeWidth={2}
+                label={{ value: "PR", position: "top", fontSize: 10, fill: mode === "1rm" ? "#e879f9" : "#818cf8", fontWeight: 700 }}
+              />
+            )}
           </AreaChart>
         </ResponsiveContainer>
       ) : mode === "volume" ? (
@@ -210,12 +237,7 @@ export function AnalyticsChart({ data, isPending }: Props) {
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#888" strokeOpacity={0.15} vertical={false} />
-            <XAxis
-              dataKey="date"
-              tick={{ fontSize: 12, fill: "#888" }}
-              axisLine={false}
-              tickLine={false}
-            />
+            <XAxis dataKey="date" tick={{ fontSize: 12, fill: "#888" }} axisLine={false} tickLine={false} />
             <YAxis
               tick={{ fontSize: 12, fill: "#888" }}
               axisLine={false}
@@ -225,24 +247,14 @@ export function AnalyticsChart({ data, isPending }: Props) {
               width={48}
             />
             <Tooltip content={<CustomTooltip mode={mode} />} />
-            <Bar
-              dataKey={yDataKey}
-              fill="url(#volumeGradient)"
-              radius={[4, 4, 0, 0]}
-              maxBarSize={48}
-            />
+            <Bar dataKey={yDataKey} fill="url(#volumeGradient)" radius={[4, 4, 0, 0]} maxBarSize={48} />
           </BarChart>
         </ResponsiveContainer>
       ) : (
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#888" strokeOpacity={0.15} vertical={false} />
-            <XAxis
-              dataKey="date"
-              tick={{ fontSize: 12, fill: "#888" }}
-              axisLine={false}
-              tickLine={false}
-            />
+            <XAxis dataKey="date" tick={{ fontSize: 12, fill: "#888" }} axisLine={false} tickLine={false} />
             <YAxis
               tick={{ fontSize: 12, fill: "#888" }}
               axisLine={false}

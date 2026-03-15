@@ -19,6 +19,7 @@ export interface SessionDataPoint {
   totalVolumeLb: number;  // sum(weightLb × reps) across all sets in session
   totalReps: number;      // sum of reps across all sets
   setCount: number;
+  estimated1RM: number;   // Epley: weight × (1 + reps/30), in lb
 }
 
 function toLb(weight: number, unit: WeightUnit): number {
@@ -90,17 +91,20 @@ export async function getExerciseHistory(
     let maxWeightUnit: WeightUnit = "lb";
     let totalVolumeLb = 0;
     let totalReps = 0;
+    let best1RM = 0;
 
     for (const set of sessionSets) {
       const unit: WeightUnit = set.weightUnit ?? "lb";
       const weightLb = toLb(set.weight, unit);
       const volume = weightLb * set.reps;
+      const epley = weightLb * (1 + set.reps / 30);
 
       if (weightLb > maxWeightLb) {
         maxWeightLb = weightLb;
         maxWeightRaw = set.weight;
         maxWeightUnit = unit;
       }
+      if (epley > best1RM) best1RM = epley;
 
       totalVolumeLb += volume;
       totalReps += set.reps;
@@ -116,6 +120,7 @@ export async function getExerciseHistory(
       totalVolumeLb: Math.round(totalVolumeLb),
       totalReps,
       setCount: sessionSets.length,
+      estimated1RM: Math.round(best1RM * 10) / 10,
     });
   }
 
