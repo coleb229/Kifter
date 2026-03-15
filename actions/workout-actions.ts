@@ -482,3 +482,28 @@ export async function getRestDaySuggestions(): Promise<ActionResult<RestDaySugge
 
   return { success: true, data: suggestions };
 }
+
+// ── getSessionDates ────────────────────────────────────────────────────────────
+// Lightweight: returns only date strings for the heatmap (no set details)
+
+export async function getSessionDates(
+  days = 365
+): Promise<ActionResult<string[]>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+
+  const userId = session.user.id;
+  const sessionsCol = await getSessionsCollection();
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+
+  const docs = await sessionsCol
+    .find({ userId, date: { $gte: cutoff } })
+    .project<{ date: Date }>({ date: 1 })
+    .toArray();
+
+  return {
+    success: true,
+    data: docs.map((d) => d.date.toISOString().slice(0, 10)),
+  };
+}

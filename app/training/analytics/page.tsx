@@ -4,12 +4,18 @@ import {
   getExercisesWithHistory,
   getExerciseHistory,
 } from "@/actions/analytics-actions";
+import { getSessionDates } from "@/actions/workout-actions";
 import { AnalyticsDashboard } from "@/components/training/analytics-dashboard";
 import { AIInsights } from "@/components/training/ai-insights";
+import { TrainingHeatmap } from "@/components/training/training-heatmap";
 
 export default async function AnalyticsPage() {
-  const exercisesResult = await getExercisesWithHistory();
+  const [exercisesResult, sessionDatesResult] = await Promise.all([
+    getExercisesWithHistory(),
+    getSessionDates(365),
+  ]);
   const exercises = exercisesResult.success ? exercisesResult.data : [];
+  const sessionDates = sessionDatesResult.success ? sessionDatesResult.data : [];
 
   let initialData = null;
   if (exercises.length > 0) {
@@ -33,6 +39,15 @@ export default async function AnalyticsPage() {
           Track your progress over time
         </p>
       </div>
+
+      {/* Training frequency heatmap — shown regardless of exercise data */}
+      {sessionDates.length > 0 && (
+        <div className="rounded-xl border border-border bg-card p-5">
+          <h2 className="mb-1 text-sm font-semibold">Training Frequency</h2>
+          <p className="mb-4 text-xs text-muted-foreground">Last 12 months</p>
+          <TrainingHeatmap dates={sessionDates} />
+        </div>
+      )}
 
       {exercises.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border p-16 text-center">
