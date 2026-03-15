@@ -2,7 +2,7 @@
 
 import { ObjectId } from "mongodb";
 import { auth } from "@/auth";
-import { getPostsCollection, getUsersCollection, getUserBlocksCollection } from "@/lib/db";
+import { getPostsCollection, getUsersCollection, getUserBlocksCollection, getPostLikesCollection, getPostCommentsCollection } from "@/lib/db";
 import type { ActionResult, Post, PostDoc } from "@/types";
 
 // ── Create post ───────────────────────────────────────────────────────────────
@@ -42,9 +42,13 @@ export async function getPosts(): Promise<ActionResult<Post[]>> {
   if (!session?.user?.id) return { success: false, error: "Not authenticated" };
 
   try {
-    const postsCol = await getPostsCollection();
-    const usersCol = await getUsersCollection();
-    const blocksCol = await getUserBlocksCollection();
+    const [postsCol, usersCol, blocksCol, likesCol, commentsCol] = await Promise.all([
+      getPostsCollection(),
+      getUsersCollection(),
+      getUserBlocksCollection(),
+      getPostLikesCollection(),
+      getPostCommentsCollection(),
+    ]);
 
     const blockedIds = await blocksCol
       .find({ blockerId: session.user.id }, { projection: { blockedId: 1 } })
@@ -61,25 +65,47 @@ export async function getPosts(): Promise<ActionResult<Post[]>> {
 
     if (docs.length === 0) return { success: true, data: [] };
 
-    // Batch-fetch all authors
+    const postIds = docs.map((d) => d._id.toHexString());
+
+    // Batch-fetch authors, like counts, comment counts, and current user likes in parallel
     const authorIds = [...new Set(docs.map((d) => d.userId))];
-    const authors = await usersCol
-      .find({ _id: { $in: authorIds.map((id) => new ObjectId(id)) } })
-      .project({ _id: 1, name: 1, image: 1, displayName: 1, profileImage: 1, role: 1 })
-      .toArray();
+    const [authors, allLikes, commentCounts, userLikes] = await Promise.all([
+      usersCol
+        .find({ _id: { $in: authorIds.map((id) => new ObjectId(id)) } })
+        .project({ _id: 1, name: 1, image: 1, displayName: 1, profileImage: 1, role: 1 })
+        .toArray(),
+      likesCol.find({ postId: { $in: postIds } }, { projection: { postId: 1 } }).toArray(),
+      commentsCol
+        .aggregate<{ _id: string; count: number }>([
+          { $match: { postId: { $in: postIds } } },
+          { $group: { _id: "$postId", count: { $sum: 1 } } },
+        ])
+        .toArray(),
+      likesCol
+        .find({ postId: { $in: postIds }, userId: session.user.id }, { projection: { postId: 1 } })
+        .toArray(),
+    ]);
 
     const authorMap = new Map(authors.map((a) => [a._id.toHexString(), a]));
+    const likeCountMap = new Map<string, number>();
+    for (const l of allLikes) likeCountMap.set(l.postId, (likeCountMap.get(l.postId) ?? 0) + 1);
+    const commentCountMap = new Map(commentCounts.map((c) => [c._id, c.count]));
+    const likedSet = new Set(userLikes.map((l) => l.postId));
 
     const posts: Post[] = docs.map((doc) => {
       const author = authorMap.get(doc.userId);
+      const id = doc._id.toHexString();
       return {
-        id: doc._id.toHexString(),
+        id,
         userId: doc.userId,
         authorName: author?.displayName ?? author?.name ?? "Unknown",
         authorImage: author?.profileImage ?? author?.image ?? undefined,
         authorRole: author?.role ?? "member",
         content: doc.content,
         type: doc.type,
+        likeCount: likeCountMap.get(id) ?? 0,
+        commentCount: commentCountMap.get(id) ?? 0,
+        isLiked: likedSet.has(id),
         createdAt: doc.createdAt.toISOString(),
       };
     });

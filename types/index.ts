@@ -205,6 +205,23 @@ export interface PostDoc {
   createdAt: Date;
 }
 
+export interface PostLikeDoc {
+  _id: ObjectId;
+  postId: string;
+  userId: string;
+  createdAt: Date;
+}
+
+export interface PostCommentDoc {
+  _id: ObjectId;
+  postId: string;
+  userId: string;
+  authorName: string;
+  authorImage?: string;
+  content: string;
+  createdAt: Date;
+}
+
 // ── Diet / Nutrition ─────────────────────────────────────────────────────────
 
 export const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"] as const;
@@ -514,5 +531,18 @@ export interface Post {
   authorRole: UserRole;
   content: string;
   type: "progress" | "general";
+  likeCount: number;
+  commentCount: number;
+  isLiked: boolean;
+  createdAt: string;
+}
+
+export interface PostComment {
+  id: string;
+  postId: string;
+  userId: string;
+  authorName: string;
+  authorImage?: string;
+  content: string;
   createdAt: string;
 }

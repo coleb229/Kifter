@@ -1,5 +1,5 @@
 import clientPromise from "@/lib/mongodb";
-import type { BodyWeightDoc, CardioSessionDoc, CommunityFoodDoc, DietEntryDoc, ExerciseDoc, GoalDoc, MacroTargetDoc, MealTemplateDoc, PostDoc, UserDoc, WorkoutSessionDoc, WorkoutSetDoc, UserBlockDoc, SiteSettingsDoc } from "@/types";
+import type { BodyWeightDoc, CardioSessionDoc, CommunityFoodDoc, DietEntryDoc, ExerciseDoc, GoalDoc, MacroTargetDoc, MealTemplateDoc, PostDoc, PostLikeDoc, PostCommentDoc, UserDoc, WorkoutSessionDoc, WorkoutSetDoc, UserBlockDoc, SiteSettingsDoc } from "@/types";
 
 const DB_NAME = process.env.MONGODB_DB ?? "Kifted";
 
@@ -76,4 +76,14 @@ export async function getMealTemplatesCollection() {
 export async function getGoalsCollection() {
   const db = await getDb();
   return db.collection<GoalDoc>("goals");
+}
+
+export async function getPostLikesCollection() {
+  const db = await getDb();
+  return db.collection<PostLikeDoc>("postLikes");
+}
+
+export async function getPostCommentsCollection() {
+  const db = await getDb();
+  return db.collection<PostCommentDoc>("postComments");
 }
