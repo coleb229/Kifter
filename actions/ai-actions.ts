@@ -7,6 +7,7 @@ import { auth } from "@/auth";
 import { getSessionsCollection, getSetsCollection, getSiteSettingsCollection, getUsersCollection, getAiUsageCollection } from "@/lib/db";
 import { getAllUsers } from "@/actions/admin-actions";
 import { getPosts } from "@/actions/post-actions";
+import { getDietHistory, getMacroTargets } from "@/actions/diet-actions";
 import type { ActionResult, AIInsight } from "@/types";
 
 // ── Rate limiting ──────────────────────────────────────────────────────────────
@@ -244,5 +245,72 @@ ${JSON.stringify(stats, null, 2)}`,
     return { success: true, data: parseInsightsJSON(text) };
   } catch (e) {
     return { success: false, error: (e as Error).message ?? "Failed to generate insights" };
+  }
+}
+
+// ── generateNutritionRecommendations ──────────────────────────────────────────
+
+export async function generateNutritionRecommendations(): Promise<ActionResult<AIInsight[]>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+
+  const rateCheck = await checkAndIncrementAiUsage(session.user.id);
+  if (!rateCheck.allowed) return { success: false, error: rateCheck.error ?? "AI request blocked." };
+
+  try {
+    const client = getClient();
+    const userId = session.user.id;
+    const cutoff = subDays(new Date(), 14);
+
+    const [historyResult, targetsResult, sessionsResult] = await Promise.all([
+      getDietHistory(14),
+      getMacroTargets(),
+      getSessionsCollection().then((col) =>
+        col.find({ userId, date: { $gte: cutoff } }).sort({ date: -1 }).toArray()
+      ),
+    ]);
+
+    if (!historyResult.success || historyResult.data.length === 0) {
+      return {
+        success: false,
+        error: "No diet data found in the last 14 days. Log some meals to unlock AI nutrition tips.",
+      };
+    }
+
+    const dietData = historyResult.data.map((d) => ({
+      date: d.date,
+      calories: Math.round(d.calories),
+      protein: Math.round(d.protein),
+      carbs: Math.round(d.carbs),
+      fat: Math.round(d.fat),
+    }));
+
+    const targets = targetsResult.success ? targetsResult.data : null;
+    const workoutDates = sessionsResult.map((s) => format(s.date, "yyyy-MM-dd"));
+
+    const message = await client.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1024,
+      messages: [
+        {
+          role: "user",
+          content: `You are a registered dietitian analyzing a user's recent nutrition and workout data.
+Generate exactly 5 nutrition insights as a JSON array — no markdown fences, no commentary.
+Each object must have: { "type": "progress"|"suggestion"|"warning"|"achievement", "title": "5-8 words max", "body": "2-3 sentences referencing specific numbers from the data." }
+Focus on: calorie consistency, macro balance vs targets, protein adequacy relative to training days, hydration/micronutrient reminders, actionable meal improvements.
+
+Today: ${format(new Date(), "yyyy-MM-dd")}
+${targets ? `Macro targets: ${targets.calories} kcal, ${targets.protein}g protein, ${targets.carbs}g carbs, ${targets.fat}g fat` : "No macro targets set."}
+Training days this period: ${workoutDates.join(", ") || "none"}
+Diet history (last 14 days):
+${JSON.stringify(dietData, null, 2)}`,
+        },
+      ],
+    });
+
+    const text = message.content[0].type === "text" ? message.content[0].text : "";
+    return { success: true, data: parseInsightsJSON(text) };
+  } catch (e) {
+    return { success: false, error: (e as Error).message ?? "Failed to generate nutrition tips" };
   }
 }

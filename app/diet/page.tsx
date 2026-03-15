@@ -4,6 +4,7 @@ import { Utensils } from "lucide-react";
 import { format } from "date-fns";
 import { getDietEntries, getMacroTargets, getDietHistory } from "@/actions/diet-actions";
 import { DietLogView } from "@/components/diet/diet-log-view";
+import { NutritionAIInsights } from "@/components/diet/nutrition-ai-insights";
 
 export default async function DietPage() {
   const today = format(new Date(), "yyyy-MM-dd");
@@ -40,6 +41,8 @@ export default async function DietPage() {
         initialHistory={history}
         initialDate={today}
       />
+
+      <NutritionAIInsights />
     </div>
   );
 }
