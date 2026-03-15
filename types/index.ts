@@ -453,6 +453,25 @@ export interface CardioWeekSummary {
   totalDistance: number; // always in km for consistency
 }
 
+// ── Progress photos ───────────────────────────────────────────────────────────
+
+export interface ProgressPhotoDoc {
+  _id: ObjectId;
+  userId: string;
+  photoUrl: string;
+  date: string; // "YYYY-MM-DD"
+  notes?: string;
+  createdAt: Date;
+}
+
+export interface ProgressPhoto {
+  id: string;
+  photoUrl: string;
+  date: string;
+  notes?: string;
+  createdAt: string;
+}
+
 // ── Body weight ───────────────────────────────────────────────────────────────
 
 export interface BodyWeightDoc {
