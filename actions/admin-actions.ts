@@ -2,7 +2,7 @@
 
 import { ObjectId } from "mongodb";
 import { auth } from "@/auth";
-import { getUsersCollection, getSessionsCollection, getSetsCollection, getDietEntriesCollection, getPostsCollection, getCardioSessionsCollection } from "@/lib/db";
+import { getUsersCollection, getSessionsCollection, getSetsCollection, getDietEntriesCollection, getPostsCollection, getCardioSessionsCollection, getAiUsageCollection } from "@/lib/db";
 import type { ActionResult, UserRole, UserSummary } from "@/types";
 
 async function requireAdmin() {
@@ -30,6 +30,7 @@ export async function getAllUsers(): Promise<ActionResult<UserSummary[]>> {
       displayName: u.displayName,
       profileImage: u.profileImage,
       restrictions: u.restrictions,
+      aiRateLimit: u.aiRateLimit,
       bannedAt: u.bannedAt?.toISOString(),
       createdAt: u.createdAt?.toISOString(),
     }));
@@ -120,22 +121,78 @@ export async function getUserData(userId: string): Promise<ActionResult<{
   dietEntries: number;
   cardioSessions: number;
   posts: number;
+  todayAiUsage: number;
 }>> {
   try {
     await requireAdmin();
-    const [sessionsCol, dietCol, cardioCol, postsCol] = await Promise.all([
+    const today = new Date().toISOString().slice(0, 10);
+    const [sessionsCol, dietCol, cardioCol, postsCol, usageCol] = await Promise.all([
       getSessionsCollection(),
       getDietEntriesCollection(),
       getCardioSessionsCollection(),
       getPostsCollection(),
+      getAiUsageCollection(),
     ]);
-    const [workoutSessions, dietEntries, cardioSessions, posts] = await Promise.all([
+    const [workoutSessions, dietEntries, cardioSessions, posts, usageDoc] = await Promise.all([
       sessionsCol.countDocuments({ userId }),
       dietCol.countDocuments({ userId }),
       cardioCol.countDocuments({ userId }),
       postsCol.countDocuments({ userId }),
+      usageCol.findOne({ _id: `${userId}:${today}` }),
     ]);
-    return { success: true, data: { workoutSessions, dietEntries, cardioSessions, posts } };
+    return { success: true, data: { workoutSessions, dietEntries, cardioSessions, posts, todayAiUsage: usageDoc?.count ?? 0 } };
+  } catch (e) {
+    return { success: false, error: (e as Error).message };
+  }
+}
+
+// ── AI rate limit controls ─────────────────────────────────────────────────────
+
+export async function setUserAiRateLimit(
+  userId: string,
+  config: { dailyLimit?: number; disabled?: boolean }
+): Promise<ActionResult> {
+  try {
+    const session = await requireAdmin();
+    if (userId === session.user.id) {
+      return { success: false, error: "Cannot modify your own AI rate limit" };
+    }
+    const col = await getUsersCollection();
+    await col.updateOne(
+      { _id: new ObjectId(userId) },
+      { $set: { aiRateLimit: config } }
+    );
+    return { success: true, data: undefined };
+  } catch (e) {
+    return { success: false, error: (e as Error).message };
+  }
+}
+
+export async function resetUserAiUsage(userId: string): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    const today = new Date().toISOString().slice(0, 10);
+    const usageCol = await getAiUsageCollection();
+    await usageCol.deleteOne({ _id: `${userId}:${today}` });
+    return { success: true, data: undefined };
+  } catch (e) {
+    return { success: false, error: (e as Error).message };
+  }
+}
+
+export async function getAiUsageToday(): Promise<ActionResult<Array<{ userId: string; count: number }>>> {
+  try {
+    await requireAdmin();
+    const today = new Date().toISOString().slice(0, 10);
+    const usageCol = await getAiUsageCollection();
+    const docs = await usageCol
+      .find({ date: today })
+      .sort({ count: -1 })
+      .toArray();
+    return {
+      success: true,
+      data: docs.map((d) => ({ userId: d.userId, count: d.count })),
+    };
   } catch (e) {
     return { success: false, error: (e as Error).message };
   }

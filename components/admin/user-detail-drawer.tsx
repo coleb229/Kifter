@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { X, Dumbbell, Utensils, Activity, MessageCircle } from "lucide-react";
-import { getUserData, setUserRestrictions } from "@/actions/admin-actions";
+import { X, Dumbbell, Utensils, Activity, MessageCircle, BrainCircuit, RotateCcw } from "lucide-react";
+import { getUserData, setUserRestrictions, setUserAiRateLimit, resetUserAiUsage } from "@/actions/admin-actions";
 import type { UserSummary } from "@/types";
 
 interface Props {
@@ -21,8 +21,13 @@ const FEATURE_KEYS = [
 export function UserDetailDrawer({ user, onClose }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [counts, setCounts] = useState<{ workoutSessions: number; dietEntries: number; cardioSessions: number; posts: number } | null>(null);
+  const [isResetting, startReset] = useTransition();
+  const [counts, setCounts] = useState<{ workoutSessions: number; dietEntries: number; cardioSessions: number; posts: number; todayAiUsage: number } | null>(null);
   const [restrictions, setRestrictions] = useState(user.restrictions ?? {});
+  const [aiDisabled, setAiDisabled] = useState(user.aiRateLimit?.disabled ?? false);
+  const [aiDailyLimit, setAiDailyLimit] = useState<string>(
+    user.aiRateLimit?.dailyLimit != null ? String(user.aiRateLimit.dailyLimit) : ""
+  );
 
   useEffect(() => {
     getUserData(user.id).then((r) => {
@@ -36,9 +41,23 @@ export function UserDetailDrawer({ user, onClose }: Props) {
 
   function handleSave() {
     startTransition(async () => {
-      await setUserRestrictions(user.id, restrictions);
+      const parsedLimit = aiDailyLimit.trim() !== "" ? parseInt(aiDailyLimit) : undefined;
+      await Promise.all([
+        setUserRestrictions(user.id, restrictions),
+        setUserAiRateLimit(user.id, {
+          disabled: aiDisabled,
+          ...(parsedLimit != null ? { dailyLimit: parsedLimit } : {}),
+        }),
+      ]);
       router.refresh();
       onClose();
+    });
+  }
+
+  function handleResetUsage() {
+    startReset(async () => {
+      await resetUserAiUsage(user.id);
+      setCounts((c) => c ? { ...c, todayAiUsage: 0 } : c);
     });
   }
 
@@ -139,6 +158,64 @@ export function UserDetailDrawer({ user, onClose }: Props) {
             </div>
             <p className="mt-2 text-xs text-muted-foreground">Toggle off to restrict access to that feature for this user.</p>
           </div>
+
+          {/* AI rate limits */}
+          <div>
+            <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">AI rate limit</p>
+            <div className="flex flex-col gap-2">
+              {/* Today's usage */}
+              <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <BrainCircuit className="size-3.5 text-muted-foreground" />
+                  <span className="text-sm">Today&apos;s usage</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium tabular-nums">
+                    {counts != null ? counts.todayAiUsage : "—"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleResetUsage}
+                    disabled={isResetting || counts?.todayAiUsage === 0}
+                    title="Reset today's count"
+                    className="rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
+                  >
+                    <RotateCcw className="size-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Disable AI toggle */}
+              <div className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3">
+                <span className="text-sm">Disable AI entirely</span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={aiDisabled}
+                  onClick={() => setAiDisabled((v) => !v)}
+                  className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors ${aiDisabled ? "bg-destructive/60" : "bg-muted"}`}
+                >
+                  <span className={`block size-4 rounded-full bg-white shadow transition-transform ${aiDisabled ? "translate-x-4" : "translate-x-0"}`} />
+                </button>
+              </div>
+
+              {/* Custom daily limit */}
+              <div className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3">
+                <div>
+                  <p className="text-sm">Custom daily limit</p>
+                  <p className="text-xs text-muted-foreground">Overrides site default. Leave blank to use default.</p>
+                </div>
+                <input
+                  type="number"
+                  min={0}
+                  placeholder="Default"
+                  value={aiDailyLimit}
+                  onChange={(e) => setAiDailyLimit(e.target.value)}
+                  className="w-20 rounded-lg border border-border bg-background px-2 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="border-t border-border px-5 py-4">
@@ -148,7 +225,7 @@ export function UserDetailDrawer({ user, onClose }: Props) {
             disabled={isPending}
             className="w-full rounded-lg bg-primary py-2 text-sm font-medium text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
           >
-            {isPending ? "Saving…" : "Save restrictions"}
+            {isPending ? "Saving…" : "Save changes"}
           </button>
         </div>
       </div>

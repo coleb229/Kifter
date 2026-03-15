@@ -1,12 +1,69 @@
 "use server";
 
 import Anthropic from "@anthropic-ai/sdk";
+import { ObjectId } from "mongodb";
 import { subDays, format } from "date-fns";
 import { auth } from "@/auth";
-import { getSessionsCollection, getSetsCollection } from "@/lib/db";
+import { getSessionsCollection, getSetsCollection, getSiteSettingsCollection, getUsersCollection, getAiUsageCollection } from "@/lib/db";
 import { getAllUsers } from "@/actions/admin-actions";
 import { getPosts } from "@/actions/post-actions";
 import type { ActionResult, AIInsight } from "@/types";
+
+// ── Rate limiting ──────────────────────────────────────────────────────────────
+
+async function checkAndIncrementAiUsage(userId: string): Promise<{ allowed: boolean; error?: string }> {
+  const today = new Date().toISOString().slice(0, 10);
+  const [settingsCol, usersCol, usageCol] = await Promise.all([
+    getSiteSettingsCollection(),
+    getUsersCollection(),
+    getAiUsageCollection(),
+  ]);
+
+  const settings = await settingsCol.findOne({ _id: "global" });
+  const rateLimits = settings?.aiRateLimits;
+
+  // Rate limiting not configured or disabled — allow
+  if (!rateLimits?.enabled) return { allowed: true };
+
+  const userDoc = await usersCol.findOne(
+    { _id: new ObjectId(userId) },
+    { projection: { aiRateLimit: 1 } }
+  );
+
+  if (userDoc?.aiRateLimit?.disabled) {
+    return { allowed: false, error: "AI features are disabled for your account." };
+  }
+
+  const usageDoc = await usageCol.findOne({ _id: `${userId}:${today}` });
+  const userCount = usageDoc?.count ?? 0;
+
+  // Check per-user limit (user override takes precedence over site default)
+  const userLimit = userDoc?.aiRateLimit?.dailyLimit ?? rateLimits.defaultUserDailyLimit ?? 0;
+  if (userLimit > 0 && userCount >= userLimit) {
+    return { allowed: false, error: `Daily AI limit reached (${userLimit}/day). Resets at midnight.` };
+  }
+
+  // Check site-wide daily limit
+  const siteLimit = rateLimits.sitewideDailyLimit ?? 0;
+  if (siteLimit > 0) {
+    const siteAgg = await usageCol.aggregate<{ total: number }>([
+      { $match: { date: today } },
+      { $group: { _id: null, total: { $sum: "$count" } } },
+    ]).next();
+    if ((siteAgg?.total ?? 0) >= siteLimit) {
+      return { allowed: false, error: "Site-wide AI limit reached for today. Try again tomorrow." };
+    }
+  }
+
+  // Increment counter atomically
+  await usageCol.updateOne(
+    { _id: `${userId}:${today}` },
+    { $inc: { count: 1 }, $set: { userId, date: today, updatedAt: new Date() } },
+    { upsert: true }
+  );
+
+  return { allowed: true };
+}
 
 // ── Shared helpers ─────────────────────────────────────────────────────────────
 
@@ -27,6 +84,9 @@ function getClient(): Anthropic {
 export async function generateWorkoutInsights(): Promise<ActionResult<AIInsight[]>> {
   const session = await auth();
   if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+
+  const rateCheck = await checkAndIncrementAiUsage(session.user.id);
+  if (!rateCheck.allowed) return { success: false, error: rateCheck.error ?? "AI request blocked." };
 
   try {
     const client = getClient();

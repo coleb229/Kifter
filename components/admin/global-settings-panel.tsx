@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Dumbbell, Utensils, Activity, Users, AlertTriangle } from "lucide-react";
+import { Dumbbell, Utensils, Activity, Users, AlertTriangle, BrainCircuit } from "lucide-react";
 import { updateSiteSettings } from "@/actions/settings-actions";
 import type { SiteSettingsDoc } from "@/types";
 
@@ -22,12 +22,17 @@ export function GlobalSettingsPanel({ settings }: Props) {
   const [isPending, startTransition] = useTransition();
   const [maintenance, setMaintenance] = useState(settings.maintenanceMode);
   const [features, setFeatures] = useState(settings.features);
+  const [aiLimits, setAiLimits] = useState({
+    enabled: settings.aiRateLimits?.enabled ?? false,
+    sitewideDailyLimit: settings.aiRateLimits?.sitewideDailyLimit ?? 0,
+    defaultUserDailyLimit: settings.aiRateLimits?.defaultUserDailyLimit ?? 0,
+  });
   const [saved, setSaved] = useState(false);
 
   function handleSave() {
     setSaved(false);
     startTransition(async () => {
-      await updateSiteSettings({ maintenanceMode: maintenance, features });
+      await updateSiteSettings({ maintenanceMode: maintenance, features, aiRateLimits: aiLimits });
       setSaved(true);
       router.refresh();
     });
@@ -92,6 +97,62 @@ export function GlobalSettingsPanel({ settings }: Props) {
             </button>
           </div>
         ))}
+      </div>
+
+      {/* AI rate limits */}
+      <div className="flex flex-col gap-3">
+        <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">AI rate limits</p>
+
+        {/* Enable toggle */}
+        <div className="flex items-center justify-between rounded-xl border border-border bg-card px-5 py-4">
+          <div className="flex items-center gap-3">
+            <BrainCircuit className="size-4 text-muted-foreground" />
+            <div>
+              <p className="text-sm font-medium">Enable rate limiting</p>
+              <p className="text-xs text-muted-foreground">Enforce daily AI call limits site-wide</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={aiLimits.enabled}
+            onClick={() => setAiLimits((l) => ({ ...l, enabled: !l.enabled }))}
+            className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors ${aiLimits.enabled ? "bg-primary" : "bg-muted"}`}
+          >
+            <span className={`block size-4 rounded-full bg-white shadow transition-transform ${aiLimits.enabled ? "translate-x-4" : "translate-x-0"}`} />
+          </button>
+        </div>
+
+        {aiLimits.enabled && (
+          <div className="flex flex-col gap-3 pl-1">
+            <div className="flex items-center justify-between rounded-xl border border-border bg-card px-5 py-4">
+              <div>
+                <p className="text-sm font-medium">Default per-user daily limit</p>
+                <p className="text-xs text-muted-foreground">Max AI calls per user per day (0 = unlimited)</p>
+              </div>
+              <input
+                type="number"
+                min={0}
+                value={aiLimits.defaultUserDailyLimit}
+                onChange={(e) => setAiLimits((l) => ({ ...l, defaultUserDailyLimit: parseInt(e.target.value) || 0 }))}
+                className="w-20 rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+            <div className="flex items-center justify-between rounded-xl border border-border bg-card px-5 py-4">
+              <div>
+                <p className="text-sm font-medium">Site-wide daily limit</p>
+                <p className="text-xs text-muted-foreground">Total AI calls across all users per day (0 = unlimited)</p>
+              </div>
+              <input
+                type="number"
+                min={0}
+                value={aiLimits.sitewideDailyLimit}
+                onChange={(e) => setAiLimits((l) => ({ ...l, sitewideDailyLimit: parseInt(e.target.value) || 0 }))}
+                className="w-20 rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center justify-end gap-3">

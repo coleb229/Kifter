@@ -138,6 +138,10 @@ export interface UserDoc {
     cardio?: boolean;
     community?: boolean;
   };
+  aiRateLimit?: {
+    dailyLimit?: number;  // overrides site default; 0 = unlimited
+    disabled?: boolean;   // block AI entirely for this user
+  };
   bannedAt?: Date;
   createdAt?: Date;
 }
@@ -171,6 +175,10 @@ export interface UserSummary {
     cardio?: boolean;
     community?: boolean;
   };
+  aiRateLimit?: {
+    dailyLimit?: number;
+    disabled?: boolean;
+  };
   bannedAt?: string;
   createdAt?: string;
 }
@@ -184,6 +192,16 @@ export interface UserBlockDoc {
   createdAt: Date;
 }
 
+// ── AI usage tracking ─────────────────────────────────────────────────────────
+
+export interface AiUsageDoc {
+  _id: string; // "userId:YYYY-MM-DD"
+  userId: string;
+  date: string; // "YYYY-MM-DD"
+  count: number;
+  updatedAt: Date;
+}
+
 // ── Site settings document ────────────────────────────────────────────────────
 
 export interface SiteSettingsDoc {
@@ -194,6 +212,11 @@ export interface SiteSettingsDoc {
     nutrition: boolean;
     cardio: boolean;
     community: boolean;
+  };
+  aiRateLimits?: {
+    enabled: boolean;
+    sitewideDailyLimit: number;   // 0 = unlimited
+    defaultUserDailyLimit: number; // 0 = unlimited, applies per user
   };
 }
 
