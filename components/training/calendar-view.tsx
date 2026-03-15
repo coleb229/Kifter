@@ -24,7 +24,7 @@ export function CalendarView({ sessions }: Props) {
 
   const sessionsByDate = new Map<string, WorkoutSession[]>();
   for (const s of sessions) {
-    const key = format(new Date(s.date), "yyyy-MM-dd");
+    const key = s.date.slice(0, 10);
     if (!sessionsByDate.has(key)) sessionsByDate.set(key, []);
     sessionsByDate.get(key)!.push(s);
   }
@@ -172,7 +172,7 @@ export function CalendarView({ sessions }: Props) {
                 <div className="flex items-center gap-2.5">
                   <Dumbbell className="size-3.5 shrink-0 text-muted-foreground" />
                   <div>
-                    <p className="font-medium">{s.name ?? format(new Date(s.date), "EEEE, MMM d")}</p>
+                    <p className="font-medium">{s.name ?? format(new Date(s.date.slice(0, 10) + "T00:00:00"), "EEEE, MMM d")}</p>
                     {s.exerciseNames && s.exerciseNames.length > 0 && (
                       <p className="text-xs text-muted-foreground truncate max-w-64">
                         {s.exerciseNames.join(" · ")}

@@ -17,7 +17,7 @@ export function SessionCard({ session, index }: SessionCardProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [confirming, setConfirming] = useState(false);
-  const date = new Date(session.date);
+  const date = new Date(session.date.slice(0, 10) + "T00:00:00");
 
   function handleDelete(e: React.MouseEvent) {
     e.preventDefault();

@@ -36,7 +36,7 @@ export function EditableSessionHeader({ session }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [mode, setMode] = useState<"view" | "edit" | "confirm-delete">("view");
-  const date = new Date(session.date);
+  const date = new Date(session.date.slice(0, 10) + "T00:00:00");
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -51,7 +51,7 @@ export function EditableSessionHeader({ session }: Props) {
   function handleEdit() {
     form.reset({
       name: session.name ?? "",
-      date: format(new Date(session.date), "yyyy-MM-dd"),
+      date: session.date.slice(0, 10),
       bodyTarget: session.bodyTarget,
       notes: session.notes ?? "",
     });
