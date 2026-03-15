@@ -636,6 +636,52 @@ export interface Injury {
   createdAt: string;
 }
 
+// ── Social Challenges ─────────────────────────────────────────────────────────
+
+export type ChallengeMetric = "workout_count" | "cardio_distance" | "total_volume";
+export type ChallengeStatus = "active" | "completed" | "cancelled";
+
+export interface ChallengeDoc {
+  _id: ObjectId;
+  title: string;
+  description?: string;
+  creatorId: string;
+  metric: ChallengeMetric;
+  targetValue: number;
+  startDate: string;
+  endDate: string;
+  participantIds: string[];
+  status: ChallengeStatus;
+  createdAt: Date;
+}
+
+export interface Challenge {
+  id: string;
+  title: string;
+  description?: string;
+  creatorId: string;
+  creatorName: string;
+  metric: ChallengeMetric;
+  targetValue: number;
+  startDate: string;
+  endDate: string;
+  participantCount: number;
+  isParticipating: boolean;
+  myCurrentValue: number;
+  myPercentComplete: number;
+  status: ChallengeStatus;
+  daysRemaining: number;
+  createdAt: string;
+}
+
+export interface ChallengeParticipant {
+  userId: string;
+  displayName: string;
+  profileImage?: string;
+  currentValue: number;
+  percentComplete: number;
+}
+
 // ── Serialized post (author joined) ──────────────────────────────────────────
 
 export interface Post {

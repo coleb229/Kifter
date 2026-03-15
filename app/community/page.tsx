@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, Users } from "lucide-react";
+import { Plus, Users, Trophy } from "lucide-react";
 import { auth } from "@/auth";
 import { getPosts } from "@/actions/post-actions";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,10 @@ export default async function CommunityPage() {
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" render={<Link href="/community/leaderboard" />}>
             Leaderboard
+          </Button>
+          <Button size="sm" variant="outline" render={<Link href="/community/challenges" />}>
+            <Trophy className="size-4" />
+            Challenges
           </Button>
           <Button size="sm" render={<Link href="/community/new" />}>
             <Plus className="size-4" />
