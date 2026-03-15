@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2, Check, X, Plus, PlayCircle, Link2 } from "lucide-react";
+import { Pencil, Trash2, Check, X, Plus, PlayCircle, Link2, Share2 } from "lucide-react";
 import {
   updateSet,
   deleteSet,
@@ -11,6 +11,7 @@ import {
   addExerciseToSession,
   setExerciseVideoUrl,
 } from "@/actions/workout-actions";
+import { shareWorkoutSession } from "@/actions/post-actions";
 import type { WorkoutSet } from "@/types";
 import type { WeightUnit } from "@/lib/weight";
 
@@ -516,15 +517,44 @@ interface SessionExercisesProps {
 }
 
 export function SessionExercises({ sessionId, sets, videoUrls = {} }: SessionExercisesProps) {
+  const router = useRouter();
   const exercises = groupByExercise(sets);
+  const [shareState, setShareState] = useState<"idle" | "pending" | "shared" | "error">("idle");
+  const [, startShareTransition] = useTransition();
 
   if (exercises.length === 0) return null;
 
+  function handleShare() {
+    setShareState("pending");
+    startShareTransition(async () => {
+      const result = await shareWorkoutSession(sessionId);
+      if (result.success) {
+        setShareState("shared");
+        setTimeout(() => setShareState("idle"), 3000);
+      } else {
+        setShareState("error");
+        setTimeout(() => setShareState("idle"), 3000);
+      }
+    });
+  }
+
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        Exercises
-      </h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Exercises
+        </h2>
+        <button
+          type="button"
+          onClick={handleShare}
+          disabled={shareState === "pending" || shareState === "shared"}
+          className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground hover:text-foreground disabled:opacity-50"
+          aria-label="Share workout to community"
+        >
+          <Share2 className="size-3.5" />
+          {shareState === "pending" ? "Sharing…" : shareState === "shared" ? "Shared!" : shareState === "error" ? "Failed" : "Share"}
+        </button>
+      </div>
       {exercises.map((group) => (
         <ExerciseGroupCard key={group.name} sessionId={sessionId} group={group} videoUrl={videoUrls[group.name]} />
       ))}
