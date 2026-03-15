@@ -28,7 +28,7 @@ export default function SettingsLayout({
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
-      <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
+      <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 pb-24 sm:px-6 sm:pb-8 lg:px-8">
         <div className="mb-6 animate-fade-up">
           <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
           <p className="mt-1 text-sm text-muted-foreground">
