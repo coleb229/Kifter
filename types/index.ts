@@ -131,6 +131,7 @@ export interface UserDoc {
       showCardio?: boolean;
       showBodyMetrics?: boolean;
     };
+    showOnLeaderboard?: boolean;
   };
   restrictions?: {
     training?: boolean;
@@ -168,6 +169,7 @@ export interface UserSummary {
       showCardio?: boolean;
       showBodyMetrics?: boolean;
     };
+    showOnLeaderboard?: boolean;
   };
   restrictions?: {
     training?: boolean;

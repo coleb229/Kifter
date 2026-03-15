@@ -35,6 +35,9 @@ export function PreferencesForm({ user }: Props) {
     showCardio:       user?.preferences?.profileVisibility?.showCardio       ?? true,
     showBodyMetrics:  user?.preferences?.profileVisibility?.showBodyMetrics  ?? false,
   });
+  const [showOnLeaderboard, setShowOnLeaderboard] = useState(
+    user?.preferences?.showOnLeaderboard ?? false
+  );
 
   const [saved, setSaved]   = useState(false);
   const [error, setError]   = useState<string | null>(null);
@@ -49,6 +52,7 @@ export function PreferencesForm({ user }: Props) {
         theme,
         accentColor: accent,
         profileVisibility: visibility,
+        showOnLeaderboard,
       });
       if (result.success) {
         setTheme(theme);
@@ -168,6 +172,28 @@ export function PreferencesForm({ user }: Props) {
             </label>
           ))}
         </div>
+      </div>
+
+      {/* Community leaderboard opt-in */}
+      <div className="flex flex-col gap-3">
+        <div>
+          <p className="text-sm font-medium">Community leaderboard</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">Show your weekly workout volume on the community leaderboard</p>
+        </div>
+        <label className="flex cursor-pointer items-center justify-between rounded-lg border border-border bg-card px-4 py-3">
+          <span className="text-sm">Appear on leaderboard</span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={showOnLeaderboard}
+            onClick={() => setShowOnLeaderboard((v) => !v)}
+            className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors ${
+              showOnLeaderboard ? "bg-primary" : "bg-muted"
+            }`}
+          >
+            <span className={`block size-4 rounded-full bg-white shadow transition-transform ${showOnLeaderboard ? "translate-x-4" : "translate-x-0"}`} />
+          </button>
+        </label>
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}

@@ -25,10 +25,15 @@ export default async function CommunityPage() {
             </p>
           </div>
         </div>
-        <Button size="sm" render={<Link href="/community/new" />}>
-          <Plus className="size-4" />
-          New Post
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" render={<Link href="/community/leaderboard" />}>
+            Leaderboard
+          </Button>
+          <Button size="sm" render={<Link href="/community/new" />}>
+            <Plus className="size-4" />
+            New Post
+          </Button>
+        </div>
       </div>
 
       <PostFeed

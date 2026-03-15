@@ -78,6 +78,8 @@ export async function updatePreferences(data: {
     showCardio?: boolean;
     showBodyMetrics?: boolean;
   };
+  showOnLeaderboard?: boolean;
+  dashboardWidgets?: string[];
 }): Promise<ActionResult> {
   const session = await auth();
   if (!session?.user?.id) return { success: false, error: "Not authenticated" };
@@ -87,6 +89,8 @@ export async function updatePreferences(data: {
   if (data.theme) update["preferences.theme"] = data.theme;
   if (data.accentColor) update["preferences.accentColor"] = data.accentColor;
   if (data.profileVisibility !== undefined) update["preferences.profileVisibility"] = data.profileVisibility;
+  if (data.showOnLeaderboard !== undefined) update["preferences.showOnLeaderboard"] = data.showOnLeaderboard;
+  if (data.dashboardWidgets !== undefined) update["preferences.dashboardWidgets"] = data.dashboardWidgets;
 
   if (Object.keys(update).length === 0) return { success: true, data: undefined };
 
