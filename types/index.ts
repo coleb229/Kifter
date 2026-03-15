@@ -603,6 +603,39 @@ export interface AIInsight {
   body: string;
 }
 
+// ── Injury / Soreness Log ─────────────────────────────────────────────────────
+
+export const MUSCLE_GROUPS = [
+  "Chest", "Shoulders", "Triceps", "Biceps", "Back",
+  "Core", "Quads", "Hamstrings", "Glutes", "Calves", "Hip Flexors", "Other",
+] as const;
+export type MuscleGroup = (typeof MUSCLE_GROUPS)[number];
+export type SeverityLevel = "mild" | "moderate" | "severe";
+
+export interface InjuryDoc {
+  _id: ObjectId;
+  userId: string;
+  muscleGroup: MuscleGroup;
+  severity: SeverityLevel;
+  notes?: string;
+  startDate: string;
+  expectedRecoveryDate?: string;
+  resolvedAt?: Date;
+  createdAt: Date;
+}
+
+export interface Injury {
+  id: string;
+  userId: string;
+  muscleGroup: MuscleGroup;
+  severity: SeverityLevel;
+  notes?: string;
+  startDate: string;
+  expectedRecoveryDate?: string;
+  resolvedAt?: string;
+  createdAt: string;
+}
+
 // ── Serialized post (author joined) ──────────────────────────────────────────
 
 export interface Post {

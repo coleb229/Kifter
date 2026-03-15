@@ -1,5 +1,5 @@
 import clientPromise from "@/lib/mongodb";
-import type { AiUsageDoc, BodyWeightDoc, CardioSessionDoc, CommunityFoodDoc, DietEntryDoc, ExerciseDoc, GoalDoc, MacroTargetDoc, MealTemplateDoc, PostDoc, PostLikeDoc, PostCommentDoc, ProgressPhotoDoc, UserDoc, WorkoutProgramDoc, WorkoutSessionDoc, WorkoutSetDoc, UserBlockDoc, SiteSettingsDoc } from "@/types";
+import type { AiUsageDoc, BodyWeightDoc, CardioSessionDoc, CommunityFoodDoc, DietEntryDoc, ExerciseDoc, GoalDoc, InjuryDoc, MacroTargetDoc, MealTemplateDoc, PostDoc, PostLikeDoc, PostCommentDoc, ProgressPhotoDoc, UserDoc, WorkoutProgramDoc, WorkoutSessionDoc, WorkoutSetDoc, UserBlockDoc, SiteSettingsDoc } from "@/types";
 
 const DB_NAME = process.env.MONGODB_DB ?? "Kifted";
 
@@ -101,4 +101,9 @@ export async function getAiUsageCollection() {
 export async function getProgressPhotosCollection() {
   const db = await getDb();
   return db.collection<ProgressPhotoDoc>("progressPhotos");
+}
+
+export async function getInjuriesCollection() {
+  const db = await getDb();
+  return db.collection<InjuryDoc>("injuries");
 }

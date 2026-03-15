@@ -3,20 +3,24 @@ export const dynamic = 'force-dynamic';
 import Link from "next/link";
 import { Plus, BookOpen, ChevronRight } from "lucide-react";
 import { getWorkoutSessions, getRestDaySuggestions, getProgressiveOverloadSuggestions } from "@/actions/workout-actions";
+import { getInjuries } from "@/actions/injury-actions";
 import { SessionsView } from "@/components/training/sessions-view";
 import { RestDaySuggestions } from "@/components/training/rest-day-suggestions";
 import { OverloadSuggestions } from "@/components/training/overload-suggestions";
+import { InjuryLog } from "@/components/training/injury-log";
 import { Button } from "@/components/ui/button";
 
 export default async function TrainingPage() {
-  const [result, suggestionsResult, overloadResult] = await Promise.all([
+  const [result, suggestionsResult, overloadResult, injuriesResult] = await Promise.all([
     getWorkoutSessions(),
     getRestDaySuggestions(),
     getProgressiveOverloadSuggestions(),
+    getInjuries(),
   ]);
   const sessions = result.success ? result.data : [];
   const suggestions = suggestionsResult.success ? suggestionsResult.data : [];
   const overloadSuggestions = overloadResult.success ? overloadResult.data : [];
+  const injuries = injuriesResult.success ? injuriesResult.data : [];
 
   return (
     <div>
@@ -46,6 +50,7 @@ export default async function TrainingPage() {
 
       {suggestions.length > 0 && <RestDaySuggestions suggestions={suggestions} />}
       {overloadSuggestions.length > 0 && <OverloadSuggestions suggestions={overloadSuggestions} />}
+      <InjuryLog injuries={injuries} />
 
       {/* Guides promo card */}
       <Link
