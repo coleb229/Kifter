@@ -132,6 +132,7 @@ export interface UserDoc {
       showBodyMetrics?: boolean;
     };
     showOnLeaderboard?: boolean;
+    dashboardWidgets?: string[];
   };
   restrictions?: {
     training?: boolean;
@@ -170,6 +171,7 @@ export interface UserSummary {
       showBodyMetrics?: boolean;
     };
     showOnLeaderboard?: boolean;
+    dashboardWidgets?: string[];
   };
   restrictions?: {
     training?: boolean;

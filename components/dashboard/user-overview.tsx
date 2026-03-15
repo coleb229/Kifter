@@ -1,26 +1,20 @@
-import Link from "next/link";
 import { format, subDays, parseISO } from "date-fns";
-import { Dumbbell, Flame, TrendingUp, Calendar, Plus, Utensils, Activity } from "lucide-react";
 import { getWorkoutSessions } from "@/actions/workout-actions";
 import { getDietEntries, getMacroTargets, getDietHistory } from "@/actions/diet-actions";
-import { getCardioHistory, getCardioSessions } from "@/actions/cardio-actions";
-import { TrainingWeekChart } from "@/components/dashboard/training-week-chart";
-import { BODY_TARGET_STYLES } from "@/lib/label-colors";
-import { MacroWeekChart } from "@/components/dashboard/macro-week-chart";
-import { CardioWeekChart } from "@/components/dashboard/cardio-week-chart";
-import { StreakBadges } from "@/components/dashboard/streak-badges";
-import { Button } from "@/components/ui/button";
+import { getCardioHistory } from "@/actions/cardio-actions";
+import { getCurrentUser } from "@/actions/user-actions";
+import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 
 export async function UserOverview() {
   const today = format(new Date(), "yyyy-MM-dd");
-  const [sessionsResult, dietResult, targetsResult, historyResult, cardioHistoryResult, cardioSessionsResult] =
+  const [sessionsResult, dietResult, targetsResult, historyResult, cardioHistoryResult, userResult] =
     await Promise.all([
       getWorkoutSessions(30),
       getDietEntries(today),
       getMacroTargets(),
       getDietHistory(7),
       getCardioHistory(7),
-      getCardioSessions(30),
+      getCurrentUser(),
     ]);
 
   const sessions = sessionsResult.success ? sessionsResult.data : [];
@@ -28,7 +22,7 @@ export async function UserOverview() {
   const targets = targetsResult.success ? targetsResult.data : null;
   const dietHistory = historyResult.success ? historyResult.data : [];
   const cardioHistory = cardioHistoryResult.success ? cardioHistoryResult.data : [];
-  const cardioSessions = cardioSessionsResult.success ? cardioSessionsResult.data : [];
+  const preferences = userResult.success ? userResult.data.preferences : undefined;
 
   // Build last-7-days date keys
   const last7 = Array.from({ length: 7 }, (_, i) => format(subDays(new Date(), 6 - i), "yyyy-MM-dd"));
@@ -83,201 +77,23 @@ export async function UserOverview() {
   const weekEnd = format(new Date(), "MMM d");
 
   return (
-    <section id="dashboard" className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
-      {/* Section header */}
-      <div className="mb-6 animate-fade-up">
-        <h2 className="text-2xl font-bold tracking-tight">Your Week</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{weekStart} – {weekEnd}</p>
-      </div>
-
-      {/* Stats row — 5 cards */}
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
-        {[
-          {
-            label: "Workouts",
-            value: workoutsThisWeek,
-            suffix: "this week",
-            icon: Dumbbell,
-            color: "text-indigo-600 dark:text-indigo-400",
-            bg: "bg-indigo-100 dark:bg-indigo-950/40",
-          },
-          {
-            label: "Cardio",
-            value: cardioThisWeek,
-            suffix: "this week",
-            icon: Activity,
-            color: "text-sky-600 dark:text-sky-400",
-            bg: "bg-sky-100 dark:bg-sky-950/40",
-          },
-          {
-            label: "Kcal Today",
-            value: todayKcal > 0 ? todayKcal.toLocaleString() : "—",
-            suffix: targets?.calories ? `/ ${targets.calories.toLocaleString()}` : "",
-            icon: Flame,
-            color: "text-amber-600 dark:text-amber-400",
-            bg: "bg-amber-100 dark:bg-amber-950/40",
-          },
-          {
-            label: "Protein Today",
-            value: todayProtein > 0 ? `${Math.round(todayProtein)}g` : "—",
-            suffix: targets?.protein ? `/ ${targets.protein}g` : "",
-            icon: TrendingUp,
-            color: "text-emerald-600 dark:text-emerald-400",
-            bg: "bg-emerald-100 dark:bg-emerald-950/40",
-          },
-          {
-            label: "Streak",
-            value: streak,
-            suffix: streak === 1 ? "day" : "days",
-            icon: Calendar,
-            color: "text-violet-600 dark:text-violet-400",
-            bg: "bg-violet-100 dark:bg-violet-950/40",
-          },
-        ].map(({ label, value, suffix, icon: Icon, color, bg }, i) => (
-          <div
-            key={label}
-            className="flex items-start gap-3 rounded-xl border border-border bg-card p-4 animate-fade-up"
-            style={{ animationDelay: `${i * 60}ms` }}
-          >
-            <div className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${bg}`}>
-              <Icon className={`size-4 ${color}`} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">{label}</p>
-              <p className="text-lg font-bold leading-tight">{value}</p>
-              {suffix && <p className="text-xs text-muted-foreground">{suffix}</p>}
-              {label === "Streak" && <StreakBadges streak={streak} />}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Diet — full width, prominent */}
-      <div
-        className="mb-4 rounded-xl border border-border bg-card p-5 animate-fade-up"
-        style={{ animationDelay: "300ms" }}
-      >
-        <div className="mb-1 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Utensils className="size-4 text-amber-500" />
-            <h3 className="text-sm font-semibold">Nutrition</h3>
-          </div>
-          <Link href="/diet" className="text-xs text-muted-foreground transition-colors hover:text-foreground">
-            View log
-          </Link>
-        </div>
-        <p className="mb-4 text-xs text-muted-foreground">Daily macros — last 7 days</p>
-        <MacroWeekChart data={macroChartData} height={220} />
-      </div>
-
-      {/* Training + Cardio side by side */}
-      <div
-        className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 animate-fade-up"
-        style={{ animationDelay: "380ms" }}
-      >
-        <div className="rounded-xl border border-border bg-card p-5">
-          <div className="mb-1 flex items-center gap-2">
-            <Dumbbell className="size-4 text-indigo-500" />
-            <h3 className="text-sm font-semibold">Training</h3>
-          </div>
-          <p className="mb-4 text-xs text-muted-foreground">Workouts per day</p>
-          <TrainingWeekChart data={trainingChartData} />
-        </div>
-        <div className="rounded-xl border border-border bg-card p-5">
-          <div className="mb-1 flex items-center gap-2">
-            <Activity className="size-4 text-sky-500" />
-            <h3 className="text-sm font-semibold">Cardio</h3>
-          </div>
-          <p className="mb-4 text-xs text-muted-foreground">Active minutes per day</p>
-          <CardioWeekChart data={cardioChartData} />
-        </div>
-      </div>
-
-      {/* Recent workouts + Quick actions */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 animate-fade-up" style={{ animationDelay: "460ms" }}>
-        {/* Recent sessions */}
-        <div className="rounded-xl border border-border bg-card p-5">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Recent Workouts</h3>
-            <Link href="/training" className="text-xs text-muted-foreground transition-colors hover:text-foreground">
-              View all
-            </Link>
-          </div>
-          {recentSessions.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-4 text-center">No workouts logged yet</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {recentSessions.map((s) => (
-                <Link
-                  key={s.id}
-                  href={`/training/${s.id}`}
-                  className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5 text-sm transition-colors hover:bg-muted/40"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Dumbbell className="size-3.5 shrink-0 text-muted-foreground" />
-                    <div>
-                      <p className="text-xs font-medium">
-                        {s.name ?? format(parseISO(s.date), "EEE, MMM d")}
-                      </p>
-                      {s.exerciseNames && s.exerciseNames.length > 0 && (
-                        <p className="text-[10px] text-muted-foreground truncate max-w-40">
-                          {s.exerciseNames.join(" · ")}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0 ${BODY_TARGET_STYLES[s.bodyTarget].badge}`}>
-                    {s.bodyTarget}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Quick actions */}
-        <div className="rounded-xl border border-border bg-card p-5">
-          <h3 className="mb-3 text-sm font-semibold">Quick Actions</h3>
-          <div className="flex flex-col gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="justify-start gap-2"
-              render={<Link href="/training/new" />}
-            >
-              <Plus className="size-4 text-indigo-500" />
-              Log Workout
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="justify-start gap-2"
-              render={<Link href="/cardio/new" />}
-            >
-              <Activity className="size-4 text-sky-500" />
-              Log Cardio
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="justify-start gap-2"
-              render={<Link href="/diet" />}
-            >
-              <Utensils className="size-4 text-amber-500" />
-              Log Food
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="justify-start gap-2"
-              render={<Link href="/training/analytics" />}
-            >
-              <TrendingUp className="size-4 text-emerald-500" />
-              View Analytics
-            </Button>
-          </div>
-        </div>
-      </div>
-    </section>
+    <DashboardLayout
+      data={{
+        trainingChartData,
+        macroChartData,
+        cardioChartData,
+        workoutsThisWeek,
+        todayKcal,
+        todayProtein,
+        cardioThisWeek,
+        streak,
+        calorieTarget: targets?.calories ?? 0,
+        proteinTarget: targets?.protein ?? 0,
+        recentSessions,
+        weekStart,
+        weekEnd,
+      }}
+      initialWidgets={preferences?.dashboardWidgets}
+    />
   );
 }
