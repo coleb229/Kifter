@@ -488,6 +488,82 @@ export async function getRestDaySuggestions(): Promise<ActionResult<RestDaySugge
   return { success: true, data: suggestions };
 }
 
+// ── getProgressiveOverloadSuggestions ─────────────────────────────────────────
+
+export interface ProgressiveOverloadSuggestion {
+  exercise: string;
+  currentWeightUnit: WeightUnit;
+  currentWeightDisplay: number;
+  suggestedWeightDisplay: number;
+  consecutiveSessions: number;
+}
+
+export async function getProgressiveOverloadSuggestions(): Promise<ActionResult<ProgressiveOverloadSuggestion[]>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+
+  const userId = session.user.id;
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 90);
+
+  const setsCol = await getSetsCollection();
+  const sets = await setsCol
+    .find({ userId, completed: true, createdAt: { $gte: cutoff } })
+    .sort({ createdAt: -1 })
+    .toArray();
+
+  // Group by exercise → group by sessionId (preserving order = descending by date)
+  const byExercise = new Map<string, Map<string, { maxLb: number; unit: WeightUnit; maxRaw: number }>>();
+  for (const s of sets) {
+    if (!byExercise.has(s.exercise)) byExercise.set(s.exercise, new Map());
+    const bySess = byExercise.get(s.exercise)!;
+    const lb = toLb(s.weight, s.weightUnit ?? "lb");
+    const existing = bySess.get(s.sessionId);
+    if (!existing || lb > existing.maxLb) {
+      bySess.set(s.sessionId, { maxLb: lb, unit: s.weightUnit ?? "lb", maxRaw: s.weight });
+    }
+  }
+
+  const suggestions: ProgressiveOverloadSuggestion[] = [];
+
+  for (const [exercise, sessMap] of byExercise) {
+    const sessions = Array.from(sessMap.values()); // already sorted desc by insertion order
+    if (sessions.length < 2) continue;
+
+    const ref = sessions[0].maxLb;
+    let consecutive = 1;
+    for (let i = 1; i < sessions.length; i++) {
+      if (Math.abs(sessions[i].maxLb - ref) < 0.01) consecutive++;
+      else break;
+    }
+    if (consecutive < 2) continue;
+
+    const unit = sessions[0].unit;
+    const currentRaw = sessions[0].maxRaw;
+    const currentLb = sessions[0].maxLb;
+
+    let suggestedDisplay: number;
+    if (unit === "kg") {
+      const suggestedKg = Math.round((currentLb * 1.05 / 2.20462) / 1.25) * 1.25;
+      suggestedDisplay = suggestedKg === currentRaw ? currentRaw + 1.25 : suggestedKg;
+    } else {
+      const suggestedLb = Math.round(currentLb * 1.05 / 2.5) * 2.5;
+      suggestedDisplay = suggestedLb === currentRaw ? currentRaw + 2.5 : suggestedLb;
+    }
+
+    suggestions.push({
+      exercise,
+      currentWeightUnit: unit,
+      currentWeightDisplay: currentRaw,
+      suggestedWeightDisplay: suggestedDisplay,
+      consecutiveSessions: consecutive,
+    });
+  }
+
+  suggestions.sort((a, b) => b.consecutiveSessions - a.consecutiveSessions);
+  return { success: true, data: suggestions };
+}
+
 // ── getDeloadRecommendation ────────────────────────────────────────────────────
 
 export interface DeloadRecommendation {

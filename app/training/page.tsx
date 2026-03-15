@@ -2,18 +2,21 @@ export const dynamic = 'force-dynamic';
 
 import Link from "next/link";
 import { Plus, BookOpen, ChevronRight } from "lucide-react";
-import { getWorkoutSessions, getRestDaySuggestions } from "@/actions/workout-actions";
+import { getWorkoutSessions, getRestDaySuggestions, getProgressiveOverloadSuggestions } from "@/actions/workout-actions";
 import { SessionsView } from "@/components/training/sessions-view";
 import { RestDaySuggestions } from "@/components/training/rest-day-suggestions";
+import { OverloadSuggestions } from "@/components/training/overload-suggestions";
 import { Button } from "@/components/ui/button";
 
 export default async function TrainingPage() {
-  const [result, suggestionsResult] = await Promise.all([
+  const [result, suggestionsResult, overloadResult] = await Promise.all([
     getWorkoutSessions(),
     getRestDaySuggestions(),
+    getProgressiveOverloadSuggestions(),
   ]);
   const sessions = result.success ? result.data : [];
   const suggestions = suggestionsResult.success ? suggestionsResult.data : [];
+  const overloadSuggestions = overloadResult.success ? overloadResult.data : [];
 
   return (
     <div>
@@ -42,6 +45,7 @@ export default async function TrainingPage() {
       </div>
 
       {suggestions.length > 0 && <RestDaySuggestions suggestions={suggestions} />}
+      {overloadSuggestions.length > 0 && <OverloadSuggestions suggestions={overloadSuggestions} />}
 
       {/* Guides promo card */}
       <Link
