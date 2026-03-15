@@ -8,6 +8,7 @@ import { TrainingWeekChart } from "@/components/dashboard/training-week-chart";
 import { BODY_TARGET_STYLES } from "@/lib/label-colors";
 import { MacroWeekChart } from "@/components/dashboard/macro-week-chart";
 import { CardioWeekChart } from "@/components/dashboard/cardio-week-chart";
+import { StreakBadges } from "@/components/dashboard/streak-badges";
 import { Button } from "@/components/ui/button";
 
 export async function UserOverview() {
@@ -145,6 +146,7 @@ export async function UserOverview() {
               <p className="text-xs text-muted-foreground">{label}</p>
               <p className="text-lg font-bold leading-tight">{value}</p>
               {suffix && <p className="text-xs text-muted-foreground">{suffix}</p>}
+              {label === "Streak" && <StreakBadges streak={streak} />}
             </div>
           </div>
         ))}
