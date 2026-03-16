@@ -131,7 +131,7 @@ export function BodyWeightView({ initialEntries }: Props) {
                   <stop offset="95%" stopColor="#818cf8" stopOpacity={0.04} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#888" strokeOpacity={0.15} vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border" strokeOpacity={0.5} vertical={false} />
               <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#888" }} axisLine={false} tickLine={false} />
               <YAxis
                 tick={{ fontSize: 12, fill: "#888" }}

@@ -115,7 +115,7 @@ export function CardioAnalyticsChart({ sessions }: Props) {
       ) : (
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#888" strokeOpacity={0.15} vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" className="stroke-border" strokeOpacity={0.5} vertical={false} />
             <XAxis
               dataKey="date"
               tick={{ fontSize: 12, fill: "#888" }}
@@ -136,7 +136,7 @@ export function CardioAnalyticsChart({ sessions }: Props) {
               }}
               width={48}
             />
-            <Tooltip content={<CustomTooltip mode={mode} />} />
+            <Tooltip content={<CustomTooltip mode={mode} />} cursor={{ fill: "rgba(128,128,128,0.08)" }} />
             <Bar
               dataKey={mode}
               fill={activeMode.color}

@@ -19,8 +19,9 @@ import {
   BookTemplate,
   X,
   Save,
+  Copy,
 } from "lucide-react";
-import { deleteDietEntry, getDietEntries, getDietHistory, getDietDataYears, getDietMonthlyHistory } from "@/actions/diet-actions";
+import { deleteDietEntry, getDietEntries, getDietHistory, getDietDataYears, getDietMonthlyHistory, copyDietDay } from "@/actions/diet-actions";
 import { getMealTemplates, createMealTemplate, deleteMealTemplate, applyMealTemplate } from "@/actions/meal-template-actions";
 import { MacroRings } from "@/components/diet/macro-rings";
 import { AddFoodForm } from "@/components/diet/add-food-form";
@@ -64,6 +65,7 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
   const [, startDeleteTransition] = useTransition();
   const [isPendingTemplate, startTemplateTransition] = useTransition();
   const [, startYearTransition] = useTransition();
+  const [isCopying, startCopyTransition] = useTransition();
 
   // Year-based history state
   const currentYear = new Date().getFullYear();
@@ -211,6 +213,17 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
     });
   }
 
+  function handleCopyYesterday() {
+    const yesterday = format(subDays(parseISO(selectedDate), 1), "yyyy-MM-dd");
+    startCopyTransition(async () => {
+      const result = await copyDietDay(yesterday, selectedDate);
+      if (result.success && result.data.copied > 0) {
+        const refreshed = await getDietEntries(selectedDate);
+        if (refreshed.success) setEntries(refreshed.data);
+      }
+    });
+  }
+
   return (
     <div className="flex flex-col gap-5">
       {/* View toggle */}
@@ -273,6 +286,17 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
                 Today
               </button>
             )}
+            {entries.length === 0 && (
+              <button
+                type="button"
+                onClick={handleCopyYesterday}
+                disabled={isCopying}
+                className="ml-auto flex items-center gap-1.5 rounded-full border border-border px-2.5 py-0.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+              >
+                <Copy className="size-3" />
+                {isCopying ? "Copying…" : "Copy from yesterday"}
+              </button>
+            )}
           </div>
 
           {/* Macro rings */}
@@ -287,7 +311,7 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
           </div>
 
           {/* Add food + Templates buttons */}
-          <div className="flex items-center gap-2 animate-fade-up" style={{ animationDelay: "100ms" }}>
+          <div id="add-food-section" className="flex items-center gap-2 animate-fade-up" style={{ animationDelay: "100ms" }}>
             <Button size="sm" onClick={() => openAddForm("breakfast")} className="gap-1.5">
               <Plus className="size-3.5" />
               Add Food

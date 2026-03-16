@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import Link from "next/link";
 import { Utensils, Pill } from "lucide-react";
+import { QuickLogFAB } from "@/components/quick-log-fab";
 import { format } from "date-fns";
 import { getDietEntries, getMacroTargets, getDietHistory } from "@/actions/diet-actions";
 import { DietLogView } from "@/components/diet/diet-log-view";
@@ -53,6 +54,7 @@ export default async function DietPage() {
 
       <NutritionAIInsights />
       <GroceryList targets={targets} />
+      <QuickLogFAB targetId="add-food-section" label="Add Food" />
     </div>
   );
 }

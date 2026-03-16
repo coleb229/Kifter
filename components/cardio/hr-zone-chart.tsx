@@ -131,7 +131,7 @@ export function HRZoneChart({ sessions }: Props) {
           </div>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={zoneData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#888" strokeOpacity={0.12} vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border" strokeOpacity={0.5} vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} className="fill-muted-foreground" />
               <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} className="fill-muted-foreground" allowDecimals={false} />
               <Tooltip

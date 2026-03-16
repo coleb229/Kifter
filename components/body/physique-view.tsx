@@ -190,7 +190,7 @@ export function PhysiqueView({ initialMeasurements }: Props) {
           <p className="mb-4 text-sm font-medium text-muted-foreground">Measurement trends</p>
           <ResponsiveContainer width="100%" height={260}>
             <LineChart data={chartData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#888" strokeOpacity={0.15} vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border" strokeOpacity={0.5} vertical={false} />
               <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#888" }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 10, fill: "#888" }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
               <Tooltip

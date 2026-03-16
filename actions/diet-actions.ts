@@ -319,3 +319,42 @@ export async function getDietHistory(
 
   return { success: true, data: result };
 }
+
+// ── copyDietDay ────────────────────────────────────────────────────────────────
+
+export async function copyDietDay(
+  fromDate: string,
+  toDate: string
+): Promise<ActionResult<{ copied: number }>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+  const userId = session.user.id;
+
+  const { start: fromStart, end: fromEnd } = parseDateRange(fromDate);
+  const { start: toStart } = parseDateRange(toDate);
+
+  const col = await getDietEntriesCollection();
+  const sourceDocs = await col
+    .find({ userId, date: { $gte: fromStart, $lte: fromEnd } })
+    .toArray();
+
+  if (sourceDocs.length === 0) return { success: true, data: { copied: 0 } };
+
+  const now = new Date();
+  const clones = sourceDocs.map((d) => ({
+    _id: new ObjectId(),
+    userId: d.userId,
+    date: toStart,
+    mealType: d.mealType,
+    food: d.food,
+    calories: d.calories,
+    protein: d.protein,
+    carbs: d.carbs,
+    fat: d.fat,
+    notes: d.notes,
+    createdAt: now,
+  }));
+
+  await col.insertMany(clones);
+  return { success: true, data: { copied: clones.length } };
+}

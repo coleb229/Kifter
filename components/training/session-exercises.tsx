@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition, useOptimistic } from "react";
+import { useState, useTransition, useOptimistic, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2, Check, X, Plus, PlayCircle, Link2, Share2, Wand2, Loader2 } from "lucide-react";
 import {
   updateSet,
   deleteSet,
+  toggleSetCompleted,
   renameExercise,
   deleteExerciseFromSession,
   addExerciseToSession,
@@ -68,7 +69,8 @@ function ExerciseGroupCard({
   type OptimisticAction =
     | { type: "update"; id: string; weight: number; weightUnit: WeightUnit; reps: number }
     | { type: "delete"; id: string }
-    | { type: "add"; set: WorkoutSet };
+    | { type: "add"; set: WorkoutSet }
+    | { type: "toggle-complete"; id: string };
 
   const [optimisticSets, dispatchOptimistic] = useOptimistic(
     group.sets,
@@ -79,11 +81,15 @@ function ExerciseGroupCard({
         return state.filter((s) => s.id !== action.id);
       if (action.type === "add")
         return [...state, action.set];
+      if (action.type === "toggle-complete")
+        return state.map((s) => s.id === action.id ? { ...s, completed: !s.completed } : s);
       return state;
     }
   );
 
   const lastSet = optimisticSets[optimisticSets.length - 1];
+  const touchStartX = useRef<number>(0);
+  const touchActiveId = useRef<string>("");
   const [editingVideo, setEditingVideo] = useState(false);
   const [videoUrlInput, setVideoUrlInput] = useState(videoUrl ?? "");
   const [showSubs, setShowSubs] = useState(false);
@@ -156,6 +162,14 @@ function ExerciseGroupCard({
         weightUnit: state.weightUnit,
         reps: state.reps,
       });
+      router.refresh();
+    });
+  }
+
+  function handleToggleComplete(set: WorkoutSet) {
+    startTransition(async () => {
+      dispatchOptimistic({ type: "toggle-complete", id: set.id });
+      await toggleSetCompleted(set.id);
       router.refresh();
     });
   }
@@ -459,15 +473,39 @@ function ExerciseGroupCard({
           return (
             <div
               key={set.id}
-              className="group grid grid-cols-[2rem_1fr_1fr_4rem] items-center gap-2"
+              className="group relative grid grid-cols-[2rem_1fr_1fr_4rem] items-center gap-2 rounded-md transition-transform"
+              onTouchStart={(e) => {
+                touchStartX.current = e.touches[0].clientX;
+                touchActiveId.current = set.id;
+              }}
+              onTouchMove={(e) => {
+                if (touchActiveId.current !== set.id) return;
+                const delta = e.touches[0].clientX - touchStartX.current;
+                const clamped = Math.max(-80, Math.min(80, delta));
+                (e.currentTarget as HTMLDivElement).style.transform = `translateX(${clamped}px)`;
+                (e.currentTarget as HTMLDivElement).style.transition = "none";
+              }}
+              onTouchEnd={(e) => {
+                if (touchActiveId.current !== set.id) return;
+                const delta = e.changedTouches[0].clientX - touchStartX.current;
+                const el = e.currentTarget as HTMLDivElement;
+                el.style.transition = "transform 0.2s ease";
+                el.style.transform = "";
+                touchActiveId.current = "";
+                if (delta > 60) {
+                  handleToggleComplete(set);
+                } else if (delta < -60) {
+                  setSetState(set.id, { type: "confirm-delete" });
+                }
+              }}
             >
-              <span className="text-center text-sm text-muted-foreground">
-                {set.setNumber}
+              <span className={`text-center text-sm ${set.completed ? "text-emerald-500" : "text-muted-foreground"}`}>
+                {set.completed ? <Check className="size-3 mx-auto" /> : set.setNumber}
               </span>
-              <span className="text-sm">
+              <span className={`text-sm ${set.completed ? "line-through text-muted-foreground" : ""}`}>
                 {set.weight} {set.weightUnit}
               </span>
-              <span className="text-sm">{set.reps}</span>
+              <span className={`text-sm ${set.completed ? "line-through text-muted-foreground" : ""}`}>{set.reps}</span>
               <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
                 <button
                   type="button"

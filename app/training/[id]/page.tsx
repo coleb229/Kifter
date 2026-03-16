@@ -6,6 +6,7 @@ import { DEFAULT_EXERCISES } from "@/lib/exercises";
 import { ExerciseLogger } from "@/components/training/exercise-logger";
 import { SessionExercises } from "@/components/training/session-exercises";
 import { EditableSessionHeader } from "@/components/training/editable-session-header";
+import { QuickLogFAB } from "@/components/quick-log-fab";
 
 export default async function SessionPage({
   params,
@@ -43,7 +44,11 @@ export default async function SessionPage({
       <SessionExercises sessionId={id} sets={sets} videoUrls={videoUrls} />
 
       {/* Log another exercise */}
-      <ExerciseLogger sessionId={id} exercises={exercises} />
+      <div id="exercise-logger">
+        <ExerciseLogger sessionId={id} exercises={exercises} />
+      </div>
+
+      <QuickLogFAB targetId="exercise-logger" label="Log Exercise" />
     </div>
   );
 }

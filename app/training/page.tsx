@@ -5,26 +5,30 @@ import { Plus, BookOpen, ChevronRight } from "lucide-react";
 import { getWorkoutSessions, getRestDaySuggestions, getProgressiveOverloadSuggestions } from "@/actions/workout-actions";
 import { getStreak } from "@/actions/streak-actions";
 import { getInjuries } from "@/actions/injury-actions";
+import { getPrograms } from "@/actions/program-actions";
 import { SessionsView } from "@/components/training/sessions-view";
 import { RestDaySuggestions } from "@/components/training/rest-day-suggestions";
 import { OverloadSuggestions } from "@/components/training/overload-suggestions";
 import { InjuryLog } from "@/components/training/injury-log";
 import { StreakBanner } from "@/components/training/streak-banner";
+import { StartFromProgramCard } from "@/components/training/start-from-program-card";
 import { Button } from "@/components/ui/button";
 
 export default async function TrainingPage() {
-  const [result, suggestionsResult, overloadResult, injuriesResult, streakResult] = await Promise.all([
+  const [result, suggestionsResult, overloadResult, injuriesResult, streakResult, programsResult] = await Promise.all([
     getWorkoutSessions(),
     getRestDaySuggestions(),
     getProgressiveOverloadSuggestions(),
     getInjuries(),
     getStreak(),
+    getPrograms(),
   ]);
   const sessions = result.success ? result.data : [];
   const suggestions = suggestionsResult.success ? suggestionsResult.data : [];
   const overloadSuggestions = overloadResult.success ? overloadResult.data : [];
   const injuries = injuriesResult.success ? injuriesResult.data : [];
   const streak = streakResult.success ? streakResult.data : null;
+  const programs = programsResult.success ? programsResult.data : [];
 
   return (
     <div>
@@ -62,6 +66,8 @@ export default async function TrainingPage() {
       {suggestions.length > 0 && <RestDaySuggestions suggestions={suggestions} />}
       {overloadSuggestions.length > 0 && <OverloadSuggestions suggestions={overloadSuggestions} />}
       <InjuryLog injuries={injuries} />
+
+      <StartFromProgramCard programs={programs} />
 
       {/* Guides promo card */}
       <Link

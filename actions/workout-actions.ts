@@ -317,6 +317,30 @@ export async function deleteSet(setId: string): Promise<ActionResult> {
   return { success: true, data: undefined };
 }
 
+// ── toggleSetCompleted ────────────────────────────────────────────────────────
+
+export async function toggleSetCompleted(setId: string): Promise<ActionResult> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+
+  let objectId: ObjectId;
+  try {
+    objectId = new ObjectId(setId);
+  } catch {
+    return { success: false, error: "Invalid set ID" };
+  }
+
+  const setsCol = await getSetsCollection();
+  const set = await setsCol.findOne({ _id: objectId, userId: session.user.id });
+  if (!set) return { success: false, error: "Set not found" };
+
+  await setsCol.updateOne(
+    { _id: objectId, userId: session.user.id },
+    { $set: { completed: !set.completed } }
+  );
+  return { success: true, data: undefined };
+}
+
 // ── renameExercise ────────────────────────────────────────────────────────────
 
 export async function renameExercise(
@@ -490,6 +514,26 @@ export async function getRestDaySuggestions(): Promise<ActionResult<RestDaySugge
       recommendation: hoursSince >= threshold ? "ready" : "rest",
     };
   });
+
+  // Cascade: if sub-groups are recovering, parent groups must also show as recovering.
+  // e.g. if Push is still on rest, Upper Body cannot be shown as ready.
+  const byTarget = new Map(suggestions.map((s) => [s.bodyTarget, s]));
+  const forceRest = (target: BodyTarget) => {
+    const s = byTarget.get(target);
+    if (s && s.recommendation === "ready") s.recommendation = "rest";
+  };
+  const pushRec      = byTarget.get("Push")?.recommendation;
+  const pullRec      = byTarget.get("Pull")?.recommendation;
+  const legsRec      = byTarget.get("Legs")?.recommendation;
+  const upperBodyRec = byTarget.get("Upper Body")?.recommendation;
+  const lowerBodyRec = byTarget.get("Lower Body")?.recommendation;
+
+  if (pushRec === "rest" || pullRec === "rest") forceRest("Upper Body");
+  if (legsRec === "rest") forceRest("Lower Body");
+  if (
+    pushRec === "rest" || pullRec === "rest" ||
+    legsRec === "rest" || upperBodyRec === "rest" || lowerBodyRec === "rest"
+  ) forceRest("Full Body");
 
   return { success: true, data: suggestions };
 }

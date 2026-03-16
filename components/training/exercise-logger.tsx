@@ -36,6 +36,7 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [unit, setUnit] = useState<WeightUnit>("lb");
+  const [suggested, setSuggested] = useState<{ weight: number; unit: WeightUnit } | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -52,7 +53,7 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
 
   async function handleExerciseChange(name: string) {
     form.setValue("exercise", name, { shouldValidate: true });
-    if (!name) return;
+    if (!name) { setSuggested(null); return; }
     const result = await getLastWeightForExercise(name);
     if (result.success && result.data) {
       setUnit(result.data.unit);
@@ -61,6 +62,10 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
       currentSets.forEach((_, i) => {
         form.setValue(`sets.${i}.weight`, weight);
       });
+      const increment = result.data.unit === "kg" ? 1.25 : 2.5;
+      setSuggested({ weight: weight + increment, unit: result.data.unit });
+    } else {
+      setSuggested(null);
     }
   }
 
@@ -137,6 +142,20 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
             <p className="text-xs text-destructive">
               {form.formState.errors.exercise.message}
             </p>
+          )}
+          {suggested && (
+            <button
+              type="button"
+              onClick={() => {
+                const currentSets = form.getValues("sets");
+                currentSets.forEach((_, i) => {
+                  form.setValue(`sets.${i}.weight`, suggested.weight);
+                });
+              }}
+              className="self-start rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              Suggested: {suggested.weight} {suggested.unit} (+{suggested.unit === "kg" ? 1.25 : 2.5})
+            </button>
           )}
         </div>
 

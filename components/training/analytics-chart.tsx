@@ -194,7 +194,7 @@ export function AnalyticsChart({ data, isPending }: Props) {
                 <stop offset="95%" stopColor="#e879f9" stopOpacity={0.04} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#888" strokeOpacity={0.15} vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" className="stroke-border" strokeOpacity={0.5} vertical={false} />
             <XAxis dataKey="date" tick={{ fontSize: 12, fill: "#888" }} axisLine={false} tickLine={false} />
             <YAxis
               tick={{ fontSize: 12, fill: "#888" }}
@@ -204,7 +204,7 @@ export function AnalyticsChart({ data, isPending }: Props) {
               label={{ value: yLabel, angle: -90, position: "insideLeft", fontSize: 11, fill: "#888", dx: -2 }}
               width={48}
             />
-            <Tooltip content={<CustomTooltip mode={mode} />} />
+            <Tooltip content={<CustomTooltip mode={mode} />} cursor={{ fill: "rgba(128,128,128,0.08)" }} />
             <Area
               type="monotone"
               dataKey={yDataKey}
@@ -236,7 +236,7 @@ export function AnalyticsChart({ data, isPending }: Props) {
                 <stop offset="100%" stopColor="#22d3ee" stopOpacity={0.85} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#888" strokeOpacity={0.15} vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" className="stroke-border" strokeOpacity={0.5} vertical={false} />
             <XAxis dataKey="date" tick={{ fontSize: 12, fill: "#888" }} axisLine={false} tickLine={false} />
             <YAxis
               tick={{ fontSize: 12, fill: "#888" }}
@@ -246,14 +246,14 @@ export function AnalyticsChart({ data, isPending }: Props) {
               label={{ value: yLabel, angle: -90, position: "insideLeft", fontSize: 11, fill: "#888", dx: -2 }}
               width={48}
             />
-            <Tooltip content={<CustomTooltip mode={mode} />} />
+            <Tooltip content={<CustomTooltip mode={mode} />} cursor={{ fill: "rgba(128,128,128,0.08)" }} />
             <Bar dataKey={yDataKey} fill="url(#volumeGradient)" radius={[4, 4, 0, 0]} maxBarSize={48} />
           </BarChart>
         </ResponsiveContainer>
       ) : (
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#888" strokeOpacity={0.15} vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" className="stroke-border" strokeOpacity={0.5} vertical={false} />
             <XAxis dataKey="date" tick={{ fontSize: 12, fill: "#888" }} axisLine={false} tickLine={false} />
             <YAxis
               tick={{ fontSize: 12, fill: "#888" }}
@@ -263,7 +263,7 @@ export function AnalyticsChart({ data, isPending }: Props) {
               label={{ value: yLabel, angle: -90, position: "insideLeft", fontSize: 11, fill: "#888", dx: -2 }}
               width={48}
             />
-            <Tooltip content={<CustomTooltip mode={mode} />} />
+            <Tooltip content={<CustomTooltip mode={mode} />} cursor={{ fill: "rgba(128,128,128,0.08)" }} />
             <Line
               type="monotone"
               dataKey={yDataKey}

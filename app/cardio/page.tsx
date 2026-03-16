@@ -5,6 +5,7 @@ import { Plus, TrendingUp } from "lucide-react";
 import { getCardioSessions } from "@/actions/cardio-actions";
 import { CardioLogView } from "@/components/cardio/cardio-log-view";
 import { Button } from "@/components/ui/button";
+import { QuickLogFAB } from "@/components/quick-log-fab";
 
 export default async function CardioPage() {
   const result = await getCardioSessions();
@@ -32,6 +33,7 @@ export default async function CardioPage() {
       </div>
 
       <CardioLogView sessions={sessions} />
+      <QuickLogFAB href="/cardio/new" label="Log Cardio" />
     </div>
   );
 }

@@ -229,7 +229,7 @@ export function AppleHealthTrainingChart({ data }: Props) {
                 strokeWidth={2}
                 dot={{ r: 3, fill: colorForLabel(label) }}
                 activeDot={{ r: 5 }}
-                connectNulls={false}
+                connectNulls={true}
               />
             ))}
           </ComposedChart>

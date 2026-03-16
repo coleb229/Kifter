@@ -3,14 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { LayoutDashboard, Dumbbell, Utensils, Activity, Users } from "lucide-react";
+import { LayoutDashboard, Dumbbell, Utensils, Activity, Scale, Users } from "lucide-react";
 
 const NAV_ITEMS = [
-  { href: "/",         label: "Home",      Icon: LayoutDashboard },
-  { href: "/training", label: "Training",  Icon: Dumbbell },
-  { href: "/diet",     label: "Diet",      Icon: Utensils },
-  { href: "/cardio",   label: "Cardio",    Icon: Activity },
-  { href: "/community",label: "Community", Icon: Users },
+  { href: "/",          label: "Home",      Icon: LayoutDashboard },
+  { href: "/training",  label: "Training",  Icon: Dumbbell },
+  { href: "/diet",      label: "Diet",      Icon: Utensils },
+  { href: "/cardio",    label: "Cardio",    Icon: Activity },
+  { href: "/body",      label: "Body",      Icon: Scale },
+  { href: "/community", label: "Community", Icon: Users },
 ] as const;
 
 export function MobileBottomNav() {
