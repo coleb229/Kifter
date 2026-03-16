@@ -12,6 +12,7 @@ import { OverloadSuggestions } from "@/components/training/overload-suggestions"
 import { InjuryLog } from "@/components/training/injury-log";
 import { StreakBanner } from "@/components/training/streak-banner";
 import { StartFromProgramCard } from "@/components/training/start-from-program-card";
+import { WeeklyPlanStrip } from "@/components/training/weekly-plan-strip";
 import { Button } from "@/components/ui/button";
 
 export default async function TrainingPage() {
@@ -65,6 +66,7 @@ export default async function TrainingPage() {
       </div>
 
       {streak && <StreakBanner streak={streak} />}
+      <WeeklyPlanStrip sessions={sessions} />
       {suggestions.length > 0 && <RestDaySuggestions suggestions={suggestions} />}
       {overloadSuggestions.length > 0 && <OverloadSuggestions suggestions={overloadSuggestions} />}
       <InjuryLog injuries={injuries} />

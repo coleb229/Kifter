@@ -139,19 +139,19 @@ export function BugReportButton() {
           "fixed bottom-20 left-4 z-40",
           "sm:bottom-5 sm:left-5",
           "flex items-center gap-2 overflow-hidden",
-          "h-10 rounded-full border",
+          "rounded-full border",
           "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400",
           "shadow-md transition-all duration-200 ease-out",
-          // Mobile: always show full pill
-          "w-auto px-3",
+          // Mobile: icon-only, small
+          "size-9",
           // Desktop: icon-only, expands on hover
-          "sm:w-10 sm:px-0 sm:hover:w-32 sm:hover:rounded-xl sm:hover:bg-amber-500/20 sm:hover:border-amber-400 sm:hover:-translate-y-0.5 sm:hover:shadow-amber-500/20 sm:hover:shadow-lg",
+          "sm:size-10 sm:hover:w-32 sm:hover:rounded-xl sm:hover:bg-amber-500/20 sm:hover:border-amber-400 sm:hover:-translate-y-0.5 sm:hover:shadow-amber-500/20 sm:hover:shadow-lg",
           "active:scale-95",
         ].join(" ")}
       >
-        <Bug className="size-4 shrink-0 sm:ml-3" />
-        {/* Always visible on mobile, hidden until hover on desktop */}
-        <span className="whitespace-nowrap text-xs font-semibold sm:opacity-0 sm:-translate-x-1 sm:transition-all sm:duration-150 sm:group-hover:opacity-100 sm:group-hover:translate-x-0 sm:pr-3">
+        <Bug className="size-4 shrink-0 mx-auto sm:ml-3" />
+        {/* Hidden on mobile, visible on hover on desktop */}
+        <span className="hidden whitespace-nowrap text-xs font-semibold sm:block sm:opacity-0 sm:-translate-x-1 sm:transition-all sm:duration-150 sm:group-hover:opacity-100 sm:group-hover:translate-x-0 sm:pr-3">
           Report Bug
         </span>
       </button>

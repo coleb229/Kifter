@@ -1,14 +1,16 @@
 import { ShieldCheck } from "lucide-react";
 import { getAllUsers } from "@/actions/admin-actions";
 import { getBugReports } from "@/actions/bug-report-actions";
+import { getUserSuggestions } from "@/actions/suggestion-actions";
 import { UserTable } from "@/components/admin/user-table";
 import { AISiteInsights } from "@/components/admin/ai-site-insights";
 import { BugReportsPanel } from "@/components/admin/bug-reports-panel";
+import { UserSuggestionsPanel } from "@/components/admin/user-suggestions-panel";
 import { auth } from "@/auth";
 
 export default async function AdminPage() {
   const session = await auth();
-  const [result, bugsResult] = await Promise.all([getAllUsers(), getBugReports()]);
+  const [result, bugsResult, suggestionsResult] = await Promise.all([getAllUsers(), getBugReports(), getUserSuggestions()]);
   const users = result.success ? result.data : [];
 
   return (
@@ -34,6 +36,9 @@ export default async function AdminPage() {
           <UserTable users={users} currentUserId={session!.user.id} />
           <div className="mt-8">
             <AISiteInsights />
+          </div>
+          <div className="mt-8">
+            <UserSuggestionsPanel initialSuggestions={suggestionsResult.success ? suggestionsResult.data : []} />
           </div>
           <div className="mt-8">
             <BugReportsPanel initialReports={bugsResult.success ? bugsResult.data : []} />

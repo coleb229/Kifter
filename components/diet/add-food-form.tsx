@@ -359,9 +359,21 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
 
   function onSubmit(data: FormData) {
     startTransition(async () => {
-      const submitData = caloriesOnly
-        ? { ...data, protein: 0, carbs: 0, fat: 0 }
+      // Apply servings multiplier for manually-typed foods (library foods already have it applied via applyMultiplier)
+      const mult = !selectedFood && activeMultiplier !== 1 ? activeMultiplier : 1;
+      const multiplied = mult !== 1
+        ? {
+            ...data,
+            calories: Math.round(data.calories * mult),
+            protein: Math.round(data.protein * mult * 10) / 10,
+            carbs: Math.round(data.carbs * mult * 10) / 10,
+            fat: Math.round(data.fat * mult * 10) / 10,
+          }
         : data;
+
+      const submitData = caloriesOnly
+        ? { ...multiplied, protein: 0, carbs: 0, fat: 0 }
+        : multiplied;
 
       if (isEditing && editingEntry) {
         await updateDietEntry(editingEntry.id, {
@@ -536,6 +548,27 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
                   {m}×
                 </button>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Number of servings — shown for manually typed new foods (not from library) */}
+        {!isEditing && !selectedFood && foodName && (
+          <div>
+            <label className={labelClass}>Number of servings</label>
+            <div className="flex items-center gap-3">
+              <MacroStepper
+                value={activeMultiplier}
+                onChange={(v) => {
+                  const mult = Math.max(0.5, v);
+                  setActiveMultiplier(mult);
+                }}
+                max={20}
+                colorClass="text-foreground"
+              />
+              <p className="text-xs text-muted-foreground">
+                Macros above are per serving · total = macros × servings
+              </p>
             </div>
           </div>
         )}

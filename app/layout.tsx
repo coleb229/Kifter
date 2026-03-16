@@ -6,6 +6,7 @@ import { auth } from "@/auth";
 import { getCurrentUser } from "@/actions/user-actions";
 import { AdminFab } from "@/components/admin-fab";
 import { BugReportButton } from "@/components/bug-report-button";
+import { SuggestionButton } from "@/components/suggestion-button";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import "./globals.css";
 
@@ -52,6 +53,7 @@ export default async function RootLayout({
             {children}
             <MobileBottomNav />
             <AdminFab />
+            <SuggestionButton />
             <BugReportButton />
           </ThemeProvider>
         </SessionProvider>

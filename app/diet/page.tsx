@@ -55,10 +55,15 @@ export default async function DietPage() {
             </p>
           </div>
         </div>
-        <Button size="sm" variant="outline" render={<Link href="/diet/supplements" />}>
-          <Pill className="size-4" />
-          Supplements
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" render={<Link href="/diet/report" />}>
+            Report
+          </Button>
+          <Button size="sm" variant="outline" render={<Link href="/diet/supplements" />}>
+            <Pill className="size-4" />
+            Supplements
+          </Button>
+        </div>
       </div>
 
       <DietLogView

@@ -928,3 +928,27 @@ export interface BugReport {
   githubIssueNumber?: number;
   createdAt: string;
 }
+
+// ── User Suggestions ──────────────────────────────────────────────────────────
+
+export type SuggestionStatus = "new" | "under_review" | "planned" | "done" | "declined";
+
+export interface UserSuggestionDoc {
+  _id: ObjectId;
+  userId: string;
+  userEmail?: string;
+  title: string;
+  description: string;
+  status: SuggestionStatus;
+  createdAt: Date;
+}
+
+export interface UserSuggestion {
+  id: string;
+  userId: string;
+  userEmail?: string;
+  title: string;
+  description: string;
+  status: SuggestionStatus;
+  createdAt: string;
+}
