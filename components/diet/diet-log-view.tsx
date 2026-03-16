@@ -150,10 +150,9 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
   }
 
   function handleDeleteEntry(id: string) {
+    setEntries((prev) => prev.filter((e) => e.id !== id));
     startDeleteTransition(async () => {
       await deleteDietEntry(id);
-      const result = await getDietEntries(selectedDate);
-      if (result.success) setEntries(result.data);
       await refreshHistory();
     });
   }

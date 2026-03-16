@@ -6,7 +6,7 @@ import { ObjectId } from "mongodb";
 import { auth } from "@/auth";
 import { getSessionsCollection, getSetsCollection, getDietEntriesCollection, getCardioSessionsCollection } from "@/lib/db";
 import { getIntegrationSettings } from "@/actions/settings-actions";
-import type { ActionResult, BodyTarget, CardioActivity, CardioSessionDoc, MealType, WorkoutSessionAppleHealth, WorkoutSessionDoc, WorkoutSetDoc, DietEntryDoc } from "@/types";
+import type { ActionResult, BodyTarget, CardioActivity, CardioSessionDoc, MealType, ParsedAppleHealthWorkout, WorkoutSessionAppleHealth, WorkoutSessionDoc, WorkoutSetDoc, DietEntryDoc } from "@/types";
 import { BODY_TARGETS, MEAL_TYPES } from "@/types";
 
 // ── Apple Health training activity map ────────────────────────────────────────
@@ -412,6 +412,124 @@ export async function importAppleHealthXML(
   let skipped = 0;
 
   // ── Insert cardio ─────────────────────────────────────────────────────────
+  if (cardioCandidates.length > 0) {
+    const cardioCol = await getCardioSessionsCollection();
+
+    if (shouldDedupe) {
+      const minDate = cardioCandidates.reduce((m, c) => (c.date < m ? c.date : m), cardioCandidates[0].date);
+      const maxDate = cardioCandidates.reduce((m, c) => (c.date > m ? c.date : m), cardioCandidates[0].date);
+
+      const existing = await cardioCol
+        .find({ userId, date: { $gte: minDate, $lte: new Date(maxDate.getTime() + 5 * 60 * 1000) } })
+        .project<{ date: Date; activityType: string }>({ date: 1, activityType: 1 })
+        .toArray();
+
+      const toInsert: CardioSessionDoc[] = [];
+      for (const c of cardioCandidates) {
+        const isDuplicate = existing.some(
+          (e) =>
+            e.activityType === c.activityType &&
+            Math.abs(e.date.getTime() - c.date.getTime()) <= 5 * 60 * 1000
+        );
+        if (isDuplicate) { skipped++; } else { toInsert.push(c); }
+      }
+      if (toInsert.length) await cardioCol.insertMany(toInsert);
+      cardioInserted = toInsert.length;
+    } else {
+      await cardioCol.insertMany(cardioCandidates);
+      cardioInserted = cardioCandidates.length;
+    }
+  }
+
+  return { success: true, data: { cardio: cardioInserted, training: trainingEnriched, skipped } };
+}
+
+// ── importAppleHealthParsed ───────────────────────────────────────────────────
+// Accepts pre-parsed workout data from the client-side parser so we never
+// send the raw (potentially 10 MB+) zip/xml through Vercel's 4.5 MB limit.
+
+export async function importAppleHealthParsed(
+  workouts: ParsedAppleHealthWorkout[]
+): Promise<ActionResult<{ cardio: number; training: number; skipped: number }>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+  const userId = session.user.id;
+
+  const integrations = await getIntegrationSettings();
+  const cfg = integrations?.appleHealth;
+
+  if (cfg?.enabled === false) {
+    return { success: false, error: "Apple Health import is currently disabled." };
+  }
+
+  if (!workouts?.length) {
+    return { success: true, data: { cardio: 0, training: 0, skipped: 0 } };
+  }
+
+  const sessionsCol = await getSessionsCollection();
+  const cardioCandidates: CardioSessionDoc[] = [];
+  let trainingEnriched = 0;
+
+  for (const w of workouts) {
+    const cardioMapped = AH_CARDIO_MAP[w.activityType];
+    const trainingMapped = AH_TRAINING_MAP[w.activityType];
+
+    if (!cardioMapped && !trainingMapped) continue;
+
+    const startDate = new Date(w.startDate);
+    if (isNaN(startDate.getTime())) continue;
+
+    if (cardioMapped) {
+      let distance: number | undefined;
+      let distanceUnit: "km" | "mi" | undefined;
+      if (w.distance != null && w.distanceUnit) {
+        const norm = normalizeDistanceToKm(w.distance, w.distanceUnit);
+        distance = norm.distance;
+        distanceUnit = norm.distanceUnit;
+      }
+
+      cardioCandidates.push({
+        _id: new ObjectId(),
+        userId,
+        date: startDate,
+        activityType: cardioMapped,
+        duration: w.durationMin,
+        distance,
+        distanceUnit,
+        intensity: "moderate",
+        caloriesBurned: w.caloriesBurned,
+        notes: "Imported from Apple Health",
+        createdAt: new Date(),
+      });
+    }
+
+    if (trainingMapped) {
+      const ahData: WorkoutSessionAppleHealth = {
+        activityType: w.activityType,
+        label: trainingMapped.label,
+        duration: w.durationMin,
+        caloriesBurned: w.caloriesBurned,
+        heartRateAvg: w.heartRateAvg,
+        heartRateMin: w.heartRateMin,
+        heartRateMax: w.heartRateMax,
+      };
+
+      const dateStr = w.startDate.slice(0, 10);
+      const dayStart = new Date(dateStr + "T00:00:00.000Z");
+      const dayEnd   = new Date(dateStr + "T23:59:59.999Z");
+
+      const updateResult = await sessionsCol.updateMany(
+        { userId, date: { $gte: dayStart, $lte: dayEnd } },
+        { $set: { appleHealth: ahData } }
+      );
+      trainingEnriched += updateResult.modifiedCount;
+    }
+  }
+
+  const shouldDedupe = cfg?.deduplicateByDate !== false;
+  let cardioInserted = 0;
+  let skipped = 0;
+
   if (cardioCandidates.length > 0) {
     const cardioCol = await getCardioSessionsCollection();
 

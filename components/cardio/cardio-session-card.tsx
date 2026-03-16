@@ -42,6 +42,8 @@ export function CardioSessionCard({ session, index }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [confirming, setConfirming] = useState(false);
+  const [deleted, setDeleted] = useState(false);
+  if (deleted) return null;
   const date = parseISO(session.date);
 
   function handleDelete(e: React.MouseEvent) {
@@ -51,6 +53,7 @@ export function CardioSessionCard({ session, index }: Props) {
       setConfirming(true);
       return;
     }
+    setDeleted(true);
     startTransition(async () => {
       await deleteCardioSession(session.id);
       router.refresh();

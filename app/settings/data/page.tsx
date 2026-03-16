@@ -3,7 +3,9 @@
 import { useRef, useState, useTransition } from "react";
 import { Download, Upload, CheckCircle, AlertCircle, Apple } from "lucide-react";
 import { exportWorkoutsCSV, exportDietCSV } from "@/actions/export-actions";
-import { importWorkoutsCSV, importDietCSV, importAppleHealthXML } from "@/actions/import-actions";
+import { importWorkoutsCSV, importDietCSV, importAppleHealthParsed } from "@/actions/import-actions";
+import { parseAppleHealthFile } from "@/lib/apple-health-client-parser";
+import type { ParsedAppleHealthWorkout } from "@/types";
 
 function downloadCsv(content: string, filename: string) {
   const blob = new Blob([content], { type: "text/csv" });
@@ -146,12 +148,17 @@ export default function DataPage() {
     reader.readAsText(file);
   }
 
-  function handleImportAppleHealth(file: File) {
+  async function handleImportAppleHealth(file: File) {
     setMsgAH(null);
+    let workouts: ParsedAppleHealthWorkout[];
+    try {
+      workouts = await parseAppleHealthFile(file);
+    } catch (e) {
+      setMsgAH({ type: "error", text: e instanceof Error ? e.message : "Failed to parse file." });
+      return;
+    }
     startAH(async () => {
-      const formData = new FormData();
-      formData.append("file", file);
-      const result = await importAppleHealthXML(formData);
+      const result = await importAppleHealthParsed(workouts);
       if (result.success) {
         const { cardio, training, skipped } = result.data;
         setMsgAH({ type: "success", text: buildImportMsg(cardio, training, skipped) });

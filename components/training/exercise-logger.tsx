@@ -163,6 +163,7 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
                 min="0"
                 step="0.5"
                 placeholder="0"
+                onFocus={(e) => e.target.select()}
                 className={inputClass}
               />
               <input
@@ -170,6 +171,7 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
                 type="number"
                 min="1"
                 placeholder="0"
+                onFocus={(e) => e.target.select()}
                 className={inputClass}
               />
               <Button
@@ -191,7 +193,11 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
           variant="ghost"
           size="sm"
           className="self-start text-muted-foreground"
-          onClick={() => append({ weight: 0, reps: 0 })}
+          onClick={() => {
+            const currentSets = form.getValues("sets");
+            const last = currentSets[currentSets.length - 1];
+            append({ weight: last?.weight ?? 0, reps: 0 });
+          }}
         >
           <Plus className="size-3.5" />
           Add Set

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useOptimistic } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2, Check, X, Plus, PlayCircle, Link2, Share2, Wand2, Loader2 } from "lucide-react";
 import {
@@ -63,8 +63,27 @@ function ExerciseGroupCard({
   const [isPending, startTransition] = useTransition();
   const [exerciseState, setExerciseState] = useState<ExerciseEditState>({ type: "none" });
   const [setStates, setSetStates] = useState<Record<string, SetEditState>>({});
-  const lastSet = group.sets[group.sets.length - 1];
   const [addingSet, setAddingSet] = useState<{ weight: number; weightUnit: WeightUnit; reps: number } | null>(null);
+
+  type OptimisticAction =
+    | { type: "update"; id: string; weight: number; weightUnit: WeightUnit; reps: number }
+    | { type: "delete"; id: string }
+    | { type: "add"; set: WorkoutSet };
+
+  const [optimisticSets, dispatchOptimistic] = useOptimistic(
+    group.sets,
+    (state: WorkoutSet[], action: OptimisticAction) => {
+      if (action.type === "update")
+        return state.map((s) => s.id === action.id ? { ...s, weight: action.weight, weightUnit: action.weightUnit, reps: action.reps } : s);
+      if (action.type === "delete")
+        return state.filter((s) => s.id !== action.id);
+      if (action.type === "add")
+        return [...state, action.set];
+      return state;
+    }
+  );
+
+  const lastSet = optimisticSets[optimisticSets.length - 1];
   const [editingVideo, setEditingVideo] = useState(false);
   const [videoUrlInput, setVideoUrlInput] = useState(videoUrl ?? "");
   const [showSubs, setShowSubs] = useState(false);
@@ -129,19 +148,22 @@ function ExerciseGroupCard({
   function handleSetSave(set: WorkoutSet) {
     const state = getSetState(set.id);
     if (state.type !== "editing") return;
+    setSetState(set.id, { type: "none" });
     startTransition(async () => {
+      dispatchOptimistic({ type: "update", id: set.id, weight: state.weight, weightUnit: state.weightUnit, reps: state.reps });
       await updateSet(set.id, {
         weight: state.weight,
         weightUnit: state.weightUnit,
         reps: state.reps,
       });
-      setSetState(set.id, { type: "none" });
       router.refresh();
     });
   }
 
   function handleSetDelete(setId: string) {
+    setSetState(setId, { type: "none" });
     startTransition(async () => {
+      dispatchOptimistic({ type: "delete", id: setId });
       await deleteSet(setId);
       router.refresh();
     });
@@ -157,12 +179,25 @@ function ExerciseGroupCard({
 
   function handleAddSetSave() {
     if (!addingSet) return;
+    const tempSet: WorkoutSet = {
+      id: "optimistic-" + Date.now(),
+      sessionId,
+      userId: "",
+      exercise: group.name,
+      setNumber: optimisticSets.length + 1,
+      weight: addingSet.weight,
+      weightUnit: addingSet.weightUnit,
+      reps: addingSet.reps,
+      completed: false,
+      createdAt: new Date().toISOString(),
+    };
+    setAddingSet(null);
     startTransition(async () => {
+      dispatchOptimistic({ type: "add", set: tempSet });
       await addExerciseToSession(sessionId, {
         exercise: group.name,
-        sets: [{ setNumber: group.sets.length + 1, ...addingSet }],
+        sets: [{ setNumber: tempSet.setNumber, ...addingSet }],
       });
-      setAddingSet(null);
       router.refresh();
     });
   }
@@ -315,7 +350,7 @@ function ExerciseGroupCard({
           <span />
         </div>
 
-        {group.sets.map((set) => {
+        {optimisticSets.map((set) => {
           const state = getSetState(set.id);
 
           if (state.type === "editing") {
@@ -340,6 +375,7 @@ function ExerciseGroupCard({
                         weight: parseFloat(e.target.value) || 0,
                       })
                     }
+                    onFocus={(e) => e.target.select()}
                     className={inputClass}
                   />
                   <select
@@ -366,6 +402,7 @@ function ExerciseGroupCard({
                       reps: parseInt(e.target.value) || 1,
                     })
                   }
+                  onFocus={(e) => e.target.select()}
                   className={inputClass}
                 />
                 <div className="flex items-center gap-0.5">
@@ -466,7 +503,7 @@ function ExerciseGroupCard({
         {addingSet ? (
           <div className="mt-1 grid grid-cols-[2rem_1fr_1fr_4rem] items-center gap-2">
             <span className="text-center text-sm text-muted-foreground">
-              {group.sets.length + 1}
+              {optimisticSets.length + 1}
             </span>
             <div className="flex gap-1">
               <input
@@ -477,6 +514,7 @@ function ExerciseGroupCard({
                 onChange={(e) =>
                   setAddingSet({ ...addingSet, weight: parseFloat(e.target.value) || 0 })
                 }
+                onFocus={(e) => e.target.select()}
                 className={inputClass}
                 autoFocus
               />
@@ -498,6 +536,7 @@ function ExerciseGroupCard({
               onChange={(e) =>
                 setAddingSet({ ...addingSet, reps: parseInt(e.target.value) || 1 })
               }
+              onFocus={(e) => e.target.select()}
               className={inputClass}
             />
             <div className="flex items-center gap-0.5">

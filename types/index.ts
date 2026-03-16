@@ -29,6 +29,18 @@ export interface WorkoutSessionAppleHealth {
   heartRateMax?: number;
 }
 
+export interface ParsedAppleHealthWorkout {
+  activityType: string;
+  startDate: string;        // ISO 8601 string
+  durationMin: number;
+  caloriesBurned?: number;
+  distance?: number;
+  distanceUnit?: string;
+  heartRateAvg?: number;
+  heartRateMin?: number;
+  heartRateMax?: number;
+}
+
 export interface WorkoutSessionDoc {
   _id: ObjectId;
   userId: string;
