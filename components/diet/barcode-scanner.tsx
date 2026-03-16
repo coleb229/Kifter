@@ -171,16 +171,15 @@ export function BarcodeScanner({ onSelect, defaultOpen = false }: Props) {
         </button>
       </div>
 
-      {/* Live video viewfinder */}
-      {scanning && (
-        <div className="relative overflow-hidden rounded-lg bg-black aspect-video w-full">
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            className="h-full w-full object-cover"
-          />
+      {/* Live video viewfinder — always in DOM so ref is valid before scanning starts */}
+      <div className={`relative overflow-hidden rounded-lg bg-black aspect-video w-full ${scanning ? "" : "hidden"}`}>
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className="h-full w-full object-cover"
+        />
           {/* Scanning overlay */}
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="relative h-40 w-64">
@@ -194,8 +193,7 @@ export function BarcodeScanner({ onSelect, defaultOpen = false }: Props) {
           <p className="absolute bottom-2 left-0 right-0 text-center text-xs text-white/80">
             Point camera at barcode — auto-detects
           </p>
-        </div>
-      )}
+      </div>
 
       {/* Start camera button (before scanning starts) */}
       {!scanning && !detected && !isPending && !result && (
