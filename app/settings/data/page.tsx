@@ -147,24 +147,39 @@ export default function DataPage() {
     reader.readAsText(file);
   }
 
+  async function compressFile(file: File): Promise<string> {
+    const compressed = await new Response(
+      file.stream().pipeThrough(new CompressionStream("gzip"))
+    ).arrayBuffer();
+    const bytes = new Uint8Array(compressed);
+    let binary = "";
+    const chunk = 8192;
+    for (let i = 0; i < bytes.length; i += chunk) {
+      binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + chunk, bytes.length)));
+    }
+    return btoa(binary);
+  }
+
   function handleImportAppleHealth(file: File) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
-      startAH(async () => {
-        const result = await importAppleHealthXML(text);
-        if (result.success) {
-          const { cardio, skipped } = result.data;
-          setMsgAH({
-            type: "success",
-            text: `Imported ${cardio} cardio session${cardio !== 1 ? "s" : ""}${skipped > 0 ? `, ${skipped} skipped as duplicate${skipped !== 1 ? "s" : ""}` : ""}.`,
-          });
-        } else {
-          setMsgAH({ type: "error", text: result.error });
-        }
-      });
-    };
-    reader.readAsText(file);
+    startAH(async () => {
+      let compressed: string;
+      try {
+        compressed = await compressFile(file);
+      } catch {
+        setMsgAH({ type: "error", text: "Failed to compress file before upload." });
+        return;
+      }
+      const result = await importAppleHealthXML(compressed);
+      if (result.success) {
+        const { cardio, skipped } = result.data;
+        setMsgAH({
+          type: "success",
+          text: `Imported ${cardio} cardio session${cardio !== 1 ? "s" : ""}${skipped > 0 ? `, ${skipped} skipped as duplicate${skipped !== 1 ? "s" : ""}` : ""}.`,
+        });
+      } else {
+        setMsgAH({ type: "error", text: result.error });
+      }
+    });
   }
 
   return (

@@ -1,5 +1,6 @@
 "use server";
 
+import { gunzipSync } from "node:zlib";
 import { ObjectId } from "mongodb";
 import { auth } from "@/auth";
 import { getSessionsCollection, getSetsCollection, getDietEntriesCollection, getCardioSessionsCollection } from "@/lib/db";
@@ -187,7 +188,7 @@ function getAttr(tag: string, name: string): string {
 }
 
 export async function importAppleHealthXML(
-  xmlText: string
+  compressedBase64: string
 ): Promise<ActionResult<{ cardio: number; skipped: number }>> {
   const session = await auth();
   if (!session?.user?.id) return { success: false, error: "Not authenticated" };
@@ -198,6 +199,15 @@ export async function importAppleHealthXML(
 
   if (cfg?.enabled === false) {
     return { success: false, error: "Apple Health import is currently disabled." };
+  }
+
+  // Decompress gzip payload sent from browser
+  let xmlText: string;
+  try {
+    const buf = Buffer.from(compressedBase64, "base64");
+    xmlText = gunzipSync(buf).toString("utf-8");
+  } catch {
+    return { success: false, error: "Failed to decompress file. Please re-export and try again." };
   }
 
   const maxBytes = (cfg?.maxFileSizeMb ?? 50) * 1024 * 1024;
