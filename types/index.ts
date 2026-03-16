@@ -19,6 +19,16 @@ export type BodyTarget = (typeof BODY_TARGETS)[number];
 
 // ── MongoDB document shapes (raw) ─────────────────────────────────────────────
 
+export interface WorkoutSessionAppleHealth {
+  activityType: string;   // original HK type e.g. "HKWorkoutActivityTypeCoreTraining"
+  label: string;          // human label e.g. "Core Training"
+  duration: number;       // minutes
+  caloriesBurned?: number;
+  heartRateAvg?: number;
+  heartRateMin?: number;
+  heartRateMax?: number;
+}
+
 export interface WorkoutSessionDoc {
   _id: ObjectId;
   userId: string;
@@ -26,6 +36,7 @@ export interface WorkoutSessionDoc {
   name?: string;
   bodyTarget: BodyTarget;
   notes?: string;
+  appleHealth?: WorkoutSessionAppleHealth;
   createdAt: Date;
 }
 
@@ -59,6 +70,7 @@ export interface WorkoutSession {
   name?: string;
   bodyTarget: BodyTarget;
   notes?: string;
+  appleHealth?: WorkoutSessionAppleHealth;
   createdAt: string;
   setCount?: number;
   exerciseNames?: string[];

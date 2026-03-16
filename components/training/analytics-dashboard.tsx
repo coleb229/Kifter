@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { format } from "date-fns";
 import { Trophy, Dumbbell, Zap, BarChart2 } from "lucide-react";
 import { getExerciseHistory } from "@/actions/analytics-actions";
 import { AnalyticsChart } from "@/components/training/analytics-chart";
+import { YearPicker } from "@/components/ui/year-picker";
 import type { SessionDataPoint } from "@/actions/analytics-actions";
 
 interface Props {
@@ -64,6 +65,24 @@ export function AnalyticsDashboard({
   const [data, setData] = useState<SessionDataPoint[]>(initialData);
   const [isPending, startTransition] = useTransition();
 
+  const years = useMemo(
+    () => [...new Set(data.map((p) => new Date(p.isoDate).getFullYear()))].sort((a, b) => b - a),
+    [data]
+  );
+  const [selectedYear, setSelectedYear] = useState<number>(() => years[0] ?? new Date().getFullYear());
+
+  // Reset to most recent year whenever the exercise changes and years shift
+  useEffect(() => {
+    if (years.length > 0 && !years.includes(selectedYear)) {
+      setSelectedYear(years[0]);
+    }
+  }, [years, selectedYear]);
+
+  const filteredData = useMemo(
+    () => data.filter((p) => new Date(p.isoDate).getFullYear() === selectedYear),
+    [data, selectedYear]
+  );
+
   function handleSelect(name: string) {
     if (name === selected) return;
     setSelected(name);
@@ -73,21 +92,19 @@ export function AnalyticsDashboard({
     });
   }
 
-  // ── Derived stats ────────────────────────────────────────────────────────────
+  // ── Derived stats (from filtered data) ──────────────────────────────────────
 
-  const pr = data.reduce<SessionDataPoint | null>((best, p) => {
+  const pr = filteredData.reduce<SessionDataPoint | null>((best, p) => {
     if (!best || p.maxWeightLb > best.maxWeightLb) return p;
     return best;
   }, null);
 
-  const totalVolumeLb = data.reduce((sum, p) => sum + p.totalVolumeLb, 0);
-  const totalReps = data.reduce((sum, p) => sum + p.totalReps, 0);
-  const totalSets = data.reduce((sum, p) => sum + p.setCount, 0);
+  const totalVolumeLb = filteredData.reduce((sum, p) => sum + p.totalVolumeLb, 0);
+  const totalReps = filteredData.reduce((sum, p) => sum + p.totalReps, 0);
+  const totalSets = filteredData.reduce((sum, p) => sum + p.setCount, 0);
   const avgReps = totalSets > 0 ? Math.round(totalReps / totalSets) : 0;
 
-  const prLabel = pr
-    ? `${pr.maxWeightRaw} ${pr.maxWeightUnit}`
-    : "—";
+  const prLabel = pr ? `${pr.maxWeightRaw} ${pr.maxWeightUnit}` : "—";
   const prSub = pr ? format(new Date(pr.isoDate), "MMM d, yyyy") : undefined;
 
   const volumeLabel =
@@ -118,6 +135,11 @@ export function AnalyticsDashboard({
         </div>
       </div>
 
+      {/* Year picker */}
+      {years.length > 1 && (
+        <YearPicker years={years} selectedYear={selectedYear} onChange={setSelectedYear} />
+      )}
+
       {/* Stat cards */}
       <div className={`grid grid-cols-2 gap-3 sm:grid-cols-4 transition-opacity ${isPending ? "opacity-50" : ""}`}>
         <StatCard
@@ -134,8 +156,8 @@ export function AnalyticsDashboard({
           iconBg="bg-violet-100 dark:bg-violet-950/40"
           iconColor="text-violet-600 dark:text-violet-400"
           label="Sessions"
-          value={data.length > 0 ? String(data.length) : "—"}
-          sub={data.length === 1 ? "session logged" : data.length > 1 ? "sessions logged" : undefined}
+          value={filteredData.length > 0 ? String(filteredData.length) : "—"}
+          sub={filteredData.length === 1 ? "session logged" : filteredData.length > 1 ? "sessions logged" : undefined}
           animDelay="80ms"
         />
         <StatCard
@@ -159,7 +181,7 @@ export function AnalyticsDashboard({
       </div>
 
       {/* Chart */}
-      <AnalyticsChart data={data} isPending={isPending} />
+      <AnalyticsChart data={filteredData} isPending={isPending} />
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { getCardioSessions } from "@/actions/cardio-actions";
 import { CardioAnalyticsDashboard } from "@/components/cardio/cardio-analytics-dashboard";
 
 export default async function CardioAnalyticsPage() {
-  const result = await getCardioSessions(200);
+  const result = await getCardioSessions(5000);
   const sessions = result.success ? result.data : [];
 
   return (

@@ -199,6 +199,84 @@ export async function setMacroTargets(data: {
   return { success: true, data: undefined };
 }
 
+// ── getDietDataYears ──────────────────────────────────────────────────────────
+
+export async function getDietDataYears(): Promise<ActionResult<number[]>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+  const userId = session.user.id;
+
+  const col = await getDietEntriesCollection();
+  const docs = await col.find({ userId }, { projection: { date: 1 } }).toArray();
+  const years = [...new Set(docs.map((d) => d.date.getFullYear()))].sort((a, b) => b - a);
+  return { success: true, data: years };
+}
+
+// ── getDietMonthlyHistory ─────────────────────────────────────────────────────
+
+export async function getDietMonthlyHistory(
+  year: number
+): Promise<ActionResult<DietDaySummary[]>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+  const userId = session.user.id;
+
+  const start = new Date(year, 0, 1);
+  const end = new Date(year, 11, 31, 23, 59, 59, 999);
+
+  const col = await getDietEntriesCollection();
+  const docs = await col
+    .find({ userId, date: { $gte: start, $lte: end } })
+    .sort({ date: 1 })
+    .toArray();
+
+  // Group by calendar date first, then by month — returns avg daily values per month
+  const byDay = new Map<string, { calories: number; protein: number; carbs: number; fat: number }>();
+  for (const d of docs) {
+    const key = format(d.date, "yyyy-MM-dd");
+    const existing = byDay.get(key) ?? { calories: 0, protein: 0, carbs: 0, fat: 0 };
+    existing.calories += d.calories;
+    existing.protein += d.protein;
+    existing.carbs += d.carbs;
+    existing.fat += d.fat;
+    byDay.set(key, existing);
+  }
+
+  const byMonth = new Map<number, { totalCal: number; totalPro: number; totalCarb: number; totalFat: number; daysLogged: number }>();
+  for (const [dateKey, dayData] of byDay) {
+    const month = new Date(dateKey).getMonth();
+    const existing = byMonth.get(month) ?? { totalCal: 0, totalPro: 0, totalCarb: 0, totalFat: 0, daysLogged: 0 };
+    existing.totalCal += dayData.calories;
+    existing.totalPro += dayData.protein;
+    existing.totalCarb += dayData.carbs;
+    existing.totalFat += dayData.fat;
+    existing.daysLogged += 1;
+    byMonth.set(month, existing);
+  }
+
+  const currentYear = new Date().getFullYear();
+  const lastMonth = year === currentYear ? new Date().getMonth() : 11;
+
+  const result: DietDaySummary[] = [];
+  for (let m = 0; m <= lastMonth; m++) {
+    const monthData = byMonth.get(m);
+    if (!monthData || monthData.daysLogged === 0) {
+      result.push({ date: format(new Date(year, m, 1), "yyyy-MM-dd"), calories: 0, protein: 0, carbs: 0, fat: 0, entryCount: 0 });
+    } else {
+      result.push({
+        date: format(new Date(year, m, 1), "yyyy-MM-dd"),
+        calories: monthData.totalCal / monthData.daysLogged,
+        protein: monthData.totalPro / monthData.daysLogged,
+        carbs: monthData.totalCarb / monthData.daysLogged,
+        fat: monthData.totalFat / monthData.daysLogged,
+        entryCount: monthData.daysLogged,
+      });
+    }
+  }
+
+  return { success: true, data: result };
+}
+
 // ── getDietHistory ────────────────────────────────────────────────────────────
 
 export async function getDietHistory(

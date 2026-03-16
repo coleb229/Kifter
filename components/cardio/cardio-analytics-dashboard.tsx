@@ -1,7 +1,9 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { Activity, Clock, Footprints, Flame } from "lucide-react";
 import { CardioAnalyticsChart } from "@/components/cardio/cardio-analytics-chart";
+import { YearPicker } from "@/components/ui/year-picker";
 import type { CardioSession, CardioActivity } from "@/types";
 
 function formatDuration(totalMinutes: number): string {
@@ -16,26 +18,36 @@ interface Props {
 }
 
 export function CardioAnalyticsDashboard({ sessions }: Props) {
-  const totalSessions = sessions.length;
+  const years = useMemo(
+    () => [...new Set(sessions.map((s) => new Date(s.date).getFullYear()))].sort((a, b) => b - a),
+    [sessions]
+  );
+  const [selectedYear, setSelectedYear] = useState<number>(() => years[0] ?? new Date().getFullYear());
 
-  const totalMinutes = sessions.reduce((s, e) => s + e.duration, 0);
+  const filtered = useMemo(
+    () => sessions.filter((s) => new Date(s.date).getFullYear() === selectedYear),
+    [sessions, selectedYear]
+  );
 
-  const totalDistanceKm = sessions.reduce((s, e) => {
+  const totalSessions = filtered.length;
+
+  const totalMinutes = filtered.reduce((s, e) => s + e.duration, 0);
+
+  const totalDistanceKm = filtered.reduce((s, e) => {
     if (e.distance == null) return s;
     return s + (e.distanceUnit === "mi" ? e.distance * 1.60934 : e.distance);
   }, 0);
 
-  const totalCalories = sessions.reduce((s, e) => s + (e.caloriesBurned ?? 0), 0);
+  const totalCalories = filtered.reduce((s, e) => s + (e.caloriesBurned ?? 0), 0);
 
   const avgDuration = totalSessions > 0 ? Math.round(totalMinutes / totalSessions) : 0;
 
   // Activity breakdown
   const activityCounts = new Map<CardioActivity, number>();
-  for (const s of sessions) {
+  for (const s of filtered) {
     activityCounts.set(s.activityType, (activityCounts.get(s.activityType) ?? 0) + 1);
   }
-  const activityBreakdown = Array.from(activityCounts.entries())
-    .sort((a, b) => b[1] - a[1]);
+  const activityBreakdown = Array.from(activityCounts.entries()).sort((a, b) => b[1] - a[1]);
 
   const stats = [
     {
@@ -74,6 +86,13 @@ export function CardioAnalyticsDashboard({ sessions }: Props) {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Year picker */}
+      {years.length > 1 && (
+        <div className="animate-fade-up">
+          <YearPicker years={years} selectedYear={selectedYear} onChange={setSelectedYear} />
+        </div>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {stats.map(({ label, value, suffix, icon: Icon, color, bg }, i) => (
@@ -121,11 +140,8 @@ export function CardioAnalyticsDashboard({ sessions }: Props) {
       )}
 
       {/* Chart */}
-      <div
-        className="animate-fade-up"
-        style={{ animationDelay: "320ms" }}
-      >
-        <CardioAnalyticsChart sessions={sessions} />
+      <div className="animate-fade-up" style={{ animationDelay: "320ms" }}>
+        <CardioAnalyticsChart sessions={filtered} />
       </div>
     </div>
   );

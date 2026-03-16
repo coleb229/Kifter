@@ -4,7 +4,7 @@ import { ObjectId } from "mongodb";
 import { format } from "date-fns";
 import { auth } from "@/auth";
 import { getSessionsCollection, getSetsCollection } from "@/lib/db";
-import type { ActionResult } from "@/types";
+import type { ActionResult, BodyTarget } from "@/types";
 import type { WeightUnit } from "@/lib/weight";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -20,6 +20,21 @@ export interface SessionDataPoint {
   totalReps: number;      // sum of reps across all sets
   setCount: number;
   estimated1RM: number;   // Epley: weight × (1 + reps/30), in lb
+}
+
+// ── AppleHealth analytics types ────────────────────────────────────────────────
+
+export interface AppleHealthSessionPoint {
+  isoDate: string;
+  date: string;           // "Mar 5" formatted for chart x-axis
+  label: string;          // "Core Training"
+  activityType: string;
+  bodyTarget: BodyTarget;
+  duration: number;
+  caloriesBurned?: number;
+  heartRateAvg?: number;
+  heartRateMin?: number;
+  heartRateMax?: number;
 }
 
 function toLb(weight: number, unit: WeightUnit): number {
@@ -126,6 +141,35 @@ export async function getExerciseHistory(
 
   // Sort by session date ascending
   points.sort((a, b) => new Date(a.isoDate).getTime() - new Date(b.isoDate).getTime());
+
+  return { success: true, data: points };
+}
+
+// ── getAppleHealthTrainingSessions ─────────────────────────────────────────────
+
+export async function getAppleHealthTrainingSessions(): Promise<ActionResult<AppleHealthSessionPoint[]>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+  const userId = session.user.id;
+
+  const sessionsCol = await getSessionsCollection();
+  const docs = await sessionsCol
+    .find({ userId, appleHealth: { $exists: true } })
+    .sort({ date: 1 })
+    .toArray();
+
+  const points: AppleHealthSessionPoint[] = docs.map((doc) => ({
+    isoDate: doc.date.toISOString(),
+    date: format(doc.date, "MMM d"),
+    label: doc.appleHealth!.label,
+    activityType: doc.appleHealth!.activityType,
+    bodyTarget: doc.bodyTarget,
+    duration: doc.appleHealth!.duration,
+    caloriesBurned: doc.appleHealth!.caloriesBurned,
+    heartRateAvg: doc.appleHealth!.heartRateAvg,
+    heartRateMin: doc.appleHealth!.heartRateMin,
+    heartRateMax: doc.appleHealth!.heartRateMax,
+  }));
 
   return { success: true, data: points };
 }

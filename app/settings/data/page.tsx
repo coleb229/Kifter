@@ -90,7 +90,6 @@ export default function DataPage() {
   const [msgD, setMsgD] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [msgAH, setMsgAH] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const ahFileRef = useRef<HTMLInputElement>(null);
-
   function handleExportWorkouts() {
     startW(async () => {
       const result = await exportWorkoutsCSV();
@@ -147,39 +146,27 @@ export default function DataPage() {
     reader.readAsText(file);
   }
 
-  async function compressFile(file: File): Promise<string> {
-    const compressed = await new Response(
-      file.stream().pipeThrough(new CompressionStream("gzip"))
-    ).arrayBuffer();
-    const bytes = new Uint8Array(compressed);
-    let binary = "";
-    const chunk = 8192;
-    for (let i = 0; i < bytes.length; i += chunk) {
-      binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + chunk, bytes.length)));
-    }
-    return btoa(binary);
-  }
-
   function handleImportAppleHealth(file: File) {
+    setMsgAH(null);
     startAH(async () => {
-      let compressed: string;
-      try {
-        compressed = await compressFile(file);
-      } catch {
-        setMsgAH({ type: "error", text: "Failed to compress file before upload." });
-        return;
-      }
-      const result = await importAppleHealthXML(compressed);
+      const formData = new FormData();
+      formData.append("file", file);
+      const result = await importAppleHealthXML(formData);
       if (result.success) {
-        const { cardio, skipped } = result.data;
-        setMsgAH({
-          type: "success",
-          text: `Imported ${cardio} cardio session${cardio !== 1 ? "s" : ""}${skipped > 0 ? `, ${skipped} skipped as duplicate${skipped !== 1 ? "s" : ""}` : ""}.`,
-        });
+        const { cardio, training, skipped } = result.data;
+        setMsgAH({ type: "success", text: buildImportMsg(cardio, training, skipped) });
       } else {
         setMsgAH({ type: "error", text: result.error });
       }
     });
+  }
+
+  function buildImportMsg(cardio: number, training: number, skipped: number): string {
+    const parts: string[] = [];
+    if (cardio > 0) parts.push(`${cardio} cardio session${cardio !== 1 ? "s" : ""} imported`);
+    if (training > 0) parts.push(`${training} training session${training !== 1 ? "s" : ""} enriched with Apple Health data`);
+    const base = parts.length > 0 ? parts.join(", ") + "." : "No matching sessions found.";
+    return skipped > 0 ? `${base} ${skipped} cardio skipped as duplicate${skipped !== 1 ? "s" : ""}.` : base;
   }
 
   return (
@@ -219,13 +206,14 @@ export default function DataPage() {
             <div>
               <p className="font-semibold">Apple Health</p>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                Import cardio sessions (runs, rides, swims, etc.) from your Apple Health export file.
+                Import cardio sessions and enrich existing training sessions with Apple Health data.
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                On iPhone: <span className="font-medium">Health app → profile icon → Export All Health Data</span> → unzip and upload <span className="font-mono text-xs">export.xml</span>.
+                On iPhone: <span className="font-medium">Health app → profile icon → Export All Health Data</span> → upload the <span className="font-mono text-xs">.zip</span> directly, or unzip and upload <span className="font-mono text-xs">export.xml</span>.
               </p>
             </div>
           </div>
+
           <div className="flex flex-wrap gap-3">
             <button
               type="button"
@@ -234,12 +222,12 @@ export default function DataPage() {
               className="flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50 transition-colors"
             >
               <Upload className="size-3.5" />
-              {isPendingAH ? "Importing…" : "Import export.xml"}
+              {isPendingAH ? "Importing…" : "Import .zip or export.xml"}
             </button>
             <input
               ref={ahFileRef}
               type="file"
-              accept=".xml,application/xml,text/xml"
+              accept=".zip,.xml,application/zip,application/xml,text/xml"
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
@@ -247,6 +235,7 @@ export default function DataPage() {
               }}
             />
           </div>
+
           {msgAH && (
             <div className={`flex items-center gap-1.5 text-sm ${msgAH.type === "success" ? "text-emerald-600" : "text-destructive"}`}>
               {msgAH.type === "success" ? <CheckCircle className="size-4" /> : <AlertCircle className="size-4" />}

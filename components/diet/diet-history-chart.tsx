@@ -17,6 +17,7 @@ import type { DietDaySummary, MacroTarget } from "@/types";
 interface Props {
   history: DietDaySummary[];
   targets: MacroTarget | null;
+  mode?: "daily" | "monthly";
 }
 
 interface TooltipPayloadEntry {
@@ -29,15 +30,17 @@ function CustomTooltip({
   active,
   payload,
   label,
+  mode,
 }: {
   active?: boolean;
   payload?: TooltipPayloadEntry[];
   label?: string;
+  mode?: "daily" | "monthly";
 }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs shadow-md">
-      <p className="mb-1.5 font-semibold">{label}</p>
+      <p className="mb-1.5 font-semibold">{label}{mode === "monthly" ? " avg/day" : ""}</p>
       {payload.map((p) => (
         <div key={p.name} className="flex items-center gap-1.5">
           <span className="size-2 rounded-full" style={{ backgroundColor: p.color }} />
@@ -51,9 +54,11 @@ function CustomTooltip({
   );
 }
 
-export function DietHistoryChart({ history, targets }: Props) {
+export function DietHistoryChart({ history, targets, mode = "daily" }: Props) {
   const data = history.map((d) => ({
-    date: format(parseISO(d.date), "EEE"),
+    date: mode === "monthly"
+      ? format(parseISO(d.date), "MMM")
+      : format(parseISO(d.date), "EEE"),
     protein: Math.round(d.protein),
     carbs: Math.round(d.carbs),
     fat: Math.round(d.fat),
@@ -66,7 +71,9 @@ export function DietHistoryChart({ history, targets }: Props) {
   if (!hasData) {
     return (
       <div className="flex h-48 items-center justify-center rounded-xl border border-dashed border-border">
-        <p className="text-sm text-muted-foreground">No diet data in the last 7 days</p>
+        <p className="text-sm text-muted-foreground">
+          {mode === "monthly" ? "No diet data for this year" : "No diet data in the last 7 days"}
+        </p>
       </div>
     );
   }
@@ -88,7 +95,7 @@ export function DietHistoryChart({ history, targets }: Props) {
           axisLine={false}
           className="fill-muted-foreground"
         />
-        <Tooltip content={<CustomTooltip />} />
+        <Tooltip content={<CustomTooltip mode={mode} />} />
         <Legend
           iconType="circle"
           iconSize={8}

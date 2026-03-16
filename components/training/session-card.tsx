@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { Dumbbell, Trash2 } from "lucide-react";
+import { Dumbbell, Trash2, Heart, Clock, Flame } from "lucide-react";
 import { deleteSession } from "@/actions/workout-actions";
 import type { WorkoutSession } from "@/types";
 import { BODY_TARGET_STYLES } from "@/lib/label-colors";
@@ -66,6 +66,27 @@ export function SessionCard({ session, index }: SessionCardProps) {
             <span className="truncate">
               {session.exerciseNames.join(" · ")}
             </span>
+          </div>
+        )}
+
+        {session.appleHealth && (
+          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+            {session.appleHealth.heartRateAvg && (
+              <span className="flex items-center gap-1">
+                <Heart className="size-3 text-rose-500" />
+                {session.appleHealth.heartRateAvg} bpm avg
+              </span>
+            )}
+            <span className="flex items-center gap-1">
+              <Clock className="size-3" />
+              {session.appleHealth.duration} min
+            </span>
+            {session.appleHealth.caloriesBurned && (
+              <span className="flex items-center gap-1">
+                <Flame className="size-3 text-amber-500" />
+                {session.appleHealth.caloriesBurned} kcal
+              </span>
+            )}
           </div>
         )}
       </a>

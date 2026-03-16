@@ -1,12 +1,25 @@
 "use server";
 
 import { gunzipSync } from "node:zlib";
+import AdmZip from "adm-zip";
 import { ObjectId } from "mongodb";
 import { auth } from "@/auth";
 import { getSessionsCollection, getSetsCollection, getDietEntriesCollection, getCardioSessionsCollection } from "@/lib/db";
 import { getIntegrationSettings } from "@/actions/settings-actions";
-import type { ActionResult, BodyTarget, CardioActivity, CardioSessionDoc, MealType, WorkoutSessionDoc, WorkoutSetDoc, DietEntryDoc } from "@/types";
+import type { ActionResult, BodyTarget, CardioActivity, CardioSessionDoc, MealType, WorkoutSessionAppleHealth, WorkoutSessionDoc, WorkoutSetDoc, DietEntryDoc } from "@/types";
 import { BODY_TARGETS, MEAL_TYPES } from "@/types";
+
+// ── Apple Health training activity map ────────────────────────────────────────
+
+const AH_TRAINING_MAP: Record<string, { bodyTarget: BodyTarget; label: string }> = {
+  HKWorkoutActivityTypeFunctionalStrengthTraining:  { bodyTarget: "Full Body", label: "Functional Strength" },
+  HKWorkoutActivityTypeTraditionalStrengthTraining: { bodyTarget: "Full Body", label: "Strength Training" },
+  HKWorkoutActivityTypeCoreTraining:                { bodyTarget: "Core",      label: "Core Training" },
+  HKWorkoutActivityTypeHighIntensityIntervalTraining: { bodyTarget: "Cardio",  label: "HIIT" },
+  HKWorkoutActivityTypeCrossTraining:               { bodyTarget: "Full Body", label: "Cross Training" },
+  HKWorkoutActivityTypePilates:                     { bodyTarget: "Core",      label: "Pilates" },
+  HKWorkoutActivityTypeYoga:                        { bodyTarget: "Other",     label: "Yoga" },
+};
 
 function parseCsvRows(csv: string): string[][] {
   const lines = csv.trim().split("\n");
@@ -187,9 +200,89 @@ function getAttr(tag: string, name: string): string {
   return m ? m[1] : "";
 }
 
+// Extract value+unit from a <WorkoutStatistics> block whose type contains `typeSubstr`
+function getWorkoutStat(
+  block: string,
+  typeSubstr: string
+): { value: number; unit: string } | undefined {
+  // Use quote-aware attribute capture so > inside device/other attrs won't truncate
+  const wsRe = /<WorkoutStatistics\s((?:"[^"]*"|[^>])*)\/>/g;
+  let m: RegExpExecArray | null;
+  while ((m = wsRe.exec(block)) !== null) {
+    const attrs = m[1];
+    if (!getAttr(attrs, "type").includes(typeSubstr)) continue;
+    const val = parseFloat(getAttr(attrs, "sum"));
+    if (!isNaN(val) && val > 0) {
+      return { value: val, unit: getAttr(attrs, "unit") };
+    }
+  }
+  return undefined;
+}
+
+// Extract heart rate stats from a <WorkoutStatistics> block (uses average/minimum/maximum, not sum)
+function getWorkoutStatHR(
+  block: string
+): { avg: number; min: number; max: number } | undefined {
+  const wsRe = /<WorkoutStatistics\s((?:"[^"]*"|[^>])*)\/>/g;
+  let m: RegExpExecArray | null;
+  while ((m = wsRe.exec(block)) !== null) {
+    const attrs = m[1];
+    if (!getAttr(attrs, "type").includes("HeartRate")) continue;
+    const avg = parseFloat(getAttr(attrs, "average"));
+    if (isNaN(avg) || avg <= 0) continue;
+    const min = parseFloat(getAttr(attrs, "minimum"));
+    const max = parseFloat(getAttr(attrs, "maximum"));
+    return {
+      avg: Math.round(avg),
+      min: isNaN(min) ? Math.round(avg) : Math.round(min),
+      max: isNaN(max) ? Math.round(avg) : Math.round(max),
+    };
+  }
+  return undefined;
+}
+
+function normalizeDistanceToKm(raw: number, unit: string): { distance: number; distanceUnit: "km" | "mi" } {
+  if (unit === "mi") return { distance: raw, distanceUnit: "mi" };
+  if (unit === "m") return { distance: raw / 1000, distanceUnit: "km" };
+  if (unit === "yd") return { distance: raw * 0.0009144, distanceUnit: "km" };
+  return { distance: raw, distanceUnit: "km" }; // default km
+}
+
+// ── Shared decompression helper ───────────────────────────────────────────────
+
+function decompressAppleHealthXMLFromBuffer(
+  buf: Buffer
+): { xmlText: string } | { error: string } {
+  try {
+    const isZip = buf[0] === 0x50 && buf[1] === 0x4b; // PK
+    const isGzip = buf[0] === 0x1f && buf[1] === 0x8b;
+    if (isZip) {
+      const zip = new AdmZip(buf);
+      const entry =
+        zip.getEntry("apple_health_export/export.xml") ??
+        zip.getEntries().find((e) => e.entryName.endsWith("export.xml"));
+      if (!entry) return { error: "Could not find export.xml inside the zip file." };
+      return { xmlText: entry.getData().toString("utf-8") };
+    } else if (isGzip) {
+      return { xmlText: gunzipSync(buf).toString("utf-8") };
+    } else {
+      // Raw XML file uploaded directly
+      const xmlText = buf.toString("utf-8");
+      if (!xmlText.includes("<HealthData")) {
+        return { error: "Unrecognized file format. Please upload export.xml or the Apple Health .zip export." };
+      }
+      return { xmlText };
+    }
+  } catch {
+    return { error: "Failed to decompress file. Please re-export and try again." };
+  }
+}
+
+// ── importAppleHealthXML ──────────────────────────────────────────────────────
+
 export async function importAppleHealthXML(
-  compressedBase64: string
-): Promise<ActionResult<{ cardio: number; skipped: number }>> {
+  formData: FormData
+): Promise<ActionResult<{ cardio: number; training: number; skipped: number }>> {
   const session = await auth();
   if (!session?.user?.id) return { success: false, error: "Not authenticated" };
   const userId = session.user.id;
@@ -201,30 +294,37 @@ export async function importAppleHealthXML(
     return { success: false, error: "Apple Health import is currently disabled." };
   }
 
-  // Decompress gzip payload sent from browser
-  let xmlText: string;
-  try {
-    const buf = Buffer.from(compressedBase64, "base64");
-    xmlText = gunzipSync(buf).toString("utf-8");
-  } catch {
-    return { success: false, error: "Failed to decompress file. Please re-export and try again." };
-  }
+  const file = formData.get("file") as File | null;
+  if (!file) return { success: false, error: "No file provided." };
+  const buf = Buffer.from(await file.arrayBuffer());
+
+  const decompressed = decompressAppleHealthXMLFromBuffer(buf);
+  if ("error" in decompressed) return { success: false, error: decompressed.error };
+  const { xmlText } = decompressed;
 
   const maxBytes = (cfg?.maxFileSizeMb ?? 50) * 1024 * 1024;
   if (xmlText.length > maxBytes) {
     return { success: false, error: `File exceeds the ${cfg?.maxFileSizeMb ?? 50} MB limit.` };
   }
 
-  // Parse <Workout ...> opening tags (self-closing or with children)
-  const workoutTagRe = /<Workout\s([^>]+?)(?:\/?>)/g;
-  const candidates: CardioSessionDoc[] = [];
+  const sessionsCol = await getSessionsCollection();
+
+  // Quote-aware regex: handles > inside quoted attribute values (e.g. device="<<iPhone>>")
+  const workoutTagRe = /<Workout\s((?:"[^"]*"|[^>])*)(\s*\/?>)/g;
+  const cardioCandidates: CardioSessionDoc[] = [];
+  let trainingEnriched = 0;
   let match: RegExpExecArray | null;
 
   while ((match = workoutTagRe.exec(xmlText)) !== null) {
     const attrs = match[1];
+    const isSelfClosing = match[2].trimStart().startsWith("/");
+    const tagEnd = match.index + match[0].length;
+
     const activityType = getAttr(attrs, "workoutActivityType");
-    const mapped = AH_CARDIO_MAP[activityType];
-    if (!mapped) continue;
+    const cardioMapped = AH_CARDIO_MAP[activityType];
+    const trainingMapped = AH_TRAINING_MAP[activityType];
+
+    if (!cardioMapped && !trainingMapped) continue;
 
     const startDateStr = getAttr(attrs, "startDate");
     if (!startDateStr) continue;
@@ -236,63 +336,110 @@ export async function importAppleHealthXML(
     const durationMin = durationUnit === "s" ? durationRaw / 60 : durationRaw;
     if (durationMin <= 0) continue;
 
-    const distRaw = parseFloat(getAttr(attrs, "totalDistance") || "");
-    const distUnit = getAttr(attrs, "totalDistanceUnit") || "km";
-    const distance = isNaN(distRaw) ? undefined : distRaw;
-    const distanceUnit = (distUnit === "mi" ? "mi" : "km") as "km" | "mi";
+    // Get block content between opening tag and </Workout> for WorkoutStatistics fallback
+    let blockContent = "";
+    if (!isSelfClosing) {
+      const closeIdx = xmlText.indexOf("</Workout>", tagEnd);
+      if (closeIdx !== -1) blockContent = xmlText.slice(tagEnd, closeIdx);
+    }
 
-    const calRaw = parseFloat(getAttr(attrs, "totalEnergyBurned") || "");
-    const caloriesBurned = isNaN(calRaw) ? undefined : Math.round(calRaw);
+    // Calories — try opening tag attrs first, then WorkoutStatistics child elements
+    let calRaw = parseFloat(getAttr(attrs, "totalEnergyBurned") || "");
+    if ((isNaN(calRaw) || calRaw <= 0) && blockContent) {
+      const stat = getWorkoutStat(blockContent, "EnergyBurned");
+      if (stat) calRaw = stat.value;
+    }
+    const caloriesBurned = !isNaN(calRaw) && calRaw > 0 ? Math.round(calRaw) : undefined;
 
-    candidates.push({
-      _id: new ObjectId(),
-      userId,
-      date: startDate,
-      activityType: mapped,
-      duration: Math.round(durationMin),
-      distance,
-      distanceUnit: distance !== undefined ? distanceUnit : undefined,
-      intensity: "moderate",
-      caloriesBurned,
-      notes: "Imported from Apple Health",
-      createdAt: new Date(),
-    });
+    // ── Cardio path ───────────────────────────────────────────────────────────
+    if (cardioMapped) {
+      let distRaw = parseFloat(getAttr(attrs, "totalDistance") || "");
+      let distUnit = getAttr(attrs, "totalDistanceUnit");
+      if ((isNaN(distRaw) || distRaw <= 0) && blockContent) {
+        const stat = getWorkoutStat(blockContent, "Distance");
+        if (stat) { distRaw = stat.value; distUnit = stat.unit; }
+      }
+      let distance: number | undefined;
+      let distanceUnit: "km" | "mi" | undefined;
+      if (!isNaN(distRaw) && distRaw > 0) {
+        const norm = normalizeDistanceToKm(distRaw, distUnit || "km");
+        distance = norm.distance;
+        distanceUnit = norm.distanceUnit;
+      }
+
+      cardioCandidates.push({
+        _id: new ObjectId(),
+        userId,
+        date: startDate,
+        activityType: cardioMapped,
+        duration: Math.round(durationMin),
+        distance,
+        distanceUnit,
+        intensity: "moderate",
+        caloriesBurned,
+        notes: "Imported from Apple Health",
+        createdAt: new Date(),
+      });
+    }
+
+    // ── Training path — enrich existing sessions on the same calendar date ────
+    if (trainingMapped) {
+      const hr = blockContent ? getWorkoutStatHR(blockContent) : undefined;
+      const ahData: WorkoutSessionAppleHealth = {
+        activityType,
+        label: trainingMapped.label,
+        duration: Math.round(durationMin),
+        caloriesBurned,
+        heartRateAvg: hr?.avg,
+        heartRateMin: hr?.min,
+        heartRateMax: hr?.max,
+      };
+
+      const dateStr = startDateStr.slice(0, 10); // "YYYY-MM-DD" in the user's local timezone
+      const dayStart = new Date(dateStr + "T00:00:00.000Z");
+      const dayEnd   = new Date(dateStr + "T23:59:59.999Z");
+
+      const updateResult = await sessionsCol.updateMany(
+        { userId, date: { $gte: dayStart, $lte: dayEnd } },
+        { $set: { appleHealth: ahData } }
+      );
+      trainingEnriched += updateResult.modifiedCount;
+    }
   }
 
-  if (candidates.length === 0) {
-    return { success: true, data: { cardio: 0, skipped: 0 } };
-  }
-
-  const cardioCol = await getCardioSessionsCollection();
   const shouldDedupe = cfg?.deduplicateByDate !== false;
-
-  let inserted = 0;
+  let cardioInserted = 0;
   let skipped = 0;
 
-  if (shouldDedupe) {
-    const minDate = candidates.reduce((m, c) => (c.date < m ? c.date : m), candidates[0].date);
-    const maxDate = candidates.reduce((m, c) => (c.date > m ? c.date : m), candidates[0].date);
+  // ── Insert cardio ─────────────────────────────────────────────────────────
+  if (cardioCandidates.length > 0) {
+    const cardioCol = await getCardioSessionsCollection();
 
-    const existing = await cardioCol
-      .find({ userId, date: { $gte: minDate, $lte: new Date(maxDate.getTime() + 5 * 60 * 1000) } })
-      .project<{ date: Date; activityType: string }>({ date: 1, activityType: 1 })
-      .toArray();
+    if (shouldDedupe) {
+      const minDate = cardioCandidates.reduce((m, c) => (c.date < m ? c.date : m), cardioCandidates[0].date);
+      const maxDate = cardioCandidates.reduce((m, c) => (c.date > m ? c.date : m), cardioCandidates[0].date);
 
-    const toInsert: CardioSessionDoc[] = [];
-    for (const c of candidates) {
-      const isDuplicate = existing.some(
-        (e) =>
-          e.activityType === c.activityType &&
-          Math.abs(e.date.getTime() - c.date.getTime()) <= 5 * 60 * 1000
-      );
-      if (isDuplicate) { skipped++; } else { toInsert.push(c); }
+      const existing = await cardioCol
+        .find({ userId, date: { $gte: minDate, $lte: new Date(maxDate.getTime() + 5 * 60 * 1000) } })
+        .project<{ date: Date; activityType: string }>({ date: 1, activityType: 1 })
+        .toArray();
+
+      const toInsert: CardioSessionDoc[] = [];
+      for (const c of cardioCandidates) {
+        const isDuplicate = existing.some(
+          (e) =>
+            e.activityType === c.activityType &&
+            Math.abs(e.date.getTime() - c.date.getTime()) <= 5 * 60 * 1000
+        );
+        if (isDuplicate) { skipped++; } else { toInsert.push(c); }
+      }
+      if (toInsert.length) await cardioCol.insertMany(toInsert);
+      cardioInserted = toInsert.length;
+    } else {
+      await cardioCol.insertMany(cardioCandidates);
+      cardioInserted = cardioCandidates.length;
     }
-    if (toInsert.length) await cardioCol.insertMany(toInsert);
-    inserted = toInsert.length;
-  } else {
-    await cardioCol.insertMany(candidates);
-    inserted = candidates.length;
   }
 
-  return { success: true, data: { cardio: inserted, skipped } };
+  return { success: true, data: { cardio: cardioInserted, training: trainingEnriched, skipped } };
 }

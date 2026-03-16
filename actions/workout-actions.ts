@@ -146,6 +146,7 @@ export async function getWorkoutSessions(
         name: doc.name,
         bodyTarget: doc.bodyTarget,
         notes: doc.notes,
+        appleHealth: doc.appleHealth,
         createdAt: doc.createdAt.toISOString(),
         setCount: sets.length,
         exerciseNames,
@@ -196,6 +197,7 @@ export async function getWorkoutSession(
         name: doc.name,
         bodyTarget: doc.bodyTarget,
         notes: doc.notes,
+        appleHealth: doc.appleHealth,
         createdAt: doc.createdAt.toISOString(),
       },
       sets: setDocs.map((s) => ({

@@ -3,6 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import {
   getExercisesWithHistory,
   getExerciseHistory,
+  getAppleHealthTrainingSessions,
 } from "@/actions/analytics-actions";
 import { getSessionDates, getDeloadRecommendation, getPersonalRecords, getBodyTargetDistribution } from "@/actions/workout-actions";
 import { AnalyticsDashboard } from "@/components/training/analytics-dashboard";
@@ -11,20 +12,23 @@ import { TrainingHeatmap } from "@/components/training/training-heatmap";
 import { DeloadRecommendation } from "@/components/training/deload-recommendation";
 import { PersonalRecords } from "@/components/training/personal-records";
 import { BodyTargetChart } from "@/components/training/body-target-chart";
+import { AppleHealthTrainingChart } from "@/components/training/apple-health-training-chart";
 
 export default async function AnalyticsPage() {
-  const [exercisesResult, sessionDatesResult, deloadResult, prResult, bodyTargetResult] = await Promise.all([
+  const [exercisesResult, sessionDatesResult, deloadResult, prResult, bodyTargetResult, ahResult] = await Promise.all([
     getExercisesWithHistory(),
     getSessionDates(365),
     getDeloadRecommendation(),
     getPersonalRecords(),
     getBodyTargetDistribution(),
+    getAppleHealthTrainingSessions(),
   ]);
   const exercises = exercisesResult.success ? exercisesResult.data : [];
   const sessionDates = sessionDatesResult.success ? sessionDatesResult.data : [];
   const deloadData = deloadResult.success ? deloadResult.data : null;
   const prData = prResult.success ? prResult.data : [];
   const bodyTargetData = bodyTargetResult.success ? bodyTargetResult.data : [];
+  const ahData = ahResult.success ? ahResult.data : [];
 
   let initialData = null;
   if (exercises.length > 0) {
@@ -61,6 +65,16 @@ export default async function AnalyticsPage() {
       )}
 
       {bodyTargetData.length > 0 && <BodyTargetChart data={bodyTargetData} />}
+
+      {ahData.length > 0 && (
+        <div className="rounded-xl border border-border bg-card p-5">
+          <h2 className="mb-1 text-sm font-semibold">Apple Health Training</h2>
+          <p className="mb-4 text-xs text-muted-foreground">
+            Imported from Apple Health — duration, heart rate &amp; calorie trends
+          </p>
+          <AppleHealthTrainingChart data={ahData} />
+        </div>
+      )}
 
       {exercises.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border p-16 text-center">

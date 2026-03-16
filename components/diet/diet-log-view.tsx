@@ -20,13 +20,14 @@ import {
   X,
   Save,
 } from "lucide-react";
-import { deleteDietEntry, getDietEntries, getDietHistory } from "@/actions/diet-actions";
+import { deleteDietEntry, getDietEntries, getDietHistory, getDietDataYears, getDietMonthlyHistory } from "@/actions/diet-actions";
 import { getMealTemplates, createMealTemplate, deleteMealTemplate, applyMealTemplate } from "@/actions/meal-template-actions";
 import { MacroRings } from "@/components/diet/macro-rings";
 import { AddFoodForm } from "@/components/diet/add-food-form";
 import { MacroTargetForm } from "@/components/diet/macro-target-form";
 import { DietHistoryChart } from "@/components/diet/diet-history-chart";
 import { Button } from "@/components/ui/button";
+import { YearPicker } from "@/components/ui/year-picker";
 import { MEAL_TYPES } from "@/types";
 import { MEAL_TYPE_STYLES } from "@/lib/label-colors";
 import type { DietDaySummary, DietEntry, MacroTarget, MealTemplate, MealType } from "@/types";
@@ -62,6 +63,13 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
   const [isDateLoading, startDateTransition] = useTransition();
   const [, startDeleteTransition] = useTransition();
   const [isPendingTemplate, startTemplateTransition] = useTransition();
+  const [, startYearTransition] = useTransition();
+
+  // Year-based history state
+  const currentYear = new Date().getFullYear();
+  const [dietYears, setDietYears] = useState<number[]>([]);
+  const [selectedHistoryYear, setSelectedHistoryYear] = useState<number | null>(null);
+  const [yearlyHistory, setYearlyHistory] = useState<DietDaySummary[]>([]);
 
   const today = format(new Date(), "yyyy-MM-dd");
   const isToday = selectedDate === today;
@@ -110,6 +118,24 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
   async function refreshHistory() {
     const result = await getDietHistory(7);
     if (result.success) setHistory(result.data);
+  }
+
+  async function openHistory() {
+    setView("history");
+    if (dietYears.length === 0) {
+      const yearsResult = await getDietDataYears();
+      if (yearsResult.success) {
+        setDietYears(yearsResult.data);
+      }
+    }
+  }
+
+  function handleHistoryYearChange(year: number) {
+    setSelectedHistoryYear(year);
+    startYearTransition(async () => {
+      const result = await getDietMonthlyHistory(year);
+      if (result.success) setYearlyHistory(result.data);
+    });
   }
 
   function handleAddClose() {
@@ -204,7 +230,7 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
         </button>
         <button
           type="button"
-          onClick={() => setView("history")}
+          onClick={openHistory}
           className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
             view === "history"
               ? "bg-background text-foreground shadow-sm"
@@ -447,44 +473,112 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
       ) : (
         /* History view */
         <div className="flex flex-col gap-5">
-          <div className="rounded-xl border border-border bg-card p-5 animate-fade-up">
-            <h2 className="mb-1 text-sm font-semibold">Last 7 Days</h2>
-            <p className="mb-4 text-xs text-muted-foreground">Macros stacked by day</p>
-            <DietHistoryChart history={history} targets={targets} />
-          </div>
+          {/* Year picker */}
+          {dietYears.length > 1 && (
+            <div className="animate-fade-up">
+              <YearPicker
+                years={dietYears}
+                selectedYear={selectedHistoryYear ?? currentYear}
+                onChange={handleHistoryYearChange}
+              />
+            </div>
+          )}
 
-          {/* Summary cards */}
-          <div className="grid grid-cols-3 gap-3 animate-fade-up" style={{ animationDelay: "80ms" }}>
-            <div className="rounded-xl border border-border bg-card p-4">
-              <p className="text-xs text-muted-foreground mb-1">Avg Daily Kcal</p>
-              <p className="text-xl font-bold text-indigo-600 dark:text-indigo-400">
-                {weeklyAvgKcal > 0 ? weeklyAvgKcal.toLocaleString() : "—"}
-              </p>
-              {targets && weeklyAvgKcal > 0 && (
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  target {targets.calories.toLocaleString()}
-                </p>
-              )}
-            </div>
-            <div className="rounded-xl border border-border bg-card p-4">
-              <p className="text-xs text-muted-foreground mb-1">Avg Protein</p>
-              <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
-                {weeklyAvgProtein > 0 ? `${weeklyAvgProtein}g` : "—"}
-              </p>
-              {targets && weeklyAvgProtein > 0 && (
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  target {targets.protein}g
-                </p>
-              )}
-            </div>
-            <div className="rounded-xl border border-border bg-card p-4">
-              <p className="text-xs text-muted-foreground mb-1">On Target</p>
-              <p className="text-xl font-bold text-amber-600 dark:text-amber-400">
-                {targets?.calories ? `${adherenceDays}/7` : "—"}
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">days (±15%)</p>
-            </div>
-          </div>
+          {selectedHistoryYear !== null ? (
+            /* Annual monthly view */
+            <>
+              <div className="rounded-xl border border-border bg-card p-5 animate-fade-up">
+                <h2 className="mb-1 text-sm font-semibold">{selectedHistoryYear} Overview</h2>
+                <p className="mb-4 text-xs text-muted-foreground">Avg daily macros per month</p>
+                <DietHistoryChart history={yearlyHistory} targets={targets} mode="monthly" />
+              </div>
+
+              {/* Annual summary cards */}
+              {(() => {
+                const activeDays = yearlyHistory.filter((d) => d.entryCount > 0);
+                const annualAvgKcal = activeDays.length > 0
+                  ? Math.round(activeDays.reduce((s, d) => s + d.calories, 0) / activeDays.length)
+                  : 0;
+                const annualAvgProtein = activeDays.length > 0
+                  ? Math.round(activeDays.reduce((s, d) => s + d.protein, 0) / activeDays.length)
+                  : 0;
+                const annualAdherence = targets?.calories
+                  ? activeDays.filter((d) => d.calories >= targets.calories * 0.85 && d.calories <= targets.calories * 1.15).length
+                  : 0;
+                return (
+                  <div className="grid grid-cols-3 gap-3 animate-fade-up" style={{ animationDelay: "80ms" }}>
+                    <div className="rounded-xl border border-border bg-card p-4">
+                      <p className="text-xs text-muted-foreground mb-1">Avg Daily Kcal</p>
+                      <p className="text-xl font-bold text-indigo-600 dark:text-indigo-400">
+                        {annualAvgKcal > 0 ? annualAvgKcal.toLocaleString() : "—"}
+                      </p>
+                      {targets && annualAvgKcal > 0 && (
+                        <p className="text-xs text-muted-foreground mt-0.5">target {targets.calories.toLocaleString()}</p>
+                      )}
+                    </div>
+                    <div className="rounded-xl border border-border bg-card p-4">
+                      <p className="text-xs text-muted-foreground mb-1">Avg Protein</p>
+                      <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                        {annualAvgProtein > 0 ? `${annualAvgProtein}g` : "—"}
+                      </p>
+                      {targets && annualAvgProtein > 0 && (
+                        <p className="text-xs text-muted-foreground mt-0.5">target {targets.protein}g</p>
+                      )}
+                    </div>
+                    <div className="rounded-xl border border-border bg-card p-4">
+                      <p className="text-xs text-muted-foreground mb-1">On Target</p>
+                      <p className="text-xl font-bold text-amber-600 dark:text-amber-400">
+                        {targets?.calories ? `${annualAdherence}/${activeDays.length}` : "—"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">months (±15%)</p>
+                    </div>
+                  </div>
+                );
+              })()}
+            </>
+          ) : (
+            /* Default rolling 7-day view */
+            <>
+              <div className="rounded-xl border border-border bg-card p-5 animate-fade-up">
+                <h2 className="mb-1 text-sm font-semibold">Last 7 Days</h2>
+                <p className="mb-4 text-xs text-muted-foreground">Macros stacked by day</p>
+                <DietHistoryChart history={history} targets={targets} mode="daily" />
+              </div>
+
+              {/* Summary cards */}
+              <div className="grid grid-cols-3 gap-3 animate-fade-up" style={{ animationDelay: "80ms" }}>
+                <div className="rounded-xl border border-border bg-card p-4">
+                  <p className="text-xs text-muted-foreground mb-1">Avg Daily Kcal</p>
+                  <p className="text-xl font-bold text-indigo-600 dark:text-indigo-400">
+                    {weeklyAvgKcal > 0 ? weeklyAvgKcal.toLocaleString() : "—"}
+                  </p>
+                  {targets && weeklyAvgKcal > 0 && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      target {targets.calories.toLocaleString()}
+                    </p>
+                  )}
+                </div>
+                <div className="rounded-xl border border-border bg-card p-4">
+                  <p className="text-xs text-muted-foreground mb-1">Avg Protein</p>
+                  <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                    {weeklyAvgProtein > 0 ? `${weeklyAvgProtein}g` : "—"}
+                  </p>
+                  {targets && weeklyAvgProtein > 0 && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      target {targets.protein}g
+                    </p>
+                  )}
+                </div>
+                <div className="rounded-xl border border-border bg-card p-4">
+                  <p className="text-xs text-muted-foreground mb-1">On Target</p>
+                  <p className="text-xl font-bold text-amber-600 dark:text-amber-400">
+                    {targets?.calories ? `${adherenceDays}/7` : "—"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">days (±15%)</p>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
 
