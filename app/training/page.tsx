@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import Link from "next/link";
 import { Plus, BookOpen, ChevronRight } from "lucide-react";
-import { getWorkoutSessions, getRestDaySuggestions, getProgressiveOverloadSuggestions } from "@/actions/workout-actions";
+import { getWorkoutSessions, getRestDaySuggestions, getProgressiveOverloadSuggestions, getExerciseTags } from "@/actions/workout-actions";
 import { getStreak } from "@/actions/streak-actions";
 import { getInjuries } from "@/actions/injury-actions";
 import { getPrograms } from "@/actions/program-actions";
@@ -15,13 +15,14 @@ import { StartFromProgramCard } from "@/components/training/start-from-program-c
 import { Button } from "@/components/ui/button";
 
 export default async function TrainingPage() {
-  const [result, suggestionsResult, overloadResult, injuriesResult, streakResult, programsResult] = await Promise.all([
+  const [result, suggestionsResult, overloadResult, injuriesResult, streakResult, programsResult, tagsResult] = await Promise.all([
     getWorkoutSessions(),
     getRestDaySuggestions(),
     getProgressiveOverloadSuggestions(),
     getInjuries(),
     getStreak(),
     getPrograms(),
+    getExerciseTags(),
   ]);
   const sessions = result.success ? result.data : [];
   const suggestions = suggestionsResult.success ? suggestionsResult.data : [];
@@ -29,6 +30,7 @@ export default async function TrainingPage() {
   const injuries = injuriesResult.success ? injuriesResult.data : [];
   const streak = streakResult.success ? streakResult.data : null;
   const programs = programsResult.success ? programsResult.data : [];
+  const tagsMap = tagsResult.success ? tagsResult.data : {};
 
   return (
     <div>
@@ -100,7 +102,7 @@ export default async function TrainingPage() {
           </Button>
         </div>
       ) : (
-        <SessionsView sessions={sessions} />
+        <SessionsView sessions={sessions} tagsMap={tagsMap} />
       )}
     </div>
   );

@@ -1,3 +1,0 @@
-Okay please work through completing all the tasks listed in the "Next Up" column in the Project 6 project board attached to the Kifter repo, moving each item to the "Done" column after completion.
-
-After this is done, please delete all items in the "AI Suggestions" column and regenerate 15 fresh new suggestions to improve the site.

@@ -62,6 +62,7 @@ export interface WorkoutSetDoc {
   weightUnit?: WeightUnit;
   reps: number;
   completed: boolean;
+  supersetGroupId?: string;
   createdAt: Date;
 }
 
@@ -70,6 +71,7 @@ export interface ExerciseDoc {
   userId: string;
   name: string;
   videoUrl?: string;
+  tags?: string[];
   createdAt: Date;
 }
 
@@ -98,6 +100,7 @@ export interface WorkoutSet {
   weightUnit: WeightUnit;
   reps: number;
   completed: boolean;
+  supersetGroupId?: string;
   createdAt: string;
 }
 

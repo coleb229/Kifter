@@ -11,6 +11,10 @@ import {
   deleteExerciseFromSession,
   addExerciseToSession,
   setExerciseVideoUrl,
+  addExerciseTag,
+  removeExerciseTag,
+  linkSuperset,
+  unlinkSuperset,
 } from "@/actions/workout-actions";
 import { shareWorkoutSession } from "@/actions/post-actions";
 import { getExerciseSubstitutions } from "@/actions/ai-actions";
@@ -23,6 +27,7 @@ import type { WeightUnit } from "@/lib/weight";
 interface ExerciseGroup {
   name: string;
   sets: WorkoutSet[];
+  supersetGroupId?: string;
 }
 
 function groupByExercise(sets: WorkoutSet[]): ExerciseGroup[] {
@@ -31,7 +36,11 @@ function groupByExercise(sets: WorkoutSet[]): ExerciseGroup[] {
     if (!map.has(set.exercise)) map.set(set.exercise, []);
     map.get(set.exercise)!.push(set);
   }
-  return Array.from(map.entries()).map(([name, sets]) => ({ name, sets }));
+  return Array.from(map.entries()).map(([name, sets]) => ({
+    name,
+    sets,
+    supersetGroupId: sets[0]?.supersetGroupId,
+  }));
 }
 
 type SetEditState =
@@ -51,20 +60,58 @@ const inputClass =
 
 // ── ExerciseGroupCard ─────────────────────────────────────────────────────────
 
+const PRESET_TAGS = ["Compound", "Isolation", "Push", "Pull", "Legs", "Core"];
+
 function ExerciseGroupCard({
   sessionId,
   group,
   videoUrl,
+  initialTags = [],
+  allUserTags = [],
+  pendingSuperset,
+  onStartSuperset,
+  onCompleteSuperset,
+  onRemoveSuperset,
 }: {
   sessionId: string;
   group: ExerciseGroup;
   videoUrl?: string;
+  initialTags?: string[];
+  allUserTags?: string[];
+  pendingSuperset?: string | null;
+  onStartSuperset?: () => void;
+  onCompleteSuperset?: () => void;
+  onRemoveSuperset?: () => void;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [exerciseState, setExerciseState] = useState<ExerciseEditState>({ type: "none" });
   const [setStates, setSetStates] = useState<Record<string, SetEditState>>({});
   const [addingSet, setAddingSet] = useState<{ weight: number; weightUnit: WeightUnit; reps: number } | null>(null);
+
+  // Tags state
+  const [tags, setTags] = useState<string[]>(initialTags);
+  const [showTagInput, setShowTagInput] = useState(false);
+  const [tagInput, setTagInput] = useState("");
+  const [, startTagTransition] = useTransition();
+
+  function handleAddTag(tag: string) {
+    const t = tag.trim();
+    if (!t || tags.includes(t)) { setShowTagInput(false); setTagInput(""); return; }
+    setTags((prev) => [...prev, t]);
+    setShowTagInput(false);
+    setTagInput("");
+    startTagTransition(async () => { await addExerciseTag(group.name, t); });
+  }
+
+  function handleRemoveTag(tag: string) {
+    setTags((prev) => prev.filter((t) => t !== tag));
+    startTagTransition(async () => { await removeExerciseTag(group.name, tag); });
+  }
+
+  const tagSuggestions = [...new Set([...PRESET_TAGS, ...allUserTags])].filter(
+    (t) => !tags.includes(t) && t.toLowerCase().includes(tagInput.toLowerCase())
+  );
 
   type OptimisticAction =
     | { type: "update"; id: string; weight: number; weightUnit: WeightUnit; reps: number }
@@ -354,6 +401,80 @@ function ExerciseGroupCard({
           </>
         )}
       </div>
+
+      {/* Tags row */}
+      {exerciseState.type === "none" && !editingVideo && (
+        <div className="mb-3 flex flex-wrap items-center gap-1.5">
+          {tags.map((tag) => (
+            <span key={tag} className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
+              {tag}
+              <button type="button" onClick={() => handleRemoveTag(tag)} className="text-muted-foreground hover:text-foreground" aria-label={`Remove ${tag}`}>
+                <X className="size-3" />
+              </button>
+            </span>
+          ))}
+          {showTagInput ? (
+            <div className="relative">
+              <input
+                type="text"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleAddTag(tagInput);
+                  if (e.key === "Escape") { setShowTagInput(false); setTagInput(""); }
+                }}
+                placeholder="Tag name"
+                autoFocus
+                className="h-6 w-24 rounded-full border border-input bg-background px-2 text-xs focus-visible:outline-none"
+              />
+              {tagSuggestions.length > 0 && tagInput.length === 0 && (
+                <div className="absolute left-0 top-7 z-10 flex flex-wrap gap-1 rounded-lg border border-border bg-popover p-2 shadow-md w-40">
+                  {tagSuggestions.slice(0, 8).map((s) => (
+                    <button key={s} type="button" onClick={() => handleAddTag(s)} className="rounded-full bg-muted px-2 py-0.5 text-xs hover:bg-muted/80">
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowTagInput(true)}
+              className="inline-flex items-center gap-0.5 rounded-full border border-dashed border-muted-foreground/40 px-2 py-0.5 text-xs text-muted-foreground hover:border-foreground hover:text-foreground"
+            >
+              <Plus className="size-3" /> tag
+            </button>
+          )}
+          {pendingSuperset === null && onStartSuperset && !group.supersetGroupId && (
+            <button
+              type="button"
+              onClick={onStartSuperset}
+              className="inline-flex items-center gap-0.5 rounded-full border border-dashed border-muted-foreground/40 px-2 py-0.5 text-xs text-muted-foreground hover:border-indigo-500 hover:text-indigo-500"
+            >
+              SS
+            </button>
+          )}
+          {pendingSuperset !== null && pendingSuperset !== group.name && onCompleteSuperset && !group.supersetGroupId && (
+            <button
+              type="button"
+              onClick={onCompleteSuperset}
+              className="inline-flex items-center gap-0.5 rounded-full border border-indigo-500 bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-600 dark:bg-indigo-950/30 hover:bg-indigo-100"
+            >
+              Link with {pendingSuperset}
+            </button>
+          )}
+          {group.supersetGroupId && onRemoveSuperset && (
+            <button
+              type="button"
+              onClick={onRemoveSuperset}
+              className="inline-flex items-center gap-0.5 rounded-full border border-amber-400 bg-amber-50 px-2 py-0.5 text-xs text-amber-700 dark:bg-amber-950/30 hover:bg-amber-100"
+            >
+              Remove SS
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Sets */}
       <div className="flex flex-col gap-1.5">
@@ -649,13 +770,62 @@ interface SessionExercisesProps {
   sessionId: string;
   sets: WorkoutSet[];
   videoUrls?: Record<string, string>;
+  tagsMap?: Record<string, string[]>;
+  allUserTags?: string[];
 }
 
-export function SessionExercises({ sessionId, sets, videoUrls = {} }: SessionExercisesProps) {
+export function SessionExercises({ sessionId, sets, videoUrls = {}, tagsMap = {}, allUserTags = [] }: SessionExercisesProps) {
   const router = useRouter();
   const exercises = groupByExercise(sets);
   const [shareState, setShareState] = useState<"idle" | "pending" | "shared" | "error">("idle");
   const [, startShareTransition] = useTransition();
+  const [pendingSuperset, setPendingSuperset] = useState<string | null>(null);
+  const [, startSupersetTransition] = useTransition();
+
+  const totalVolumeKg = sets.reduce((sum, s) => {
+    const kg = s.weightUnit === "lb" ? s.weight / 2.20462 : s.weight;
+    return sum + kg * s.reps;
+  }, 0);
+
+  function handleStartSuperset(exerciseName: string) {
+    setPendingSuperset(exerciseName);
+  }
+
+  function handleCompleteSuperset(exerciseName: string) {
+    if (!pendingSuperset) return;
+    const ex1 = pendingSuperset;
+    const ex2 = exerciseName;
+    setPendingSuperset(null);
+    startSupersetTransition(async () => {
+      await linkSuperset(sessionId, ex1, ex2);
+      router.refresh();
+    });
+  }
+
+  function handleRemoveSuperset(groupId: string) {
+    startSupersetTransition(async () => {
+      await unlinkSuperset(sessionId, groupId);
+      router.refresh();
+    });
+  }
+
+  // Group exercises into superset pairs or singles
+  type RenderGroup =
+    | { type: "single"; exercise: ExerciseGroup }
+    | { type: "superset"; exercises: ExerciseGroup[]; groupId: string };
+
+  const renderGroups: RenderGroup[] = [];
+  const seenSupersets = new Set<string>();
+  for (const ex of exercises) {
+    if (ex.supersetGroupId) {
+      if (seenSupersets.has(ex.supersetGroupId)) continue;
+      seenSupersets.add(ex.supersetGroupId);
+      const pair = exercises.filter((e) => e.supersetGroupId === ex.supersetGroupId);
+      renderGroups.push({ type: "superset", exercises: pair, groupId: ex.supersetGroupId });
+    } else {
+      renderGroups.push({ type: "single", exercise: ex });
+    }
+  }
 
   if (exercises.length === 0) return null;
 
@@ -676,9 +846,16 @@ export function SessionExercises({ sessionId, sets, videoUrls = {} }: SessionExe
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Exercises
-        </h2>
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Exercises
+          </h2>
+          {totalVolumeKg > 0 && (
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Total volume: {Math.round(totalVolumeKg).toLocaleString()} kg
+            </p>
+          )}
+        </div>
         <button
           type="button"
           onClick={handleShare}
@@ -690,9 +867,42 @@ export function SessionExercises({ sessionId, sets, videoUrls = {} }: SessionExe
           {shareState === "pending" ? "Sharing…" : shareState === "shared" ? "Shared!" : shareState === "error" ? "Failed" : "Share"}
         </button>
       </div>
-      {exercises.map((group) => (
-        <ExerciseGroupCard key={group.name} sessionId={sessionId} group={group} videoUrl={videoUrls[group.name]} />
-      ))}
+      {renderGroups.map((rg) =>
+        rg.type === "superset" ? (
+          <div
+            key={rg.groupId}
+            className="rounded-xl border-2 border-dashed border-indigo-300 dark:border-indigo-700 p-1 flex flex-col gap-1 relative"
+          >
+            <span className="absolute -top-2.5 left-3 rounded-full bg-indigo-500 px-2 py-0.5 text-[10px] font-bold text-white">SS</span>
+            {rg.exercises.map((ex) => (
+              <ExerciseGroupCard
+                key={ex.name}
+                sessionId={sessionId}
+                group={ex}
+                videoUrl={videoUrls[ex.name]}
+                initialTags={tagsMap[ex.name] ?? []}
+                allUserTags={allUserTags}
+                pendingSuperset={pendingSuperset}
+                onStartSuperset={() => handleStartSuperset(ex.name)}
+                onCompleteSuperset={() => handleCompleteSuperset(ex.name)}
+                onRemoveSuperset={() => handleRemoveSuperset(rg.groupId)}
+              />
+            ))}
+          </div>
+        ) : (
+          <ExerciseGroupCard
+            key={rg.exercise.name}
+            sessionId={sessionId}
+            group={rg.exercise}
+            videoUrl={videoUrls[rg.exercise.name]}
+            initialTags={tagsMap[rg.exercise.name] ?? []}
+            allUserTags={allUserTags}
+            pendingSuperset={pendingSuperset}
+            onStartSuperset={() => handleStartSuperset(rg.exercise.name)}
+            onCompleteSuperset={() => handleCompleteSuperset(rg.exercise.name)}
+          />
+        )
+      )}
     </div>
   );
 }

@@ -6,6 +6,9 @@ import { QuickLogFAB } from "@/components/quick-log-fab";
 import { format } from "date-fns";
 import { auth } from "@/auth";
 import { getDietEntries, getMacroTargets, getDietHistory } from "@/actions/diet-actions";
+import { getWorkoutSessions } from "@/actions/workout-actions";
+import { getBodyWeightHistory } from "@/actions/body-weight-actions";
+import { toKg } from "@/lib/weight";
 import { DietLogView } from "@/components/diet/diet-log-view";
 import { NutritionAIInsights } from "@/components/diet/nutrition-ai-insights";
 import { GroceryList } from "@/components/diet/grocery-list";
@@ -16,15 +19,25 @@ export default async function DietPage() {
   const isAdmin = session?.user?.role === "admin";
   const today = format(new Date(), "yyyy-MM-dd");
 
-  const [entriesResult, targetsResult, historyResult] = await Promise.all([
+  const [entriesResult, targetsResult, historyResult, sessionsResult, bwResult] = await Promise.all([
     getDietEntries(today),
     getMacroTargets(),
     getDietHistory(7),
+    getWorkoutSessions(20),
+    getBodyWeightHistory(),
   ]);
 
   const entries = entriesResult.success ? entriesResult.data : [];
   const targets = targetsResult.success ? targetsResult.data : null;
   const history = historyResult.success ? historyResult.data : [];
+
+  const todaySessions = (sessionsResult.success ? sessionsResult.data : [])
+    .filter((s) => s.date.startsWith(today))
+    .map((s) => ({ bodyTarget: s.bodyTarget, durationMinutes: s.appleHealth?.duration }));
+
+  const bwEntries = bwResult.success ? bwResult.data : [];
+  const latestBw = bwEntries.at(-1);
+  const bodyWeightKg = latestBw ? toKg(latestBw.weight, latestBw.weightUnit) : 70;
 
   const todayKcal = entries.reduce((sum, e) => sum + e.calories, 0);
 
@@ -53,6 +66,8 @@ export default async function DietPage() {
         initialTargets={targets}
         initialHistory={history}
         initialDate={today}
+        initialTodaySessions={todaySessions}
+        initialBodyWeightKg={bodyWeightKg}
       />
 
       {isAdmin && <NutritionAIInsights />}

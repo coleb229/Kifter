@@ -10,15 +10,27 @@ const PAGE_SIZE = 10;
 
 interface Props {
   sessions: WorkoutSession[];
+  tagsMap?: Record<string, string[]>;
 }
 
-export function SessionsView({ sessions }: Props) {
+export function SessionsView({ sessions, tagsMap = {} }: Props) {
   const [view, setView] = useState<"list" | "calendar">("list");
   const [page, setPage] = useState(1);
+  const [activeTag, setActiveTag] = useState<string | null>(null);
 
-  const totalPages = Math.max(1, Math.ceil(sessions.length / PAGE_SIZE));
+  // Collect all unique tags in use
+  const allTags = [...new Set(Object.values(tagsMap).flat())].sort();
+
+  // Filter sessions by tag if one is selected
+  const filteredSessions = activeTag
+    ? sessions.filter((s) =>
+        s.exerciseNames?.some((ex) => tagsMap[ex]?.includes(activeTag))
+      )
+    : sessions;
+
+  const totalPages = Math.max(1, Math.ceil(filteredSessions.length / PAGE_SIZE));
   const pageStart = (page - 1) * PAGE_SIZE;
-  const paginated = sessions.slice(pageStart, pageStart + PAGE_SIZE);
+  const paginated = filteredSessions.slice(pageStart, pageStart + PAGE_SIZE);
 
   // Page window: show up to 5 page numbers centered on current page
   function pageNumbers() {
@@ -36,6 +48,33 @@ export function SessionsView({ sessions }: Props) {
 
   return (
     <div>
+      {/* Tag filter row */}
+      {allTags.length > 0 && (
+        <div className="mb-4 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+          <button
+            type="button"
+            onClick={() => { setActiveTag(null); setPage(1); }}
+            className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              activeTag === null ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            All
+          </button>
+          {allTags.map((tag) => (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => { setActiveTag(tag === activeTag ? null : tag); setPage(1); }}
+              className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                activeTag === tag ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* View toggle */}
       <div className="mb-5 flex items-center gap-1 rounded-lg border border-border bg-muted p-1 w-fit">
         <button

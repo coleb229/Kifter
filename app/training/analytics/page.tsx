@@ -5,7 +5,7 @@ import {
   getExerciseHistory,
   getAppleHealthTrainingSessions,
 } from "@/actions/analytics-actions";
-import { getSessionDates, getDeloadRecommendation, getPersonalRecords, getBodyTargetDistribution } from "@/actions/workout-actions";
+import { getSessionDates, getDeloadRecommendation, getPersonalRecords, getBodyTargetDistribution, getVolumeHistory, getPRHistory } from "@/actions/workout-actions";
 import { auth } from "@/auth";
 import { AnalyticsDashboard } from "@/components/training/analytics-dashboard";
 import { AIInsights } from "@/components/training/ai-insights";
@@ -14,18 +14,22 @@ import { DeloadRecommendation } from "@/components/training/deload-recommendatio
 import { PersonalRecords } from "@/components/training/personal-records";
 import { BodyTargetChart } from "@/components/training/body-target-chart";
 import { AppleHealthTrainingChart } from "@/components/training/apple-health-training-chart";
+import { VolumeChart } from "@/components/training/volume-chart";
+import { PRHistoryTimeline } from "@/components/training/pr-history-timeline";
 
 export default async function AnalyticsPage() {
   const session = await auth();
   const isAdmin = session?.user?.role === "admin";
 
-  const [exercisesResult, sessionDatesResult, deloadResult, prResult, bodyTargetResult, ahResult] = await Promise.all([
+  const [exercisesResult, sessionDatesResult, deloadResult, prResult, bodyTargetResult, ahResult, volumeResult, prHistoryResult] = await Promise.all([
     getExercisesWithHistory(),
     getSessionDates(365),
     getDeloadRecommendation(),
     getPersonalRecords(),
     getBodyTargetDistribution(),
     getAppleHealthTrainingSessions(),
+    getVolumeHistory(30),
+    getPRHistory(),
   ]);
   const exercises = exercisesResult.success ? exercisesResult.data : [];
   const sessionDates = sessionDatesResult.success ? sessionDatesResult.data : [];
@@ -33,6 +37,8 @@ export default async function AnalyticsPage() {
   const prData = prResult.success ? prResult.data : [];
   const bodyTargetData = bodyTargetResult.success ? bodyTargetResult.data : [];
   const ahData = ahResult.success ? ahResult.data : [];
+  const volumeData = volumeResult.success ? volumeResult.data : [];
+  const prHistoryData = prHistoryResult.success ? prHistoryResult.data : [];
 
   let initialData = null;
   if (exercises.length > 0) {
@@ -70,6 +76,8 @@ export default async function AnalyticsPage() {
 
       {bodyTargetData.length > 0 && <BodyTargetChart data={bodyTargetData} />}
 
+      {volumeData.length > 0 && <VolumeChart initialData={volumeData} />}
+
       {ahData.length > 0 && (
         <div className="rounded-xl border border-border bg-card p-5">
           <h2 className="mb-1 text-sm font-semibold">Apple Health Training</h2>
@@ -99,6 +107,8 @@ export default async function AnalyticsPage() {
       )}
 
       <PersonalRecords records={prData} />
+
+      {prHistoryData.length > 0 && <PRHistoryTimeline initialData={prHistoryData} />}
     </div>
   );
 }

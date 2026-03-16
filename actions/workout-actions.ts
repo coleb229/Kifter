@@ -1050,3 +1050,196 @@ export async function getRecentSessionsForExercise(
 
   return { success: true, data: Array.from(bySession.values()) };
 }
+
+// ── getVolumeHistory ──────────────────────────────────────────────────────────
+
+export interface VolumeDayPoint {
+  date: string;          // "YYYY-MM-DD"
+  totalVolumeKg: number;
+}
+
+export async function getVolumeHistory(days: 30 | 90): Promise<ActionResult<VolumeDayPoint[]>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+
+  const userId = session.user.id;
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+  const setsCol = await getSetsCollection();
+  const sets = await setsCol
+    .find({ userId, createdAt: { $gte: cutoff }, completed: true })
+    .toArray();
+
+  const volumeByDate = new Map<string, number>();
+  for (const s of sets) {
+    const date = s.createdAt.toISOString().slice(0, 10);
+    const weightKg = s.weightUnit === "lb" ? s.weight / 2.20462 : s.weight;
+    volumeByDate.set(date, (volumeByDate.get(date) ?? 0) + weightKg * s.reps);
+  }
+
+  const data: VolumeDayPoint[] = Array.from(volumeByDate.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, vol]) => ({ date, totalVolumeKg: Math.round(vol) }));
+
+  return { success: true, data };
+}
+
+// ── getPRHistory ──────────────────────────────────────────────────────────────
+
+export interface PRHistoryEntry {
+  date: string;
+  weight: number;
+  weightUnit: WeightUnit;
+  reps: number;
+  estimated1RM: number;  // Epley, lb
+  deltaVsPrev: number | null;
+  sessionId: string;
+}
+
+export interface ExercisePRHistory {
+  exercise: string;
+  entries: PRHistoryEntry[]; // newest-first
+}
+
+export async function getPRHistory(): Promise<ActionResult<ExercisePRHistory[]>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+
+  const userId = session.user.id;
+  const setsCol = await getSetsCollection();
+  const sessionsCol = await getSessionsCollection();
+
+  // Get all completed sets sorted oldest-first
+  const sets = await setsCol
+    .find({ userId, completed: true })
+    .sort({ createdAt: 1 })
+    .toArray();
+
+  if (sets.length === 0) return { success: true, data: [] };
+
+  // Build session date map
+  const sessionIds = [...new Set(sets.map((s) => s.sessionId))];
+  const sessionDocs = await sessionsCol
+    .find({ _id: { $in: sessionIds.map((id) => new ObjectId(id)) } })
+    .project<{ _id: import("mongodb").ObjectId; date: Date }>({ date: 1 })
+    .toArray();
+  const sessionDateMap = new Map(sessionDocs.map((d) => [d._id.toHexString(), d.date.toISOString()]));
+
+  // Walk through sets chronologically, track best 1RM per exercise
+  const bestByExercise = new Map<string, number>(); // exercise → best 1RM lb
+  const historyByExercise = new Map<string, PRHistoryEntry[]>();
+
+  for (const s of sets) {
+    const exercise = s.exercise;
+    const unit = (s.weightUnit ?? "lb") as WeightUnit;
+    const weightLb = toLb(s.weight, unit);
+    const est1RM = Math.round(weightLb * (1 + s.reps / 30) * 10) / 10;
+    const prevBest = bestByExercise.get(exercise) ?? 0;
+
+    if (est1RM > prevBest) {
+      const delta = prevBest > 0 ? Math.round((est1RM - prevBest) * 10) / 10 : null;
+      bestByExercise.set(exercise, est1RM);
+
+      if (!historyByExercise.has(exercise)) historyByExercise.set(exercise, []);
+      historyByExercise.get(exercise)!.push({
+        date: sessionDateMap.get(s.sessionId) ?? s.createdAt.toISOString(),
+        weight: s.weight,
+        weightUnit: unit,
+        reps: s.reps,
+        estimated1RM: est1RM,
+        deltaVsPrev: delta,
+        sessionId: s.sessionId,
+      });
+    }
+  }
+
+  const data: ExercisePRHistory[] = Array.from(historyByExercise.entries())
+    .map(([exercise, entries]) => ({ exercise, entries: entries.slice().reverse() }))
+    .sort((a, b) => a.exercise.localeCompare(b.exercise));
+
+  return { success: true, data };
+}
+
+// ── addExerciseTag / removeExerciseTag / getExerciseTags ──────────────────────
+
+export async function addExerciseTag(exerciseName: string, tag: string): Promise<ActionResult<void>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+
+  const userId = session.user.id;
+  const exercisesCol = await getExercisesCollection();
+  await exercisesCol.updateOne(
+    { userId, name: exerciseName },
+    { $addToSet: { tags: tag }, $setOnInsert: { createdAt: new Date() } },
+    { upsert: true }
+  );
+  return { success: true, data: undefined };
+}
+
+export async function removeExerciseTag(exerciseName: string, tag: string): Promise<ActionResult<void>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+
+  const userId = session.user.id;
+  const exercisesCol = await getExercisesCollection();
+  await exercisesCol.updateOne({ userId, name: exerciseName }, { $pull: { tags: tag } });
+  return { success: true, data: undefined };
+}
+
+export async function getExerciseTags(): Promise<ActionResult<Record<string, string[]>>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+
+  const userId = session.user.id;
+  const exercisesCol = await getExercisesCollection();
+  const docs = await exercisesCol
+    .find({ userId, tags: { $exists: true, $not: { $size: 0 } } })
+    .toArray();
+
+  const result: Record<string, string[]> = {};
+  for (const doc of docs) {
+    if (doc.tags && doc.tags.length > 0) {
+      result[doc.name] = doc.tags;
+    }
+  }
+  return { success: true, data: result };
+}
+
+// ── linkSuperset / unlinkSuperset ─────────────────────────────────────────────
+
+export async function linkSuperset(
+  sessionId: string,
+  exerciseName1: string,
+  exerciseName2: string
+): Promise<ActionResult<string>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+
+  const userId = session.user.id;
+  const setsCol = await getSetsCollection();
+
+  // Generate a unique group ID using timestamp + random
+  const groupId = `ss_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+
+  await setsCol.updateMany(
+    { userId, sessionId, exercise: { $in: [exerciseName1, exerciseName2] } },
+    { $set: { supersetGroupId: groupId } }
+  );
+
+  return { success: true, data: groupId };
+}
+
+export async function unlinkSuperset(sessionId: string, groupId: string): Promise<ActionResult<void>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+
+  const userId = session.user.id;
+  const setsCol = await getSetsCollection();
+
+  await setsCol.updateMany(
+    { userId, sessionId, supersetGroupId: groupId },
+    { $unset: { supersetGroupId: "" } }
+  );
+
+  return { success: true, data: undefined };
+}
