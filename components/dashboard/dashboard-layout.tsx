@@ -33,7 +33,7 @@ import { updatePreferences } from "@/actions/user-actions";
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 export interface DashboardData {
-  trainingChartData: { day: string; sessions: number }[];
+  trainingChartData: { day: string; sessions: number; exercises: number }[];
   macroChartData: { day: string; protein: number; carbs: number; fat: number; calories: number; target: number }[];
   cardioChartData: { day: string; minutes: number }[];
   workoutsThisWeek: number;

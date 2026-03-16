@@ -154,6 +154,7 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
   const [selectedFromSearch, setSelectedFromSearch] = useState(false);
   const [selectedFood, setSelectedFood] = useState<FoodSearchResult | null>(null);
   const [activeMultiplier, setActiveMultiplier] = useState(1);
+  const [customAmount, setCustomAmount] = useState<string>("");
   const [caloriesOnly, setCaloriesOnly] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("kifted-calories-only-mode") === "true";
@@ -220,6 +221,7 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
     setValue("servingUnit", food.servingUnit);
     setSelectedFood(food);
     setActiveMultiplier(1);
+    setCustomAmount(String(food.servingSize));
     setSelectedFromSearch(true);
     setSaveToLibrary(false);
   }
@@ -234,10 +236,23 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
   function applyMultiplier(mult: number) {
     if (!selectedFood) return;
     setActiveMultiplier(mult);
+    setCustomAmount(String(Math.round(selectedFood.servingSize * mult * 10) / 10));
     setValue("calories", Math.round(selectedFood.calories * mult));
     setValue("protein", Math.round(selectedFood.protein * mult * 10) / 10);
     setValue("carbs", Math.round(selectedFood.carbs * mult * 10) / 10);
     setValue("fat", Math.round(selectedFood.fat * mult * 10) / 10);
+  }
+
+  function applyCustomAmount(amountStr: string) {
+    const amount = parseFloat(amountStr);
+    if (!selectedFood || isNaN(amount) || amount <= 0 || selectedFood.servingSize <= 0) return;
+    const factor = amount / selectedFood.servingSize;
+    setActiveMultiplier(-1); // deselect preset buttons
+    setValue("servingSize", amount);
+    setValue("calories", Math.round(selectedFood.calories * factor));
+    setValue("protein", Math.round(selectedFood.protein * factor * 10) / 10);
+    setValue("carbs", Math.round(selectedFood.carbs * factor * 10) / 10);
+    setValue("fat", Math.round(selectedFood.fat * factor * 10) / 10);
   }
 
   function handleGramChip(grams: number) {
@@ -529,10 +544,24 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
           </div>
         </div>
 
-        {/* Serving size multiplier (shown after food selected from search) */}
+        {/* Serving size controls (shown after food selected from search) */}
         {selectedFood && (
-          <div>
-            <label className={labelClass}>Serving multiplier</label>
+          <div className="flex flex-col gap-2">
+            <label className={labelClass}>Quantity ({selectedFood.servingUnit})</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={0.1}
+                step={0.1}
+                value={customAmount}
+                onChange={(e) => {
+                  setCustomAmount(e.target.value);
+                  applyCustomAmount(e.target.value);
+                }}
+                className="h-10 w-28 rounded-lg border border-amber-500 bg-background px-3 text-sm font-medium outline-none focus:ring-2 focus:ring-amber-500/40 text-amber-600 dark:text-amber-400"
+              />
+              <span className="text-xs text-muted-foreground">{selectedFood.servingUnit} per serving: {selectedFood.servingSize}</span>
+            </div>
             <div className="flex flex-wrap gap-1.5">
               {MULTIPLIERS.map((m) => (
                 <button

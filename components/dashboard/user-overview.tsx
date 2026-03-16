@@ -27,18 +27,22 @@ export async function UserOverview() {
   // Build last-7-days date keys
   const last7 = Array.from({ length: 7 }, (_, i) => format(subDays(new Date(), 6 - i), "yyyy-MM-dd"));
 
-  // Training: sessions per day last 7 days
+  // Training: sessions and unique exercises per day last 7 days
   const sessionsByDay = new Map<string, number>();
+  const exercisesByDay = new Map<string, Set<string>>();
   for (const s of sessions) {
     const key = format(parseISO(s.date), "yyyy-MM-dd");
     if (last7.includes(key)) {
       sessionsByDay.set(key, (sessionsByDay.get(key) ?? 0) + 1);
+      if (!exercisesByDay.has(key)) exercisesByDay.set(key, new Set());
+      for (const ex of (s.exerciseNames ?? [])) exercisesByDay.get(key)!.add(ex);
     }
   }
 
   const trainingChartData = last7.map((d) => ({
     day: format(parseISO(d), "EEE"),
     sessions: sessionsByDay.get(d) ?? 0,
+    exercises: exercisesByDay.get(d)?.size ?? 0,
   }));
 
   // Macro chart data

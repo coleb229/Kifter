@@ -74,9 +74,16 @@ export function BarcodeScanner({ onSelect, defaultOpen = false }: Props) {
     reset();
     setError(null);
 
+    // Polyfill BarcodeDetector for browsers that don't support it natively (e.g. iOS Safari/Chrome)
     if (!("BarcodeDetector" in window)) {
-      setError("Live scanning not supported in this browser. Enter the barcode number manually.");
-      return;
+      try {
+        const { BarcodeDetector } = await import("barcode-detector/pure");
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (window as any).BarcodeDetector = BarcodeDetector;
+      } catch {
+        setError("Live scanning not supported in this browser. Enter the barcode number manually.");
+        return;
+      }
     }
 
     try {
