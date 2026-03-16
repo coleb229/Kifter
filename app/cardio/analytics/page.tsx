@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { getCardioSessions } from "@/actions/cardio-actions";
 import { CardioAnalyticsDashboard } from "@/components/cardio/cardio-analytics-dashboard";
+import { HRZoneChart } from "@/components/cardio/hr-zone-chart";
 
 export default async function CardioAnalyticsPage() {
   const result = await getCardioSessions(5000);
@@ -34,7 +35,14 @@ export default async function CardioAnalyticsPage() {
           </p>
         </div>
       ) : (
-        <CardioAnalyticsDashboard sessions={sessions} />
+        <>
+          <CardioAnalyticsDashboard sessions={sessions} />
+          <div className="rounded-xl border border-border bg-card p-5">
+            <h2 className="mb-1 text-sm font-semibold">Heart Rate Zones</h2>
+            <p className="mb-4 text-xs text-muted-foreground">Zone targets and session distribution based on your max heart rate</p>
+            <HRZoneChart sessions={sessions} />
+          </div>
+        </>
       )}
     </div>
   );

@@ -1,9 +1,13 @@
-import { getLeaderboard } from "@/actions/leaderboard-actions";
+import { getLeaderboard, getLeaderboardExercises } from "@/actions/leaderboard-actions";
 import { LeaderboardView } from "@/components/community/leaderboard-view";
 
 export default async function LeaderboardPage() {
-  const result = await getLeaderboard();
+  const [result, exercisesResult] = await Promise.all([
+    getLeaderboard(),
+    getLeaderboardExercises(),
+  ]);
   const entries = result.success ? result.data : [];
+  const exercises = exercisesResult.success ? exercisesResult.data : [];
 
-  return <LeaderboardView entries={entries} />;
+  return <LeaderboardView entries={entries} exercises={exercises} />;
 }

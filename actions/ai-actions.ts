@@ -377,3 +377,66 @@ Be concise. No extra commentary.`,
     return { success: false, error: (e as Error).message ?? "Failed to get substitutions" };
   }
 }
+
+// ── generateGroceryList ───────────────────────────────────────────────────────
+
+export interface GroceryCategory {
+  category: string;
+  items: string[];
+}
+
+export async function generateGroceryList(): Promise<ActionResult<GroceryCategory[]>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+
+  const rateCheck = await checkAndIncrementAiUsage(session.user.id);
+  if (!rateCheck.allowed) return { success: false, error: rateCheck.error ?? "AI request blocked." };
+
+  try {
+    const client = getClient();
+    const model = await getDefaultAiModel();
+
+    const [targetsResult, historyResult] = await Promise.all([
+      getMacroTargets(),
+      getDietHistory(7),
+    ]);
+
+    const targets = targetsResult.success ? targetsResult.data : null;
+    const history = historyResult.success ? historyResult.data : [];
+
+    const avgCalories = history.length
+      ? Math.round(history.reduce((s, d) => s + d.calories, 0) / history.length)
+      : null;
+
+    const targetSummary = targets
+      ? `Daily targets: ${targets.calories} kcal, ${targets.protein}g protein, ${targets.carbs}g carbs, ${targets.fat}g fat.`
+      : avgCalories
+      ? `No explicit targets set; user averages ~${avgCalories} kcal/day based on recent logs.`
+      : "No nutrition targets or history available.";
+
+    const message = await client.messages.create({
+      model,
+      max_tokens: 1024,
+      messages: [
+        {
+          role: "user",
+          content: `You are a nutrition coach building a weekly grocery list.
+${targetSummary}
+Generate a practical grocery list organized by category that supports these macro targets.
+Respond ONLY with a JSON array — no markdown fences, no commentary.
+Each object: { "category": "string", "items": ["item1", "item2", ...] }
+Use 6-8 categories (e.g. Proteins, Produce, Grains, Dairy, Fats & Oils, Snacks, Spices & Condiments).
+Each category should have 4-7 specific items. Keep items concise (e.g. "Chicken breast (2 lbs)").`,
+        },
+      ],
+    });
+
+    const text = message.content[0].type === "text" ? message.content[0].text : "";
+    const cleaned = text.replace(/^```(?:json)?\n?/m, "").replace(/\n?```$/m, "").trim();
+    const parsed: GroceryCategory[] = JSON.parse(cleaned);
+    if (!Array.isArray(parsed) || parsed.length === 0) throw new Error("Empty grocery list returned");
+    return { success: true, data: parsed };
+  } catch (e) {
+    return { success: false, error: (e as Error).message ?? "Failed to generate grocery list" };
+  }
+}

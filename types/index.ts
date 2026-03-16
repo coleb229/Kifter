@@ -736,3 +736,66 @@ export interface PostComment {
   content: string;
   createdAt: string;
 }
+
+// ── Physique Measurements ─────────────────────────────────────────────────────
+
+export type MeasurementUnit = "cm" | "in";
+
+export interface PhysiqueMeasurementDoc {
+  _id: ObjectId;
+  userId: string;
+  date: string; // "YYYY-MM-DD"
+  unit: MeasurementUnit;
+  neck?: number;
+  waist?: number;
+  hips?: number;
+  chest?: number;
+  bicepsL?: number;
+  bicepsR?: number;
+  thighL?: number;
+  thighR?: number;
+  height?: number; // used for body fat calculation
+  createdAt: Date;
+}
+
+export interface PhysiqueMeasurement {
+  id: string;
+  date: string;
+  unit: MeasurementUnit;
+  neck?: number;
+  waist?: number;
+  hips?: number;
+  chest?: number;
+  bicepsL?: number;
+  bicepsR?: number;
+  thighL?: number;
+  thighR?: number;
+  height?: number;
+  createdAt: string;
+}
+
+// ── Supplement Log ─────────────────────────────────────────────────────────────
+
+export const SUPPLEMENT_TIMINGS = ["morning", "pre-workout", "post-workout", "with-meal", "bedtime", "other"] as const;
+export type SupplementTiming = (typeof SUPPLEMENT_TIMINGS)[number];
+
+export interface SupplementLogDoc {
+  _id: ObjectId;
+  userId: string;
+  date: string; // "YYYY-MM-DD"
+  name: string;
+  dosage: string; // e.g. "5g", "1 scoop", "2 capsules"
+  timing: SupplementTiming;
+  notes?: string;
+  createdAt: Date;
+}
+
+export interface SupplementLog {
+  id: string;
+  date: string;
+  name: string;
+  dosage: string;
+  timing: SupplementTiming;
+  notes?: string;
+  createdAt: string;
+}
