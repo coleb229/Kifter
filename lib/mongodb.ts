@@ -1,4 +1,4 @@
-import { MongoClient } from "mongodb";
+import { MongoClient, MongoClientOptions } from "mongodb";
 
 if (!process.env.MONGODB_URI) {
   throw new Error('Missing environment variable: "MONGODB_URI"');
@@ -6,23 +6,23 @@ if (!process.env.MONGODB_URI) {
 
 const uri = process.env.MONGODB_URI;
 
-let clientPromise: Promise<MongoClient>;
+const options: MongoClientOptions = {
+  maxPoolSize: 10,
+  serverSelectionTimeoutMS: 5000,
+  connectTimeoutMS: 10000,
+  socketTimeoutMS: 30000,
+};
 
-if (process.env.NODE_ENV === "development") {
-  // In development, reuse the client across HMR reloads
-  const globalWithMongo = global as typeof globalThis & {
-    _mongoClientPromise?: Promise<MongoClient>;
-  };
-
-  if (!globalWithMongo._mongoClientPromise) {
-    const client = new MongoClient(uri);
-    globalWithMongo._mongoClientPromise = client.connect();
-  }
-
-  clientPromise = globalWithMongo._mongoClientPromise;
-} else {
-  const client = new MongoClient(uri);
-  clientPromise = client.connect();
+declare global {
+  // eslint-disable-next-line no-var
+  var _mongoClientPromise: Promise<MongoClient> | undefined;
 }
+
+if (!global._mongoClientPromise) {
+  const client = new MongoClient(uri, options);
+  global._mongoClientPromise = client.connect();
+}
+
+const clientPromise: Promise<MongoClient> = global._mongoClientPromise;
 
 export default clientPromise;
