@@ -129,7 +129,7 @@ export function ProgramsView({ initialPrograms }: Props) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={80}
-            className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+            className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
           />
           <input
             type="text"
@@ -137,7 +137,7 @@ export function ProgramsView({ initialPrograms }: Props) {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             maxLength={300}
-            className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+            className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
           />
 
           {/* Days */}
@@ -252,7 +252,7 @@ export function ProgramsView({ initialPrograms }: Props) {
                 type="date"
                 value={applyDate}
                 onChange={(e) => setApplyDate(e.target.value)}
-                className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
             {applyMsg && (

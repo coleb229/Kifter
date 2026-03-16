@@ -364,8 +364,9 @@ function ExerciseGroupCard({
           <span />
         </div>
 
-        {optimisticSets.map((set) => {
+        {optimisticSets.map((set, idx) => {
           const state = getSetState(set.id);
+          const isLastSet = idx === optimisticSets.length - 1;
 
           if (state.type === "editing") {
             return (
@@ -499,14 +500,19 @@ function ExerciseGroupCard({
                 }
               }}
             >
-              <span className={`text-center text-sm ${set.completed ? "text-emerald-500" : "text-muted-foreground"}`}>
-                {set.completed ? <Check className="size-3 mx-auto" /> : set.setNumber}
-              </span>
+              <button
+                type="button"
+                onClick={() => handleToggleComplete(set)}
+                aria-label={set.completed ? "Mark incomplete" : "Mark complete"}
+                className={`flex size-full items-center justify-center rounded text-sm transition-colors hover:bg-muted ${set.completed ? "text-emerald-500" : "text-muted-foreground hover:text-emerald-500"}`}
+              >
+                {set.completed ? <Check className="size-3.5 mx-auto" /> : set.setNumber}
+              </button>
               <span className={`text-sm ${set.completed ? "line-through text-muted-foreground" : ""}`}>
                 {set.weight} {set.weightUnit}
               </span>
               <span className={`text-sm ${set.completed ? "line-through text-muted-foreground" : ""}`}>{set.reps}</span>
-              <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+              <div className={`flex items-center gap-0.5 transition-opacity group-hover:opacity-100 ${isLastSet ? "opacity-100" : "opacity-0"}`}>
                 <button
                   type="button"
                   onClick={() =>

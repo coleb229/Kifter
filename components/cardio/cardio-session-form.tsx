@@ -36,9 +36,9 @@ const toOptionalNumber = (v: string) =>
 type FormData = z.infer<typeof schema>;
 
 const inputClass =
-  "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500 transition-colors placeholder:text-muted-foreground";
+  "h-10 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500 transition-colors placeholder:text-muted-foreground";
 const selectClass =
-  "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500 transition-colors";
+  "h-10 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500 transition-colors";
 const labelClass = "block text-xs font-medium text-muted-foreground mb-1";
 const errorClass = "mt-1 text-xs text-rose-500";
 
@@ -138,6 +138,22 @@ export function CardioSessionForm({ editingSession }: Props) {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label className={labelClass}>Duration (minutes)</label>
+          <div className="mb-2 flex flex-wrap gap-1.5">
+            {[15, 20, 30, 45, 60, 90].map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => setValue("duration", d, { shouldValidate: true })}
+                className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                  watch("duration") === d
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {d}m
+              </button>
+            ))}
+          </div>
           <input
             {...register("duration", { valueAsNumber: true })}
             type="number"
@@ -150,7 +166,7 @@ export function CardioSessionForm({ editingSession }: Props) {
         </div>
         <div>
           <label className={labelClass}>Intensity</label>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {CARDIO_INTENSITIES.map((level) => {
               const styles = INTENSITY_STYLES[level];
               const isSelected = watch("intensity") === level;
@@ -159,7 +175,7 @@ export function CardioSessionForm({ editingSession }: Props) {
                   key={level}
                   type="button"
                   onClick={() => setValue("intensity", level, { shouldValidate: true })}
-                  className={`flex-1 rounded-full border py-1 text-sm font-medium capitalize transition-colors ${
+                  className={`flex-1 rounded-full border px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
                     isSelected ? styles.active : styles.inactive
                   }`}
                 >

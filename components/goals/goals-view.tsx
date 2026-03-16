@@ -146,7 +146,7 @@ export function GoalsView({ initialGoals, alerts }: Props) {
                 <select
                   value={type}
                   onChange={(e) => handleTypeChange(e.target.value as GoalType)}
-                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
+                  className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
                 >
                   {GOAL_TYPES.map((t) => (
                     <option key={t.id} value={t.id}>{t.label}</option>
@@ -160,7 +160,7 @@ export function GoalsView({ initialGoals, alerts }: Props) {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Goal name"
-                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
+                  className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
                 />
               </div>
               <div className="flex flex-col gap-1">
@@ -172,7 +172,7 @@ export function GoalsView({ initialGoals, alerts }: Props) {
                   value={targetValue}
                   onChange={(e) => setTargetValue(e.target.value)}
                   placeholder={GOAL_TYPES.find((t) => t.id === type)?.placeholder}
-                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
+                  className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
                 />
               </div>
               <div className="flex flex-col gap-1">
@@ -181,7 +181,7 @@ export function GoalsView({ initialGoals, alerts }: Props) {
                   type="text"
                   value={unit}
                   onChange={(e) => setUnit(e.target.value)}
-                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
+                  className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
                 />
               </div>
               {type === "exercise_1rm" && (
@@ -192,7 +192,7 @@ export function GoalsView({ initialGoals, alerts }: Props) {
                     value={exerciseName}
                     onChange={(e) => setExerciseName(e.target.value)}
                     placeholder="e.g. Bench Press"
-                    className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
+                    className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
                   />
                 </div>
               )}
@@ -202,7 +202,7 @@ export function GoalsView({ initialGoals, alerts }: Props) {
                   type="date"
                   value={targetDate}
                   onChange={(e) => setTargetDate(e.target.value)}
-                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
+                  className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
                 />
               </div>
             </div>

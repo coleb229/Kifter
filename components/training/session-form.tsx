@@ -21,7 +21,7 @@ const sessionSchema = z.object({
 type SessionFormValues = z.infer<typeof sessionSchema>;
 
 const inputClass =
-  "h-9 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+  "h-10 min-w-0 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 const textareaClass =
   "min-h-20 w-full resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
@@ -41,6 +41,18 @@ export function SessionForm() {
   });
 
   const selectedTarget = watch("bodyTarget");
+
+  const NAME_SUGGESTIONS: Partial<Record<string, string>> = {
+    Push: "Push Day", Pull: "Pull Day", Legs: "Leg Day",
+    "Upper Body": "Upper Body Day", "Lower Body": "Lower Body Day",
+    "Full Body": "Full Body", Core: "Core Work", Cardio: "Cardio Session",
+  };
+
+  function handleBodyTargetChange(target: string) {
+    setValue("bodyTarget", target as SessionFormValues["bodyTarget"], { shouldValidate: true });
+    const currentName = watch("name");
+    if (!currentName) setValue("name", NAME_SUGGESTIONS[target] ?? "");
+  }
 
   function onSubmit(values: SessionFormValues) {
     startTransition(async () => {
@@ -90,7 +102,7 @@ export function SessionForm() {
                   <button
                     key={target}
                     type="button"
-                    onClick={() => setValue("bodyTarget", target, { shouldValidate: true })}
+                    onClick={() => handleBodyTargetChange(target)}
                     className={`rounded-full border px-3.5 py-1 text-sm font-medium transition-colors ${
                       isSelected ? colors.active : colors.inactive
                     }`}

@@ -170,7 +170,7 @@ export function BodyWeightView({ initialEntries }: Props) {
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
+                className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -182,7 +182,7 @@ export function BodyWeightView({ initialEntries }: Props) {
                 placeholder="0.0"
                 value={weight}
                 onChange={(e) => setWeight(e.target.value)}
-                className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
+                className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -190,7 +190,7 @@ export function BodyWeightView({ initialEntries }: Props) {
               <select
                 value={unit}
                 onChange={(e) => setUnit(e.target.value as WeightUnit)}
-                className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
+                className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
               >
                 <option value="lb">lb</option>
                 <option value="kg">kg</option>
@@ -203,7 +203,7 @@ export function BodyWeightView({ initialEntries }: Props) {
                 placeholder="e.g. morning"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
+                className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
               />
             </div>
           </div>

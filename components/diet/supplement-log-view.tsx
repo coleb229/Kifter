@@ -92,22 +92,22 @@ export function SupplementLogView({ initialLogs }: Props) {
               <div className="flex flex-col gap-1">
                 <label className="text-xs text-muted-foreground">Date</label>
                 <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
-                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
+                  className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
               </div>
               <div className="flex flex-col gap-1 sm:col-span-1">
                 <label className="text-xs text-muted-foreground">Name</label>
                 <input type="text" placeholder="e.g. Creatine" value={name} onChange={(e) => setName(e.target.value)}
-                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
+                  className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-xs text-muted-foreground">Dosage</label>
                 <input type="text" placeholder="e.g. 5g" value={dosage} onChange={(e) => setDosage(e.target.value)}
-                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
+                  className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-xs text-muted-foreground">Timing</label>
                 <select value={timing} onChange={(e) => setTiming(e.target.value as SupplementTiming)}
-                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30">
+                  className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30">
                   {TIMING_OPTIONS.map((t) => (
                     <option key={t} value={t}>{TIMING_LABELS[t]}</option>
                   ))}
@@ -117,7 +117,7 @@ export function SupplementLogView({ initialLogs }: Props) {
             <div className="flex flex-col gap-1">
               <label className="text-xs text-muted-foreground">Notes (optional)</label>
               <input type="text" placeholder="e.g. with water" value={notes} onChange={(e) => setNotes(e.target.value)}
-                className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
+                className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
             </div>
             {error && <p className="text-xs text-destructive">{error}</p>}
             <div className="flex gap-2">

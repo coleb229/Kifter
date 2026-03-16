@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Utensils, Pill } from "lucide-react";
 import { QuickLogFAB } from "@/components/quick-log-fab";
 import { format } from "date-fns";
+import { auth } from "@/auth";
 import { getDietEntries, getMacroTargets, getDietHistory } from "@/actions/diet-actions";
 import { DietLogView } from "@/components/diet/diet-log-view";
 import { NutritionAIInsights } from "@/components/diet/nutrition-ai-insights";
@@ -11,6 +12,8 @@ import { GroceryList } from "@/components/diet/grocery-list";
 import { Button } from "@/components/ui/button";
 
 export default async function DietPage() {
+  const session = await auth();
+  const isAdmin = session?.user?.role === "admin";
   const today = format(new Date(), "yyyy-MM-dd");
 
   const [entriesResult, targetsResult, historyResult] = await Promise.all([
@@ -52,7 +55,7 @@ export default async function DietPage() {
         initialDate={today}
       />
 
-      <NutritionAIInsights />
+      {isAdmin && <NutritionAIInsights />}
       <GroceryList targets={targets} />
       <QuickLogFAB targetId="add-food-section" label="Add Food" />
     </div>

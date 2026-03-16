@@ -48,7 +48,7 @@ export function ProgressGallery({ initialPhotos }: Props) {
             type="date"
             value={uploadDate}
             onChange={(e) => setUploadDate(e.target.value)}
-            className="h-9 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            className="h-10 min-w-0 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
         </div>
         <div className="flex-1 min-w-[140px]">

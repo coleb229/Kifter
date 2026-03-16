@@ -6,6 +6,7 @@ import {
   getAppleHealthTrainingSessions,
 } from "@/actions/analytics-actions";
 import { getSessionDates, getDeloadRecommendation, getPersonalRecords, getBodyTargetDistribution } from "@/actions/workout-actions";
+import { auth } from "@/auth";
 import { AnalyticsDashboard } from "@/components/training/analytics-dashboard";
 import { AIInsights } from "@/components/training/ai-insights";
 import { TrainingHeatmap } from "@/components/training/training-heatmap";
@@ -15,6 +16,9 @@ import { BodyTargetChart } from "@/components/training/body-target-chart";
 import { AppleHealthTrainingChart } from "@/components/training/apple-health-training-chart";
 
 export default async function AnalyticsPage() {
+  const session = await auth();
+  const isAdmin = session?.user?.role === "admin";
+
   const [exercisesResult, sessionDatesResult, deloadResult, prResult, bodyTargetResult, ahResult] = await Promise.all([
     getExercisesWithHistory(),
     getSessionDates(365),
@@ -90,7 +94,7 @@ export default async function AnalyticsPage() {
             initialExercise={exercises[0]}
             initialData={initialData ?? []}
           />
-          <AIInsights />
+          {isAdmin && <AIInsights />}
         </>
       )}
 

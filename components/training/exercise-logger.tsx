@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { addExerciseToSession, getLastWeightForExercise } from "@/actions/workout-actions";
+import { addExerciseToSession, getLastWeightForExercise, getLastSessionSetsForExercise, getRecentSessionsForExercise } from "@/actions/workout-actions";
+import { format } from "date-fns";
 import type { WeightUnit } from "@/lib/weight";
 
 const schema = z.object({
@@ -25,7 +26,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 const inputClass =
-  "h-9 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+  "h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 interface ExerciseLoggerProps {
   sessionId: string;
@@ -37,6 +38,18 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
   const [isPending, startTransition] = useTransition();
   const [unit, setUnit] = useState<WeightUnit>("lb");
   const [suggested, setSuggested] = useState<{ weight: number; unit: WeightUnit } | null>(null);
+  const [lastSession, setLastSession] = useState<{ date: string; sets: { setNumber: number; weight: number; weightUnit: string; reps: number }[] } | null>(null);
+  const [history, setHistory] = useState<{ date: string; maxWeight: number; weightUnit: string }[]>([]);
+  const [query, setQuery] = useState("");
+  const [comboOpen, setComboOpen] = useState(false);
+  const comboRef = useRef<HTMLDivElement>(null);
+  const [restTimer, setRestTimer] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (restTimer === null || restTimer <= 0) return;
+    const id = setTimeout(() => setRestTimer((t) => (t !== null && t > 0 ? t - 1 : null)), 1000);
+    return () => clearTimeout(id);
+  }, [restTimer]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -53,20 +66,31 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
 
   async function handleExerciseChange(name: string) {
     form.setValue("exercise", name, { shouldValidate: true });
-    if (!name) { setSuggested(null); return; }
-    const result = await getLastWeightForExercise(name);
-    if (result.success && result.data) {
-      setUnit(result.data.unit);
-      const { weight } = result.data;
+    if (!name) {
+      setSuggested(null);
+      setLastSession(null);
+      setHistory([]);
+      return;
+    }
+    const [weightResult, lastSessionResult, historyResult] = await Promise.all([
+      getLastWeightForExercise(name),
+      getLastSessionSetsForExercise(name),
+      getRecentSessionsForExercise(name, 3),
+    ]);
+    if (weightResult.success && weightResult.data) {
+      setUnit(weightResult.data.unit);
+      const { weight } = weightResult.data;
       const currentSets = form.getValues("sets");
       currentSets.forEach((_, i) => {
         form.setValue(`sets.${i}.weight`, weight);
       });
-      const increment = result.data.unit === "kg" ? 1.25 : 2.5;
-      setSuggested({ weight: weight + increment, unit: result.data.unit });
+      const increment = weightResult.data.unit === "kg" ? 1.25 : 2.5;
+      setSuggested({ weight: weight + increment, unit: weightResult.data.unit });
     } else {
       setSuggested(null);
     }
+    setLastSession(lastSessionResult.success ? (lastSessionResult.data ?? null) : null);
+    setHistory(historyResult.success ? historyResult.data : []);
   }
 
   function onSubmit(values: FormValues) {
@@ -82,6 +106,11 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
       });
       if (result.success) {
         form.reset({ exercise: "", sets: [{ weight: 0, reps: 0 }] });
+        setQuery("");
+        setSuggested(null);
+        setLastSession(null);
+        setHistory([]);
+        setRestTimer(90);
         router.refresh();
       } else {
         form.setError("root", { message: result.error });
@@ -123,21 +152,42 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
       </div>
 
       <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
-        {/* Exercise select */}
+        {/* Exercise combobox */}
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium">Exercise</label>
-          <select
-            value={form.watch("exercise")}
-            onChange={(e) => handleExerciseChange(e.target.value)}
-            className={inputClass}
-          >
-            <option value="">Select an exercise…</option>
-            {exercises.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
+          <div ref={comboRef} className="relative">
+            <input
+              type="text"
+              value={query || form.watch("exercise")}
+              placeholder="Search exercises…"
+              className={inputClass}
+              onFocus={() => { setQuery(""); setComboOpen(true); }}
+              onChange={(e) => { setQuery(e.target.value); setComboOpen(true); }}
+              onBlur={() => setTimeout(() => setComboOpen(false), 150)}
+            />
+            {comboOpen && (
+              <ul className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-border bg-popover shadow-md">
+                {exercises
+                  .filter((name) => name.toLowerCase().includes(query.toLowerCase()))
+                  .map((name) => (
+                    <li
+                      key={name}
+                      onMouseDown={() => {
+                        setQuery("");
+                        setComboOpen(false);
+                        handleExerciseChange(name);
+                      }}
+                      className="cursor-pointer px-3 py-2 text-sm hover:bg-muted"
+                    >
+                      {name}
+                    </li>
+                  ))}
+                {exercises.filter((n) => n.toLowerCase().includes(query.toLowerCase())).length === 0 && (
+                  <li className="px-3 py-2 text-sm text-muted-foreground">No matches</li>
+                )}
+              </ul>
+            )}
+          </div>
           {form.formState.errors.exercise && (
             <p className="text-xs text-destructive">
               {form.formState.errors.exercise.message}
@@ -156,6 +206,24 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
             >
               Suggested: {suggested.weight} {suggested.unit} (+{suggested.unit === "kg" ? 1.25 : 2.5})
             </button>
+          )}
+          {lastSession && (
+            <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+              <span className="font-medium">Last ({format(new Date(lastSession.date), "MMM d")}):</span>
+              {lastSession.sets.map((s, i) => (
+                <span key={i}> · {s.weight}{s.weightUnit}×{s.reps}</span>
+              ))}
+            </div>
+          )}
+          {history.length > 0 && (
+            <details className="text-xs text-muted-foreground">
+              <summary className="cursor-pointer select-none hover:text-foreground">History</summary>
+              <div className="mt-1 space-y-0.5 pl-2">
+                {history.map((s) => (
+                  <div key={s.date}>{format(new Date(s.date), "MMM d")}: {s.maxWeight}{s.weightUnit}</div>
+                ))}
+              </div>
+            </details>
           )}
         </div>
 
@@ -207,20 +275,45 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
           ))}
         </div>
 
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="self-start text-muted-foreground"
-          onClick={() => {
-            const currentSets = form.getValues("sets");
-            const last = currentSets[currentSets.length - 1];
-            append({ weight: last?.weight ?? 0, reps: 0 });
-          }}
-        >
-          <Plus className="size-3.5" />
-          Add Set
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
+            onClick={() => {
+              const currentSets = form.getValues("sets");
+              const last = currentSets[currentSets.length - 1];
+              append({ weight: last?.weight ?? 0, reps: 0 });
+            }}
+          >
+            <Plus className="size-3.5" />
+            Add Set
+          </Button>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-muted-foreground">Presets:</span>
+            {[3, 4, 5].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => {
+                  const last = form.getValues("sets").at(-1) ?? { weight: 0, reps: 0 };
+                  form.setValue("sets", Array.from({ length: n }, () => ({ weight: last.weight, reps: 0 })));
+                }}
+                className="rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                {n}×
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {restTimer !== null && (
+          <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2 text-sm">
+            <span>{restTimer > 0 ? <>Rest: <strong>{restTimer}s</strong></> : "Time to go! 💪"}</span>
+            <button type="button" onClick={() => setRestTimer(null)} className="text-xs text-muted-foreground hover:text-foreground">Done</button>
+          </div>
+        )}
 
         {form.formState.errors.root && (
           <p className="text-sm text-destructive">

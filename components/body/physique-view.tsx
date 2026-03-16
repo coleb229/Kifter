@@ -222,12 +222,12 @@ export function PhysiqueView({ initialMeasurements }: Props) {
             <div className="flex flex-col gap-1">
               <label className="text-xs text-muted-foreground">Date</label>
               <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
-                className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
+                className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-xs text-muted-foreground">Unit</label>
               <select value={unit} onChange={(e) => setUnit(e.target.value as MeasurementUnit)}
-                className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30">
+                className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30">
                 <option value="in">in</option>
                 <option value="cm">cm</option>
               </select>
@@ -249,7 +249,7 @@ export function PhysiqueView({ initialMeasurements }: Props) {
                 <label className="text-xs text-muted-foreground">{label}</label>
                 <input type="number" step="0.1" min="0" placeholder="—" value={val}
                   onChange={(e) => set(e.target.value)}
-                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
+                  className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
               </div>
             ))}
           </div>
@@ -272,7 +272,7 @@ export function PhysiqueView({ initialMeasurements }: Props) {
             <div className="flex flex-col gap-1">
               <label className="text-xs text-muted-foreground">Gender</label>
               <select value={bfGender} onChange={(e) => setBfGender(e.target.value as "male" | "female")}
-                className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30">
+                className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30">
                 <option value="male">Male</option>
                 <option value="female">Female</option>
               </select>
@@ -280,7 +280,7 @@ export function PhysiqueView({ initialMeasurements }: Props) {
             <div className="flex flex-col gap-1">
               <label className="text-xs text-muted-foreground">Unit</label>
               <select value={bfUnit} onChange={(e) => setBfUnit(e.target.value as MeasurementUnit)}
-                className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30">
+                className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30">
                 <option value="in">in</option>
                 <option value="cm">cm</option>
               </select>
@@ -289,26 +289,26 @@ export function PhysiqueView({ initialMeasurements }: Props) {
               <label className="text-xs text-muted-foreground">Height</label>
               <input type="number" step="0.1" min="0" placeholder={bfUnit === "in" ? "70" : "178"} value={bfHeight}
                 onChange={(e) => setBfHeight(e.target.value)}
-                className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
+                className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-xs text-muted-foreground">Neck</label>
               <input type="number" step="0.1" min="0" placeholder="—" value={bfNeck}
                 onChange={(e) => setBfNeck(e.target.value)}
-                className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
+                className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-xs text-muted-foreground">Waist (navel)</label>
               <input type="number" step="0.1" min="0" placeholder="—" value={bfWaist}
                 onChange={(e) => setBfWaist(e.target.value)}
-                className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
+                className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
             </div>
             {bfGender === "female" && (
               <div className="flex flex-col gap-1">
                 <label className="text-xs text-muted-foreground">Hips (widest)</label>
                 <input type="number" step="0.1" min="0" placeholder="—" value={bfHips}
                   onChange={(e) => setBfHips(e.target.value)}
-                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
+                  className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
               </div>
             )}
           </div>

@@ -979,3 +979,74 @@ export async function getSessionDates(
     data: docs.map((d) => d.date.toISOString().slice(0, 10)),
   };
 }
+
+// ── getLastSessionSetsForExercise ─────────────────────────────────────────────
+
+export async function getLastSessionSetsForExercise(
+  exerciseName: string
+): Promise<ActionResult<{ date: string; sets: { setNumber: number; weight: number; weightUnit: string; reps: number }[] } | null>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+  const userId = session.user.id;
+
+  const setsCol = await getSetsCollection();
+  const lastSet = await setsCol.findOne(
+    { userId, exercise: exerciseName },
+    { sort: { createdAt: -1 } }
+  );
+  if (!lastSet) return { success: true, data: null };
+
+  const sessionSets = await setsCol
+    .find({ userId, exercise: exerciseName, sessionId: lastSet.sessionId })
+    .sort({ setNumber: 1 })
+    .toArray();
+
+  return {
+    success: true,
+    data: {
+      date: lastSet.createdAt.toISOString().slice(0, 10),
+      sets: sessionSets.map((s) => ({
+        setNumber: s.setNumber,
+        weight: s.weight,
+        weightUnit: s.weightUnit ?? "lb",
+        reps: s.reps,
+      })),
+    },
+  };
+}
+
+// ── getRecentSessionsForExercise ──────────────────────────────────────────────
+
+export async function getRecentSessionsForExercise(
+  exerciseName: string,
+  limit = 3
+): Promise<ActionResult<{ date: string; maxWeight: number; weightUnit: string }[]>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+  const userId = session.user.id;
+
+  const setsCol = await getSetsCollection();
+  const sets = await setsCol
+    .find({ userId, exercise: exerciseName })
+    .sort({ createdAt: -1 })
+    .toArray();
+
+  // Group by sessionId, take last `limit` distinct sessions
+  const bySession = new Map<string, { date: string; maxWeight: number; weightUnit: string }>();
+  for (const s of sets) {
+    const key = s.sessionId.toString();
+    if (!bySession.has(key)) {
+      bySession.set(key, {
+        date: s.createdAt.toISOString().slice(0, 10),
+        maxWeight: s.weight,
+        weightUnit: s.weightUnit ?? "lb",
+      });
+    } else {
+      const existing = bySession.get(key)!;
+      if (s.weight > existing.maxWeight) existing.maxWeight = s.weight;
+    }
+    if (bySession.size >= limit) break;
+  }
+
+  return { success: true, data: Array.from(bySession.values()) };
+}

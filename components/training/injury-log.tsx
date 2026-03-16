@@ -34,7 +34,7 @@ const selectClass =
   "h-9 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20";
 
 const inputClass =
-  "h-9 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20";
+  "h-10 min-w-0 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20";
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);

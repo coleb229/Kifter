@@ -21,7 +21,7 @@ import {
   Save,
   Copy,
 } from "lucide-react";
-import { deleteDietEntry, getDietEntries, getDietHistory, getDietDataYears, getDietMonthlyHistory, copyDietDay } from "@/actions/diet-actions";
+import { addDietEntry, deleteDietEntry, getDietEntries, getDietHistory, getDietDataYears, getDietMonthlyHistory, copyDietDay } from "@/actions/diet-actions";
 import { getMealTemplates, createMealTemplate, deleteMealTemplate, applyMealTemplate } from "@/actions/meal-template-actions";
 import { MacroRings } from "@/components/diet/macro-rings";
 import { AddFoodForm } from "@/components/diet/add-food-form";
@@ -66,6 +66,7 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
   const [isPendingTemplate, startTemplateTransition] = useTransition();
   const [, startYearTransition] = useTransition();
   const [isCopying, startCopyTransition] = useTransition();
+  const [, startQuickAddTransition] = useTransition();
 
   // Year-based history state
   const currentYear = new Date().getFullYear();
@@ -299,6 +300,25 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
             )}
           </div>
 
+          {/* Today's macros summary bar — sticky, only when targets set and entries exist */}
+          {targets && entries.length > 0 && (
+            <div className="sticky top-0 z-10 -mx-4 flex items-center gap-4 border-b border-border bg-background/95 px-4 py-2 text-xs backdrop-blur animate-fade-up">
+              {([
+                { label: "P", value: totals.protein, target: targets.protein, color: "text-emerald-500" },
+                { label: "C", value: totals.carbs,   target: targets.carbs,   color: "text-amber-500" },
+                { label: "F", value: totals.fat,     target: targets.fat,     color: "text-rose-500" },
+              ] as const).map(({ label, value, target, color }) => (
+                <span key={label}>
+                  <span className={`font-semibold ${color}`}>{label}</span>{" "}
+                  {Math.round(value)}/{target}g
+                </span>
+              ))}
+              <span className="ml-auto text-muted-foreground">
+                {Math.round(totals.calories)}/{targets.calories} kcal
+              </span>
+            </div>
+          )}
+
           {/* Macro rings */}
           <div className="animate-fade-up" style={{ animationDelay: "60ms" }}>
             <MacroRings
@@ -310,8 +330,26 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
             />
           </div>
 
+          {/* Calorie budget meter */}
+          {targets && (
+            <div className="rounded-lg border border-border bg-card px-4 py-3 animate-fade-up" style={{ animationDelay: "80ms" }}>
+              <div className="mb-1.5 flex justify-between text-xs font-medium">
+                <span>Calories</span>
+                <span className={totals.calories > targets.calories ? "text-destructive" : ""}>
+                  {Math.round(totals.calories)} / {targets.calories} kcal
+                </span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-indigo-500 transition-all duration-300"
+                  style={{ width: `${Math.min(100, (totals.calories / targets.calories) * 100)}%` }}
+                />
+              </div>
+            </div>
+          )}
+
           {/* Add food + Templates buttons */}
-          <div id="add-food-section" className="flex items-center gap-2 animate-fade-up" style={{ animationDelay: "100ms" }}>
+          <div id="add-food-section" className="flex flex-wrap items-center gap-2 animate-fade-up" style={{ animationDelay: "100ms" }}>
             <Button size="sm" onClick={() => openAddForm("breakfast")} className="gap-1.5">
               <Plus className="size-3.5" />
               Add Food
@@ -320,6 +358,35 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
               <BookTemplate className="size-3.5" />
               Templates
             </Button>
+            {/* Recent food chips — one-tap re-log */}
+            {entries.length > 0 && (() => {
+              const seen = new Set<string>();
+              const recent = entries.filter((e) => { if (seen.has(e.food)) return false; seen.add(e.food); return true; }).slice(0, 5);
+              return recent.map((e) => (
+                <button
+                  key={e.food}
+                  type="button"
+                  onClick={() => {
+                    startQuickAddTransition(async () => {
+                      await addDietEntry({
+                        date: selectedDate,
+                        mealType: e.mealType,
+                        food: e.food,
+                        calories: e.calories,
+                        protein: e.protein,
+                        carbs: e.carbs,
+                        fat: e.fat,
+                      });
+                      const refreshed = await getDietEntries(selectedDate);
+                      if (refreshed.success) setEntries(refreshed.data);
+                    });
+                  }}
+                  className="rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  + {e.food}
+                </button>
+              ));
+            })()}
           </div>
 
           {/* Templates overlay */}
