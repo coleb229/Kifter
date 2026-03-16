@@ -98,6 +98,20 @@ function BugReportCard({ report }: { report: BugReport }) {
             <p className="text-sm text-muted-foreground">{report.deviceInfo}</p>
           </div>
 
+          {report.screenshotUrls && report.screenshotUrls.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Screenshots</p>
+              <div className="flex flex-wrap gap-2">
+                {report.screenshotUrls.map((url, i) => (
+                  <a key={url} href={url} target="_blank" rel="noopener noreferrer">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt={`Screenshot ${i + 1}`} className="h-24 rounded-lg border border-border object-cover hover:opacity-80 transition-opacity" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <span className="text-xs text-muted-foreground">Status:</span>
             {STATUS_OPTIONS.map(({ value, label }) => (

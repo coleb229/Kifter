@@ -21,7 +21,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { format, parseISO } from "date-fns";
-import { Dumbbell, Flame, TrendingUp, Calendar, Plus, Utensils, Activity, GripVertical, Pencil, Check } from "lucide-react";
+import { Dumbbell, Flame, TrendingUp, Calendar, Plus, Utensils, Activity, GripVertical, Pencil, Check, X } from "lucide-react";
 import { TrainingWeekChart } from "@/components/dashboard/training-week-chart";
 import { MacroWeekChart } from "@/components/dashboard/macro-week-chart";
 import { CardioWeekChart } from "@/components/dashboard/cardio-week-chart";
@@ -57,9 +57,17 @@ interface Props {
 
 const DEFAULT_WIDGETS = ["stats", "nutrition", "training_cardio", "recent_workouts", "quick_actions"];
 
+const WIDGET_LABELS: Record<string, string> = {
+  stats: "Stats Overview",
+  nutrition: "Nutrition Chart",
+  training_cardio: "Training & Cardio Charts",
+  recent_workouts: "Recent Workouts",
+  quick_actions: "Quick Actions",
+};
+
 // ── Sortable wrapper ───────────────────────────────────────────────────────────
 
-function SortableWidget({ id, editMode, children }: { id: string; editMode: boolean; children: React.ReactNode }) {
+function SortableWidget({ id, editMode, onRemove, children }: { id: string; editMode: boolean; onRemove: () => void; children: React.ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -70,13 +78,23 @@ function SortableWidget({ id, editMode, children }: { id: string; editMode: bool
   return (
     <div ref={setNodeRef} style={style} className="relative">
       {editMode && (
-        <div
-          {...attributes}
-          {...listeners}
-          className="absolute -left-6 top-1/2 -translate-y-1/2 z-10 cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground"
-        >
-          <GripVertical className="size-4" />
-        </div>
+        <>
+          <div
+            {...attributes}
+            {...listeners}
+            className="absolute -left-6 top-1/2 -translate-y-1/2 z-10 cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground"
+          >
+            <GripVertical className="size-4" />
+          </div>
+          <button
+            type="button"
+            onClick={onRemove}
+            title="Hide widget"
+            className="absolute -right-2 -top-2 z-10 flex size-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-sm hover:brightness-110 transition-all"
+          >
+            <X className="size-3" />
+          </button>
+        </>
       )}
       {children}
     </div>
@@ -89,6 +107,8 @@ export function DashboardLayout({ data, initialWidgets }: Props) {
   const [widgets, setWidgets] = useState<string[]>(initialWidgets ?? DEFAULT_WIDGETS);
   const [editMode, setEditMode] = useState(false);
   const [isSaving, startSave] = useTransition();
+
+  const hiddenWidgets = DEFAULT_WIDGETS.filter((id) => !widgets.includes(id));
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -234,7 +254,7 @@ export function DashboardLayout({ data, initialWidgets }: Props) {
   }
 
   return (
-    <section id="dashboard" className="mx-auto max-w-6xl px-4 py-12 pb-24 sm:px-6 sm:pb-12 lg:px-8">
+    <section id="dashboard" className="mx-auto max-w-6xl px-4 py-12 pb-40 sm:px-6 sm:pb-12 lg:px-8">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between animate-fade-up">
         <div>
@@ -259,15 +279,40 @@ export function DashboardLayout({ data, initialWidgets }: Props) {
       {/* Sortable widgets */}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={widgets} strategy={verticalListSortingStrategy}>
-          <div className={`flex flex-col gap-4 ${editMode ? "pl-8" : ""}`}>
+          <div className={`flex flex-col gap-4 ${editMode ? "pl-8 pr-2" : ""}`}>
             {widgets.map((id) => (
-              <SortableWidget key={id} id={id} editMode={editMode}>
+              <SortableWidget
+                key={id}
+                id={id}
+                editMode={editMode}
+                onRemove={() => setWidgets((prev) => prev.filter((w) => w !== id))}
+              >
                 {renderWidget(id)}
               </SortableWidget>
             ))}
           </div>
         </SortableContext>
       </DndContext>
+
+      {/* Hidden widgets — shown in edit mode */}
+      {editMode && hiddenWidgets.length > 0 && (
+        <div className="mt-4 pl-8 pr-2">
+          <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">Hidden widgets</p>
+          <div className="flex flex-col gap-2">
+            {hiddenWidgets.map((id) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setWidgets((prev) => [...prev, id])}
+                className="flex items-center gap-2 rounded-xl border border-dashed border-border px-4 py-3 text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+              >
+                <Plus className="size-4" />
+                {WIDGET_LABELS[id] ?? id}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </section>
   );
 }

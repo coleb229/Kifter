@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { X, Dumbbell, Utensils, Activity, MessageCircle, BrainCircuit, RotateCcw } from "lucide-react";
-import { getUserData, setUserRestrictions, setUserAiRateLimit, resetUserAiUsage } from "@/actions/admin-actions";
+import { getUserData, setUserRestrictions, setUserAiRateLimit, resetUserAiUsage, setAdminPermissions } from "@/actions/admin-actions";
 import type { UserSummary } from "@/types";
 
 interface Props {
@@ -24,6 +24,7 @@ export function UserDetailDrawer({ user, onClose }: Props) {
   const [isResetting, startReset] = useTransition();
   const [counts, setCounts] = useState<{ workoutSessions: number; dietEntries: number; cardioSessions: number; posts: number; todayAiUsage: number } | null>(null);
   const [restrictions, setRestrictions] = useState(user.restrictions ?? {});
+  const [adminPerms, setAdminPerms] = useState(user.adminPermissions ?? {});
   const [aiDisabled, setAiDisabled] = useState(user.aiRateLimit?.disabled ?? false);
   const [aiDailyLimit, setAiDailyLimit] = useState<string>(
     user.aiRateLimit?.dailyLimit != null ? String(user.aiRateLimit.dailyLimit) : ""
@@ -44,6 +45,7 @@ export function UserDetailDrawer({ user, onClose }: Props) {
       const parsedLimit = aiDailyLimit.trim() !== "" ? parseInt(aiDailyLimit) : undefined;
       await Promise.all([
         setUserRestrictions(user.id, restrictions),
+        setAdminPermissions(user.id, adminPerms),
         setUserAiRateLimit(user.id, {
           disabled: aiDisabled,
           ...(parsedLimit != null ? { dailyLimit: parsedLimit } : {}),
@@ -158,6 +160,39 @@ export function UserDetailDrawer({ user, onClose }: Props) {
             </div>
             <p className="mt-2 text-xs text-muted-foreground">Toggle off to restrict access to that feature for this user.</p>
           </div>
+
+          {/* Admin permissions — only for non-admin users */}
+          {user.role !== "admin" && (
+            <div>
+              <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">Admin privileges</p>
+              <div className="flex flex-col gap-2">
+                {(
+                  [
+                    { key: "manageUsers" as const, label: "Manage users" },
+                    { key: "viewBugReports" as const, label: "View bug reports" },
+                    { key: "manageSuggestions" as const, label: "Manage suggestions" },
+                  ] as const
+                ).map(({ key, label }) => {
+                  const enabled = !!adminPerms[key];
+                  return (
+                    <div key={key} className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3">
+                      <span className="text-sm">{label}</span>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={enabled}
+                        onClick={() => setAdminPerms((p) => ({ ...p, [key]: !p[key] }))}
+                        className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors ${enabled ? "bg-primary" : "bg-muted"}`}
+                      >
+                        <span className={`block size-4 rounded-full bg-white shadow transition-transform ${enabled ? "translate-x-4" : "translate-x-0"}`} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">Grant access to specific admin sections without full admin role.</p>
+            </div>
+          )}
 
           {/* AI rate limits */}
           <div>

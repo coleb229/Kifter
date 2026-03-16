@@ -30,6 +30,7 @@ export async function getAllUsers(): Promise<ActionResult<UserSummary[]>> {
       displayName: u.displayName,
       profileImage: u.profileImage,
       restrictions: u.restrictions,
+      adminPermissions: u.adminPermissions,
       aiRateLimit: u.aiRateLimit,
       bannedAt: u.bannedAt?.toISOString(),
       createdAt: u.createdAt?.toISOString(),
@@ -107,6 +108,25 @@ export async function setUserRestrictions(
     await col.updateOne(
       { _id: new ObjectId(userId) },
       { $set: { restrictions } }
+    );
+    return { success: true, data: undefined };
+  } catch (e) {
+    return { success: false, error: (e as Error).message };
+  }
+}
+
+// ── Set admin permissions ──────────────────────────────────────────────────────
+
+export async function setAdminPermissions(
+  userId: string,
+  permissions: { manageUsers?: boolean; viewBugReports?: boolean; manageSuggestions?: boolean }
+): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    const col = await getUsersCollection();
+    await col.updateOne(
+      { _id: new ObjectId(userId) },
+      { $set: { adminPermissions: permissions } }
     );
     return { success: true, data: undefined };
   } catch (e) {

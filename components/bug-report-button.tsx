@@ -6,8 +6,9 @@ import { usePathname } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Bug, X, ExternalLink } from "lucide-react";
+import { Bug, X, ExternalLink, ImagePlus, Loader2 } from "lucide-react";
 import { submitBugReport } from "@/actions/bug-report-actions";
+import { useUploadThing } from "@/lib/uploadthing-client";
 import type { BugCategory, BugSeverity } from "@/types";
 
 const schema = z.object({
@@ -70,6 +71,12 @@ export function BugReportButton() {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [submitted, setSubmitted] = useState<{ githubIssueUrl?: string } | null>(null);
+  const [screenshotUrls, setScreenshotUrls] = useState<string[]>([]);
+  const { startUpload, isUploading } = useUploadThing("bugScreenshot", {
+    onClientUploadComplete: (res) => {
+      setScreenshotUrls((prev) => [...prev, ...res.map((f) => f.url)]);
+    },
+  });
 
   const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -106,6 +113,7 @@ export function BugReportButton() {
   function handleClose() {
     setOpen(false);
     setSubmitted(null);
+    setScreenshotUrls([]);
     reset();
   }
 
@@ -119,6 +127,7 @@ export function BugReportButton() {
         description: values.description,
         steps: values.steps || undefined,
         deviceInfo: getDeviceInfo(),
+        screenshotUrls: screenshotUrls.length ? screenshotUrls : undefined,
       });
       if (result.success) {
         setSubmitted({ githubIssueUrl: result.data.githubIssueUrl });
@@ -297,6 +306,47 @@ export function BugReportButton() {
                     placeholder="1. Go to...&#10;2. Tap...&#10;3. See error"
                     className={textareaClass}
                   />
+                </div>
+
+                {/* Screenshots */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium">
+                    Screenshots <span className="text-muted-foreground">(optional, max 3)</span>
+                  </label>
+                  {screenshotUrls.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {screenshotUrls.map((url, i) => (
+                        <div key={url} className="relative">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={url} alt={`Screenshot ${i + 1}`} className="size-16 rounded-lg border border-border object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => setScreenshotUrls((prev) => prev.filter((_, j) => j !== i))}
+                            className="absolute -right-1.5 -top-1.5 flex size-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
+                          >
+                            <X className="size-2.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {screenshotUrls.length < 3 && (
+                    <label className={`flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2 text-xs text-muted-foreground transition-colors hover:border-ring hover:text-foreground ${isUploading ? "opacity-60 pointer-events-none" : ""}`}>
+                      {isUploading ? <Loader2 className="size-3.5 animate-spin" /> : <ImagePlus className="size-3.5" />}
+                      {isUploading ? "Uploading…" : "Add screenshot"}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="sr-only"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files ?? []).slice(0, 3 - screenshotUrls.length);
+                          if (files.length) startUpload(files);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                  )}
                 </div>
 
                 {/* Device Info — read-only */}

@@ -168,6 +168,11 @@ export interface UserDoc {
     cardio?: boolean;
     community?: boolean;
   };
+  adminPermissions?: {
+    manageUsers?: boolean;
+    viewBugReports?: boolean;
+    manageSuggestions?: boolean;
+  };
   aiRateLimit?: {
     dailyLimit?: number;  // overrides site default; 0 = unlimited
     disabled?: boolean;   // block AI entirely for this user
@@ -206,6 +211,11 @@ export interface UserSummary {
     nutrition?: boolean;
     cardio?: boolean;
     community?: boolean;
+  };
+  adminPermissions?: {
+    manageUsers?: boolean;
+    viewBugReports?: boolean;
+    manageSuggestions?: boolean;
   };
   aiRateLimit?: {
     dailyLimit?: number;
@@ -908,6 +918,7 @@ export interface BugReportDoc {
   deviceInfo: string;
   githubIssueUrl?: string;
   githubIssueNumber?: number;
+  screenshotUrls?: string[];
   createdAt: Date;
   resolvedAt?: Date;
 }
@@ -926,6 +937,7 @@ export interface BugReport {
   deviceInfo: string;
   githubIssueUrl?: string;
   githubIssueNumber?: number;
+  screenshotUrls?: string[];
   createdAt: string;
 }
 

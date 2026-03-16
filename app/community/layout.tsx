@@ -15,7 +15,7 @@ export default async function CommunityLayout({
     return (
       <div className="flex min-h-screen flex-col">
         <Navbar />
-        <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 pb-24 sm:px-6 sm:pb-8 lg:px-8">
+        <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 pb-40 sm:px-6 sm:pb-8 lg:px-8">
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
               <Lock className="size-5 text-muted-foreground" />
@@ -34,7 +34,7 @@ export default async function CommunityLayout({
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
-      <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 pb-24 sm:px-6 sm:pb-8 lg:px-8">
+      <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 pb-40 sm:px-6 sm:pb-8 lg:px-8">
         {children}
       </main>
     </div>

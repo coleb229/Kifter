@@ -10,7 +10,17 @@ import { auth } from "@/auth";
 
 export default async function AdminPage() {
   const session = await auth();
-  const [result, bugsResult, suggestionsResult] = await Promise.all([getAllUsers(), getBugReports(), getUserSuggestions()]);
+  const isAdmin = session?.user?.role === "admin";
+  const perms = session?.user?.adminPermissions ?? {};
+  const canManageUsers = isAdmin || perms.manageUsers;
+  const canViewBugReports = isAdmin || perms.viewBugReports;
+  const canManageSuggestions = isAdmin || perms.manageSuggestions;
+
+  const [result, bugsResult, suggestionsResult] = await Promise.all([
+    canManageUsers ? getAllUsers() : Promise.resolve({ success: true as const, data: [] }),
+    canViewBugReports ? getBugReports() : Promise.resolve({ success: true as const, data: [] }),
+    canManageSuggestions ? getUserSuggestions() : Promise.resolve({ success: true as const, data: [] }),
+  ]);
   const users = result.success ? result.data : [];
 
   return (
@@ -22,28 +32,38 @@ export default async function AdminPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Admin Panel</h1>
           <p className="text-sm text-muted-foreground">
-            {users.length} user{users.length !== 1 ? "s" : ""} registered
+            {canManageUsers ? `${users.length} user${users.length !== 1 ? "s" : ""} registered` : "Limited access"}
           </p>
         </div>
       </div>
 
-      {!result.success ? (
-        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-sm text-destructive">
-          Failed to load users: {result.error}
+      {canManageUsers && (
+        !result.success ? (
+          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-sm text-destructive">
+            Failed to load users: {result.error}
+          </div>
+        ) : (
+          <>
+            <UserTable users={users} currentUserId={session!.user.id} />
+            {isAdmin && (
+              <div className="mt-8">
+                <AISiteInsights />
+              </div>
+            )}
+          </>
+        )
+      )}
+
+      {canManageSuggestions && (
+        <div className="mt-8">
+          <UserSuggestionsPanel initialSuggestions={suggestionsResult.success ? suggestionsResult.data : []} />
         </div>
-      ) : (
-        <>
-          <UserTable users={users} currentUserId={session!.user.id} />
-          <div className="mt-8">
-            <AISiteInsights />
-          </div>
-          <div className="mt-8">
-            <UserSuggestionsPanel initialSuggestions={suggestionsResult.success ? suggestionsResult.data : []} />
-          </div>
-          <div className="mt-8">
-            <BugReportsPanel initialReports={bugsResult.success ? bugsResult.data : []} />
-          </div>
-        </>
+      )}
+
+      {canViewBugReports && (
+        <div className="mt-8">
+          <BugReportsPanel initialReports={bugsResult.success ? bugsResult.data : []} />
+        </div>
       )}
     </div>
   );

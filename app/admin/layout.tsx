@@ -10,7 +10,10 @@ export default async function AdminLayout({
 }) {
   const session = await auth();
   if (!session) redirect("/");
-  if (session.user.role !== "admin") redirect("/");
+  const isAdmin = session.user.role === "admin";
+  const hasAnyAdminPermission = session.user.adminPermissions &&
+    Object.values(session.user.adminPermissions).some(Boolean);
+  if (!isAdmin && !hasAnyAdminPermission) redirect("/");
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -25,7 +28,7 @@ export default async function AdminLayout({
           </Link>
         </nav>
       </div>
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 pb-24 sm:px-6 sm:pb-8 lg:px-8">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 pb-40 sm:px-6 sm:pb-8 lg:px-8">
         {children}
       </main>
     </div>

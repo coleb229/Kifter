@@ -13,6 +13,7 @@ interface SubmitBugReportInput {
   description: string;
   steps?: string;
   deviceInfo: string;
+  screenshotUrls?: string[];
 }
 
 export async function submitBugReport(
@@ -36,6 +37,7 @@ export async function submitBugReport(
     description: data.description,
     steps: data.steps || undefined,
     deviceInfo: data.deviceInfo,
+    screenshotUrls: data.screenshotUrls?.length ? data.screenshotUrls : undefined,
     createdAt: now,
   });
 
@@ -137,6 +139,7 @@ export async function getBugReports(): Promise<ActionResult<BugReport[]>> {
       deviceInfo: d.deviceInfo,
       githubIssueUrl: d.githubIssueUrl,
       githubIssueNumber: d.githubIssueNumber,
+      screenshotUrls: d.screenshotUrls,
       createdAt: d.createdAt.toISOString(),
     })),
   };
