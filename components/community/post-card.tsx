@@ -17,6 +17,7 @@ import { formatDistanceToNow } from "date-fns";
 import { deletePost } from "@/actions/post-actions";
 import { blockUser } from "@/actions/block-actions";
 import { toggleLike, addComment, deleteComment, getComments } from "@/actions/social-actions";
+import { KudosBar } from "@/components/community/kudos-bar";
 import type { Post, PostComment, UserRole } from "@/types";
 
 interface Props {
@@ -180,8 +181,13 @@ export function PostCard({ post, currentUserId, currentUserRole, index }: Props)
         {/* Content */}
         <p className="mt-4 text-sm leading-relaxed whitespace-pre-wrap">{post.content}</p>
 
+        {/* Kudos reactions */}
+        <div className="mt-3">
+          <KudosBar postId={post.id} kudosCounts={post.kudosCounts} myKudos={post.myKudos} />
+        </div>
+
         {/* Footer: likes, comments, actions */}
-        <div className="mt-4 flex items-center justify-between gap-2">
+        <div className="mt-3 flex items-center justify-between gap-2">
           {/* Like + comment buttons */}
           <div className="flex items-center gap-3">
             <button

@@ -4,6 +4,7 @@ import { ObjectId } from "mongodb";
 import { format } from "date-fns";
 import { auth } from "@/auth";
 import { getSessionsCollection, getSetsCollection, getExercisesCollection } from "@/lib/db";
+import { updateStreak } from "@/actions/streak-actions";
 import { DEFAULT_EXERCISES } from "@/lib/exercises";
 import type { WeightUnit } from "@/lib/weight";
 import type {
@@ -63,6 +64,9 @@ export async function createSession(
     notes: data.notes || undefined,
     createdAt: now,
   });
+
+  // Fire-and-forget streak update
+  void updateStreak();
 
   return { success: true, data: { sessionId: sessionId.toHexString() } };
 }
@@ -842,6 +846,69 @@ export async function getBodyTargetDistribution(): Promise<ActionResult<BodyTarg
     .sort((a, b) => b.volume - a.volume);
 
   return { success: true, data: result };
+}
+
+// ── replaySession ─────────────────────────────────────────────────────────────
+
+export async function replaySession(
+  sessionId: string,
+  newDate: string
+): Promise<ActionResult<{ newSessionId: string }>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+
+  const userId = session.user.id;
+  let objectId: ObjectId;
+  try {
+    objectId = new ObjectId(sessionId);
+  } catch {
+    return { success: false, error: "Invalid session ID" };
+  }
+
+  const [sessionsCol, setsCol] = await Promise.all([
+    getSessionsCollection(),
+    getSetsCollection(),
+  ]);
+
+  const source = await sessionsCol.findOne({ _id: objectId, userId });
+  if (!source) return { success: false, error: "Session not found" };
+
+  const sourceSets = await setsCol
+    .find({ sessionId, userId })
+    .sort({ exercise: 1, setNumber: 1 })
+    .toArray();
+
+  const newSessionId = new ObjectId();
+  const now = new Date();
+
+  await sessionsCol.insertOne({
+    _id: newSessionId,
+    userId,
+    date: new Date(newDate + "T00:00:00.000Z"),
+    name: source.name,
+    bodyTarget: source.bodyTarget,
+    notes: source.notes,
+    createdAt: now,
+  });
+
+  if (sourceSets.length > 0) {
+    await setsCol.insertMany(
+      sourceSets.map((s) => ({
+        _id: new ObjectId(),
+        sessionId: newSessionId.toHexString(),
+        userId,
+        exercise: s.exercise,
+        setNumber: s.setNumber,
+        weight: s.weight,
+        weightUnit: s.weightUnit,
+        reps: s.reps,
+        completed: s.completed,
+        createdAt: now,
+      }))
+    );
+  }
+
+  return { success: true, data: { newSessionId: newSessionId.toHexString() } };
 }
 
 // ── getSessionDates ────────────────────────────────────────────────────────────

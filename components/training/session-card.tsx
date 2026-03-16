@@ -3,8 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { Dumbbell, Trash2, Heart, Clock, Flame } from "lucide-react";
-import { deleteSession } from "@/actions/workout-actions";
+import { Dumbbell, Trash2, Heart, Clock, Flame, RotateCcw } from "lucide-react";
+import { deleteSession, replaySession } from "@/actions/workout-actions";
 import type { WorkoutSession } from "@/types";
 import { BODY_TARGET_STYLES } from "@/lib/label-colors";
 
@@ -17,6 +17,9 @@ export function SessionCard({ session, index }: SessionCardProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [confirming, setConfirming] = useState(false);
+  const [replayMode, setReplayMode] = useState(false);
+  const [replayDate, setReplayDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [replayPending, startReplayTransition] = useTransition();
   const date = new Date(session.date.slice(0, 10) + "T00:00:00");
 
   function handleDelete(e: React.MouseEvent) {
@@ -29,6 +32,24 @@ export function SessionCard({ session, index }: SessionCardProps) {
     startTransition(async () => {
       await deleteSession(session.id);
       router.refresh();
+    });
+  }
+
+  function handleReplay(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setReplayMode(true);
+    setConfirming(false);
+  }
+
+  function handleReplayConfirm(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    startReplayTransition(async () => {
+      const result = await replaySession(session.id, replayDate);
+      if (result.success) {
+        router.push(`/training/${result.data.newSessionId}`);
+      }
     });
   }
 
@@ -91,8 +112,34 @@ export function SessionCard({ session, index }: SessionCardProps) {
         )}
       </a>
 
-      {/* Delete control — floated over the card, outside the <a> */}
+      {/* Controls — floated over the card, outside the <a> */}
       <div className="absolute right-3 bottom-3 flex items-center gap-2">
+        {replayMode && (
+          <>
+            <input
+              type="date"
+              value={replayDate}
+              onChange={(e) => { e.stopPropagation(); setReplayDate(e.target.value); }}
+              onClick={(e) => e.stopPropagation()}
+              className="rounded border border-border bg-background px-2 py-0.5 text-xs outline-none focus:border-ring"
+            />
+            <button
+              type="button"
+              onClick={handleReplayConfirm}
+              disabled={replayPending}
+              className="text-xs font-medium text-primary transition-colors hover:underline disabled:opacity-50"
+            >
+              {replayPending ? "Creating…" : "Go"}
+            </button>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setReplayMode(false); }}
+              className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Cancel
+            </button>
+          </>
+        )}
         {confirming && (
           <>
             <span className="text-xs text-muted-foreground">Delete?</span>
@@ -113,15 +160,25 @@ export function SessionCard({ session, index }: SessionCardProps) {
             </button>
           </>
         )}
-        {!confirming && (
-          <button
-            type="button"
-            onClick={handleDelete}
-            aria-label="Delete session"
-            className="rounded p-1 text-muted-foreground opacity-0 transition-all hover:text-destructive group-hover:opacity-100"
-          >
-            <Trash2 className="size-3.5" />
-          </button>
+        {!confirming && !replayMode && (
+          <>
+            <button
+              type="button"
+              onClick={handleReplay}
+              aria-label="Replay session"
+              className="rounded p-1 text-muted-foreground opacity-0 transition-all hover:text-primary group-hover:opacity-100"
+            >
+              <RotateCcw className="size-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              aria-label="Delete session"
+              className="rounded p-1 text-muted-foreground opacity-0 transition-all hover:text-destructive group-hover:opacity-100"
+            >
+              <Trash2 className="size-3.5" />
+            </button>
+          </>
         )}
       </div>
     </div>

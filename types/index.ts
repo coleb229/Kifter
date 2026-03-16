@@ -724,6 +724,8 @@ export interface Post {
   likeCount: number;
   commentCount: number;
   isLiked: boolean;
+  kudosCounts: Record<KudosType, number>;
+  myKudos?: KudosType;
   createdAt: string;
 }
 
@@ -798,4 +800,35 @@ export interface SupplementLog {
   timing: SupplementTiming;
   notes?: string;
   createdAt: string;
+}
+
+// ── Streak ────────────────────────────────────────────────────────────────────
+
+export interface StreakDoc {
+  _id: ObjectId;
+  userId: string;
+  currentStreak: number;
+  longestStreak: number;
+  lastWorkoutDate: string; // "YYYY-MM-DD" UTC
+  freezeTokens: number;    // 0–3
+  updatedAt: Date;
+}
+
+export interface Streak {
+  currentStreak: number;
+  longestStreak: number;
+  lastWorkoutDate: string;
+  freezeTokens: number;
+}
+
+// ── Kudos reactions ───────────────────────────────────────────────────────────
+
+export type KudosType = "fire" | "rocket" | "heart" | "muscle";
+
+export interface PostKudosDoc {
+  _id: ObjectId;
+  postId: string;
+  userId: string;
+  kudosType: KudosType;
+  createdAt: Date;
 }

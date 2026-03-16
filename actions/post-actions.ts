@@ -2,8 +2,8 @@
 
 import { ObjectId } from "mongodb";
 import { auth } from "@/auth";
-import { getPostsCollection, getUsersCollection, getUserBlocksCollection, getPostLikesCollection, getPostCommentsCollection, getSessionsCollection, getSetsCollection } from "@/lib/db";
-import type { ActionResult, Post, PostDoc } from "@/types";
+import { getPostsCollection, getUsersCollection, getUserBlocksCollection, getPostLikesCollection, getPostCommentsCollection, getPostKudosCollection, getSessionsCollection, getSetsCollection } from "@/lib/db";
+import type { ActionResult, KudosType, Post, PostDoc } from "@/types";
 
 function toLb(weight: number, unit: string): number {
   return unit === "kg" ? weight * 2.20462 : weight;
@@ -114,12 +114,13 @@ export async function getPosts(): Promise<ActionResult<Post[]>> {
   if (!session?.user?.id) return { success: false, error: "Not authenticated" };
 
   try {
-    const [postsCol, usersCol, blocksCol, likesCol, commentsCol] = await Promise.all([
+    const [postsCol, usersCol, blocksCol, likesCol, commentsCol, kudosCol] = await Promise.all([
       getPostsCollection(),
       getUsersCollection(),
       getUserBlocksCollection(),
       getPostLikesCollection(),
       getPostCommentsCollection(),
+      getPostKudosCollection(),
     ]);
 
     const blockedIds = await blocksCol
@@ -158,11 +159,28 @@ export async function getPosts(): Promise<ActionResult<Post[]>> {
         .toArray(),
     ]);
 
+    // Fetch kudos counts + current user's kudos
+    const [allKudos, myKudosDocs] = await Promise.all([
+      kudosCol.find({ postId: { $in: postIds } }, { projection: { postId: 1, kudosType: 1 } }).toArray(),
+      kudosCol.find({ postId: { $in: postIds }, userId: session.user.id }, { projection: { postId: 1, kudosType: 1 } }).toArray(),
+    ]);
+
+    const kudosCountMap = new Map<string, Record<KudosType, number>>();
+    for (const k of allKudos) {
+      if (!kudosCountMap.has(k.postId)) {
+        kudosCountMap.set(k.postId, { fire: 0, rocket: 0, heart: 0, muscle: 0 });
+      }
+      kudosCountMap.get(k.postId)![k.kudosType as KudosType]++;
+    }
+    const myKudosMap = new Map(myKudosDocs.map((k) => [k.postId, k.kudosType as KudosType]));
+
     const authorMap = new Map(authors.map((a) => [a._id.toHexString(), a]));
     const likeCountMap = new Map<string, number>();
     for (const l of allLikes) likeCountMap.set(l.postId, (likeCountMap.get(l.postId) ?? 0) + 1);
     const commentCountMap = new Map(commentCounts.map((c) => [c._id, c.count]));
     const likedSet = new Set(userLikes.map((l) => l.postId));
+
+    const emptyKudos: Record<KudosType, number> = { fire: 0, rocket: 0, heart: 0, muscle: 0 };
 
     const posts: Post[] = docs.map((doc) => {
       const author = authorMap.get(doc.userId);
@@ -178,6 +196,8 @@ export async function getPosts(): Promise<ActionResult<Post[]>> {
         likeCount: likeCountMap.get(id) ?? 0,
         commentCount: commentCountMap.get(id) ?? 0,
         isLiked: likedSet.has(id),
+        kudosCounts: kudosCountMap.get(id) ?? { ...emptyKudos },
+        myKudos: myKudosMap.get(id),
         createdAt: doc.createdAt.toISOString(),
       };
     });
