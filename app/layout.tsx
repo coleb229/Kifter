@@ -5,6 +5,7 @@ import { SessionProvider } from "next-auth/react";
 import { auth } from "@/auth";
 import { getCurrentUser } from "@/actions/user-actions";
 import { AdminFab } from "@/components/admin-fab";
+import { BugReportButton } from "@/components/bug-report-button";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import "./globals.css";
 
@@ -51,6 +52,7 @@ export default async function RootLayout({
             {children}
             <MobileBottomNav />
             <AdminFab />
+            <BugReportButton />
           </ThemeProvider>
         </SessionProvider>
       </body>

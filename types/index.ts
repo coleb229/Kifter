@@ -844,3 +844,44 @@ export interface PostKudosDoc {
   kudosType: KudosType;
   createdAt: Date;
 }
+
+// ── Bug reports ────────────────────────────────────────────────────────────────
+
+export type BugCategory = "ui" | "feature" | "data" | "performance" | "other";
+export type BugSeverity = "low" | "medium" | "high" | "critical";
+export type BugStatus = "open" | "in_progress" | "resolved";
+
+export interface BugReportDoc {
+  _id: ObjectId;
+  userId: string;
+  userEmail?: string;
+  title: string;
+  category: BugCategory;
+  severity: BugSeverity;
+  status: BugStatus;
+  page: string;
+  description: string;
+  steps?: string;
+  deviceInfo: string;
+  githubIssueUrl?: string;
+  githubIssueNumber?: number;
+  createdAt: Date;
+  resolvedAt?: Date;
+}
+
+export interface BugReport {
+  id: string;
+  userId: string;
+  userEmail?: string;
+  title: string;
+  category: BugCategory;
+  severity: BugSeverity;
+  status: BugStatus;
+  page: string;
+  description: string;
+  steps?: string;
+  deviceInfo: string;
+  githubIssueUrl?: string;
+  githubIssueNumber?: number;
+  createdAt: string;
+}

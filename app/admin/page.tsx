@@ -1,12 +1,14 @@
 import { ShieldCheck } from "lucide-react";
 import { getAllUsers } from "@/actions/admin-actions";
+import { getBugReports } from "@/actions/bug-report-actions";
 import { UserTable } from "@/components/admin/user-table";
 import { AISiteInsights } from "@/components/admin/ai-site-insights";
+import { BugReportsPanel } from "@/components/admin/bug-reports-panel";
 import { auth } from "@/auth";
 
 export default async function AdminPage() {
   const session = await auth();
-  const result = await getAllUsers();
+  const [result, bugsResult] = await Promise.all([getAllUsers(), getBugReports()]);
   const users = result.success ? result.data : [];
 
   return (
@@ -32,6 +34,9 @@ export default async function AdminPage() {
           <UserTable users={users} currentUserId={session!.user.id} />
           <div className="mt-8">
             <AISiteInsights />
+          </div>
+          <div className="mt-8">
+            <BugReportsPanel initialReports={bugsResult.success ? bugsResult.data : []} />
           </div>
         </>
       )}
