@@ -902,7 +902,7 @@ export interface PostKudosDoc {
 
 export type BugCategory = "ui" | "feature" | "data" | "performance" | "other";
 export type BugSeverity = "low" | "medium" | "high" | "critical";
-export type BugStatus = "open" | "in_progress" | "resolved";
+export type BugStatus = "open" | "in_progress" | "testing" | "resolved";
 
 export interface BugReportDoc {
   _id: ObjectId;
@@ -943,7 +943,7 @@ export interface BugReport {
 
 // ── User Suggestions ──────────────────────────────────────────────────────────
 
-export type SuggestionStatus = "new" | "under_review" | "planned" | "done" | "declined";
+export type SuggestionStatus = "new" | "under_review" | "planned" | "testing" | "done" | "declined";
 
 export interface UserSuggestionDoc {
   _id: ObjectId;
@@ -952,6 +952,7 @@ export interface UserSuggestionDoc {
   title: string;
   description: string;
   status: SuggestionStatus;
+  imageUrls?: string[];
   createdAt: Date;
 }
 
@@ -962,5 +963,6 @@ export interface UserSuggestion {
   title: string;
   description: string;
   status: SuggestionStatus;
+  imageUrls?: string[];
   createdAt: string;
 }

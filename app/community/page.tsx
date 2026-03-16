@@ -13,7 +13,7 @@ export default async function CommunityPage() {
 
   return (
     <div>
-      <div className="mb-8 flex items-center justify-between animate-fade-up">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-fade-up">
         <div className="flex items-center gap-3">
           <div className="flex size-9 items-center justify-center rounded-lg bg-violet-100 dark:bg-violet-950/40">
             <Users className="size-5 text-violet-600 dark:text-violet-400" />

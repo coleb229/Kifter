@@ -8,6 +8,7 @@ import { ObjectId } from "mongodb";
 interface SubmitSuggestionInput {
   title: string;
   description: string;
+  imageUrls?: string[];
 }
 
 export async function submitSuggestion(
@@ -25,6 +26,7 @@ export async function submitSuggestion(
     title: data.title,
     description: data.description,
     status: "new" as SuggestionStatus,
+    imageUrls: data.imageUrls?.length ? data.imageUrls : undefined,
     createdAt: new Date(),
   });
 
@@ -108,9 +110,20 @@ export async function getUserSuggestions(): Promise<ActionResult<UserSuggestion[
       title: d.title,
       description: d.description,
       status: d.status,
+      imageUrls: d.imageUrls,
       createdAt: d.createdAt.toISOString(),
     })),
   };
+}
+
+export async function deleteUserSuggestion(id: string): Promise<ActionResult> {
+  const session = await auth();
+  if (session?.user?.role !== "admin") return { success: false, error: "Unauthorized" };
+
+  const col = await getUserSuggestionsCollection();
+  await col.deleteOne({ _id: new ObjectId(id) });
+
+  return { success: true, data: undefined };
 }
 
 export async function updateSuggestionStatus(

@@ -145,6 +145,16 @@ export async function getBugReports(): Promise<ActionResult<BugReport[]>> {
   };
 }
 
+export async function deleteBugReport(id: string): Promise<ActionResult> {
+  const session = await auth();
+  if (session?.user?.role !== "admin") return { success: false, error: "Unauthorized" };
+
+  const col = await getBugReportsCollection();
+  await col.deleteOne({ _id: new ObjectId(id) });
+
+  return { success: true, data: undefined };
+}
+
 export async function updateBugReportStatus(
   id: string,
   status: BugStatus

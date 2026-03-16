@@ -172,7 +172,7 @@ export default async function Home() {
 
       {/* Footer */}
       <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 pt-6 pb-24 sm:py-6 sm:px-6 lg:px-8">
           <span className="text-sm font-semibold">Kifted</span>
           <p className="text-xs text-muted-foreground">
             © {new Date().getFullYear()} Kifted. All rights reserved.

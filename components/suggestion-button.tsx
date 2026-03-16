@@ -5,8 +5,9 @@ import { useSession } from "next-auth/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Lightbulb, X } from "lucide-react";
+import { Lightbulb, X, ImagePlus, Loader2 } from "lucide-react";
 import { submitSuggestion } from "@/actions/suggestion-actions";
+import { useUploadThing } from "@/lib/uploadthing-client";
 
 const schema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
@@ -25,6 +26,12 @@ export function SuggestionButton() {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [submitted, setSubmitted] = useState(false);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const { startUpload, isUploading } = useUploadThing("suggestionImage", {
+    onClientUploadComplete: (res) => {
+      setImageUrls((prev) => [...prev, ...res.map((f) => f.url)]);
+    },
+  });
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -44,12 +51,13 @@ export function SuggestionButton() {
   function handleClose() {
     setOpen(false);
     setSubmitted(false);
+    setImageUrls([]);
     reset();
   }
 
   function onSubmit(values: FormValues) {
     startTransition(async () => {
-      const result = await submitSuggestion(values);
+      const result = await submitSuggestion({ ...values, imageUrls: imageUrls.length ? imageUrls : undefined });
       if (result.success) {
         setSubmitted(true);
         reset();
@@ -149,6 +157,47 @@ export function SuggestionButton() {
                     className={textareaClass}
                   />
                   {errors.description && <p className="text-xs text-destructive">{errors.description.message}</p>}
+                </div>
+
+                {/* Images */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium">
+                    Images <span className="text-muted-foreground">(optional, max 3)</span>
+                  </label>
+                  {imageUrls.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {imageUrls.map((url, i) => (
+                        <div key={url} className="relative">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={url} alt={`Image ${i + 1}`} className="size-16 rounded-lg border border-border object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => setImageUrls((prev) => prev.filter((_, j) => j !== i))}
+                            className="absolute -right-1.5 -top-1.5 flex size-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
+                          >
+                            <X className="size-2.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {imageUrls.length < 3 && (
+                    <label className={`flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2 text-xs text-muted-foreground transition-colors hover:border-ring hover:text-foreground ${isUploading ? "opacity-60 pointer-events-none" : ""}`}>
+                      {isUploading ? <Loader2 className="size-3.5 animate-spin" /> : <ImagePlus className="size-3.5" />}
+                      {isUploading ? "Uploading…" : "Add image"}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="sr-only"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files ?? []).slice(0, 3 - imageUrls.length);
+                          if (files.length) startUpload(files);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                  )}
                 </div>
 
                 <button
