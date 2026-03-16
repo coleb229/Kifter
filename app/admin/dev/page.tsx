@@ -38,24 +38,34 @@ export default async function DevPanelPage() {
       description: "Powers AI coaching insights and admin analytics",
       configured: !!process.env.ANTHROPIC_API_KEY,
       docsUrl: "https://console.anthropic.com",
-    },
-    {
-      name: "UploadThing",
-      description: "Handles profile image file uploads",
-      configured: !!process.env.UPLOADTHING_TOKEN,
-      docsUrl: "https://uploadthing.com/dashboard",
+      settingsKey: "anthropic" as const,
     },
     {
       name: "Google OAuth",
       description: "Provides sign-in via Google accounts",
       configured: !!(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET),
       docsUrl: "https://console.cloud.google.com",
+      settingsKey: "google" as const,
+    },
+    {
+      name: "UploadThing",
+      description: "Handles profile image file uploads",
+      configured: !!process.env.UPLOADTHING_TOKEN,
+      docsUrl: "https://uploadthing.com/dashboard",
+      settingsKey: "uploadthing" as const,
     },
     {
       name: "MongoDB",
       description: "Primary database for all app data",
       configured: !!process.env.MONGODB_URI,
       docsUrl: "https://cloud.mongodb.com",
+    },
+    {
+      name: "Apple Health Import",
+      description: "Allows users to import cardio data from Apple Health XML exports",
+      configured: true,
+      docsUrl: "https://support.apple.com/en-us/111829",
+      settingsKey: "appleHealth" as const,
     },
   ];
 
@@ -75,7 +85,7 @@ export default async function DevPanelPage() {
       <div className="border-t border-border" />
 
       <Section icon={Plug} title="External Integrations" description="Status of all connected third-party services">
-        <IntegrationsPanel integrations={integrations} />
+        <IntegrationsPanel integrations={integrations} settings={settings.integrations ?? {}} />
       </Section>
 
       <div className="border-t border-border" />

@@ -2,8 +2,9 @@
 
 import { ObjectId } from "mongodb";
 import { auth } from "@/auth";
-import { getSessionsCollection, getSetsCollection, getDietEntriesCollection } from "@/lib/db";
-import type { ActionResult, BodyTarget, MealType, WorkoutSessionDoc, WorkoutSetDoc, DietEntryDoc } from "@/types";
+import { getSessionsCollection, getSetsCollection, getDietEntriesCollection, getCardioSessionsCollection } from "@/lib/db";
+import { getIntegrationSettings } from "@/actions/settings-actions";
+import type { ActionResult, BodyTarget, CardioActivity, CardioSessionDoc, MealType, WorkoutSessionDoc, WorkoutSetDoc, DietEntryDoc } from "@/types";
 import { BODY_TARGETS, MEAL_TYPES } from "@/types";
 
 function parseCsvRows(csv: string): string[][] {
@@ -164,4 +165,124 @@ export async function importDietCSV(
 
   if (docs.length) await col.insertMany(docs);
   return { success: true, data: { imported: docs.length } };
+}
+
+// ── Apple Health XML import ────────────────────────────────────────────────────
+
+const AH_CARDIO_MAP: Record<string, CardioActivity> = {
+  HKWorkoutActivityTypeRunning:                       "Run",
+  HKWorkoutActivityTypeCycling:                       "Cycle",
+  HKWorkoutActivityTypeWalking:                       "Walk",
+  HKWorkoutActivityTypeHiking:                        "Walk",
+  HKWorkoutActivityTypeSwimming:                      "Swim",
+  HKWorkoutActivityTypeRowing:                        "Row",
+  HKWorkoutActivityTypeHighIntensityIntervalTraining: "HIIT",
+  HKWorkoutActivityTypeElliptical:                    "Elliptical",
+  HKWorkoutActivityTypeStairClimbing:                 "Stairs",
+};
+
+function getAttr(tag: string, name: string): string {
+  const m = tag.match(new RegExp(`${name}="([^"]*)"`));
+  return m ? m[1] : "";
+}
+
+export async function importAppleHealthXML(
+  xmlText: string
+): Promise<ActionResult<{ cardio: number; skipped: number }>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+  const userId = session.user.id;
+
+  const integrations = await getIntegrationSettings();
+  const cfg = integrations?.appleHealth;
+
+  if (cfg?.enabled === false) {
+    return { success: false, error: "Apple Health import is currently disabled." };
+  }
+
+  const maxBytes = (cfg?.maxFileSizeMb ?? 50) * 1024 * 1024;
+  if (xmlText.length > maxBytes) {
+    return { success: false, error: `File exceeds the ${cfg?.maxFileSizeMb ?? 50} MB limit.` };
+  }
+
+  // Parse <Workout ...> opening tags (self-closing or with children)
+  const workoutTagRe = /<Workout\s([^>]+?)(?:\/?>)/g;
+  const candidates: CardioSessionDoc[] = [];
+  let match: RegExpExecArray | null;
+
+  while ((match = workoutTagRe.exec(xmlText)) !== null) {
+    const attrs = match[1];
+    const activityType = getAttr(attrs, "workoutActivityType");
+    const mapped = AH_CARDIO_MAP[activityType];
+    if (!mapped) continue;
+
+    const startDateStr = getAttr(attrs, "startDate");
+    if (!startDateStr) continue;
+    const startDate = new Date(startDateStr);
+    if (isNaN(startDate.getTime())) continue;
+
+    const durationRaw = parseFloat(getAttr(attrs, "duration") || "0");
+    const durationUnit = getAttr(attrs, "durationUnit") || "min";
+    const durationMin = durationUnit === "s" ? durationRaw / 60 : durationRaw;
+    if (durationMin <= 0) continue;
+
+    const distRaw = parseFloat(getAttr(attrs, "totalDistance") || "");
+    const distUnit = getAttr(attrs, "totalDistanceUnit") || "km";
+    const distance = isNaN(distRaw) ? undefined : distRaw;
+    const distanceUnit = (distUnit === "mi" ? "mi" : "km") as "km" | "mi";
+
+    const calRaw = parseFloat(getAttr(attrs, "totalEnergyBurned") || "");
+    const caloriesBurned = isNaN(calRaw) ? undefined : Math.round(calRaw);
+
+    candidates.push({
+      _id: new ObjectId(),
+      userId,
+      date: startDate,
+      activityType: mapped,
+      duration: Math.round(durationMin),
+      distance,
+      distanceUnit: distance !== undefined ? distanceUnit : undefined,
+      intensity: "moderate",
+      caloriesBurned,
+      notes: "Imported from Apple Health",
+      createdAt: new Date(),
+    });
+  }
+
+  if (candidates.length === 0) {
+    return { success: true, data: { cardio: 0, skipped: 0 } };
+  }
+
+  const cardioCol = await getCardioSessionsCollection();
+  const shouldDedupe = cfg?.deduplicateByDate !== false;
+
+  let inserted = 0;
+  let skipped = 0;
+
+  if (shouldDedupe) {
+    const minDate = candidates.reduce((m, c) => (c.date < m ? c.date : m), candidates[0].date);
+    const maxDate = candidates.reduce((m, c) => (c.date > m ? c.date : m), candidates[0].date);
+
+    const existing = await cardioCol
+      .find({ userId, date: { $gte: minDate, $lte: new Date(maxDate.getTime() + 5 * 60 * 1000) } })
+      .project<{ date: Date; activityType: string }>({ date: 1, activityType: 1 })
+      .toArray();
+
+    const toInsert: CardioSessionDoc[] = [];
+    for (const c of candidates) {
+      const isDuplicate = existing.some(
+        (e) =>
+          e.activityType === c.activityType &&
+          Math.abs(e.date.getTime() - c.date.getTime()) <= 5 * 60 * 1000
+      );
+      if (isDuplicate) { skipped++; } else { toInsert.push(c); }
+    }
+    if (toInsert.length) await cardioCol.insertMany(toInsert);
+    inserted = toInsert.length;
+  } else {
+    await cardioCol.insertMany(candidates);
+    inserted = candidates.length;
+  }
+
+  return { success: true, data: { cardio: inserted, skipped } };
 }

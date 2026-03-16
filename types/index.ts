@@ -223,6 +223,23 @@ export interface SiteSettingsDoc {
     sitewideDailyLimit: number;   // 0 = unlimited
     defaultUserDailyLimit: number; // 0 = unlimited, applies per user
   };
+  integrations?: {
+    anthropic?: {
+      defaultModel?: "claude-haiku-4-5-20251001" | "claude-sonnet-4-6" | "claude-opus-4-6";
+    };
+    google?: {
+      allowNewRegistrations?: boolean;
+      allowedDomains?: string;
+    };
+    uploadthing?: {
+      maxFileSizeMb?: number;
+    };
+    appleHealth?: {
+      enabled?: boolean;
+      maxFileSizeMb?: number;
+      deduplicateByDate?: boolean;
+    };
+  };
 }
 
 // ── Post document ─────────────────────────────────────────────────────────────

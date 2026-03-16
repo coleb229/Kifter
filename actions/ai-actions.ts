@@ -8,6 +8,7 @@ import { getSessionsCollection, getSetsCollection, getSiteSettingsCollection, ge
 import { getAllUsers } from "@/actions/admin-actions";
 import { getPosts } from "@/actions/post-actions";
 import { getDietHistory, getMacroTargets } from "@/actions/diet-actions";
+import { getIntegrationSettings } from "@/actions/settings-actions";
 import type { ActionResult, AIInsight } from "@/types";
 
 // ── Rate limiting ──────────────────────────────────────────────────────────────
@@ -80,6 +81,11 @@ function getClient(): Anthropic {
   return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 }
 
+async function getDefaultAiModel(): Promise<string> {
+  const integrations = await getIntegrationSettings();
+  return integrations?.anthropic?.defaultModel ?? "claude-sonnet-4-6";
+}
+
 // ── generateWorkoutInsights ───────────────────────────────────────────────────
 
 export async function generateWorkoutInsights(): Promise<ActionResult<AIInsight[]>> {
@@ -139,8 +145,9 @@ export async function generateWorkoutInsights(): Promise<ActionResult<AIInsight[
       })
     );
 
+    const model = await getDefaultAiModel();
     const message = await client.messages.create({
-      model: "claude-sonnet-4-6",
+      model,
       max_tokens: 1024,
       messages: [
         {
@@ -222,8 +229,9 @@ export async function generateAdminInsights(): Promise<ActionResult<AIInsight[]>
       totalSets,
     };
 
+    const model = await getDefaultAiModel();
     const message = await client.messages.create({
-      model: "claude-sonnet-4-6",
+      model,
       max_tokens: 1200,
       messages: [
         {
@@ -288,8 +296,9 @@ export async function generateNutritionRecommendations(): Promise<ActionResult<A
     const targets = targetsResult.success ? targetsResult.data : null;
     const workoutDates = sessionsResult.map((s) => format(s.date, "yyyy-MM-dd"));
 
+    const model = await getDefaultAiModel();
     const message = await client.messages.create({
-      model: "claude-sonnet-4-6",
+      model,
       max_tokens: 1024,
       messages: [
         {
@@ -333,8 +342,9 @@ export async function getExerciseSubstitutions(
 
   try {
     const client = getClient();
+    const model = await getDefaultAiModel();
     const message = await client.messages.create({
-      model: "claude-sonnet-4-6",
+      model,
       max_tokens: 512,
       messages: [
         {

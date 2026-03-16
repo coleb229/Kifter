@@ -1,9 +1,9 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { Download, Upload, CheckCircle, AlertCircle } from "lucide-react";
+import { Download, Upload, CheckCircle, AlertCircle, Apple } from "lucide-react";
 import { exportWorkoutsCSV, exportDietCSV } from "@/actions/export-actions";
-import { importWorkoutsCSV, importDietCSV } from "@/actions/import-actions";
+import { importWorkoutsCSV, importDietCSV, importAppleHealthXML } from "@/actions/import-actions";
 
 function downloadCsv(content: string, filename: string) {
   const blob = new Blob([content], { type: "text/csv" });
@@ -85,8 +85,11 @@ function Section({
 export default function DataPage() {
   const [isPendingW, startW] = useTransition();
   const [isPendingD, startD] = useTransition();
+  const [isPendingAH, startAH] = useTransition();
   const [msgW, setMsgW] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [msgD, setMsgD] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [msgAH, setMsgAH] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const ahFileRef = useRef<HTMLInputElement>(null);
 
   function handleExportWorkouts() {
     startW(async () => {
@@ -144,6 +147,26 @@ export default function DataPage() {
     reader.readAsText(file);
   }
 
+  function handleImportAppleHealth(file: File) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      startAH(async () => {
+        const result = await importAppleHealthXML(text);
+        if (result.success) {
+          const { cardio, skipped } = result.data;
+          setMsgAH({
+            type: "success",
+            text: `Imported ${cardio} cardio session${cardio !== 1 ? "s" : ""}${skipped > 0 ? `, ${skipped} skipped as duplicate${skipped !== 1 ? "s" : ""}` : ""}.`,
+          });
+        } else {
+          setMsgAH({ type: "error", text: result.error });
+        }
+      });
+    };
+    reader.readAsText(file);
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="animate-fade-up">
@@ -171,6 +194,51 @@ export default function DataPage() {
           isPending={isPendingD}
           message={msgD}
         />
+
+        {/* Apple Health Import */}
+        <div className="rounded-xl border border-border bg-card p-5 flex flex-col gap-4">
+          <div className="flex items-start gap-3">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-rose-100 dark:bg-rose-950/40">
+              <Apple className="size-4 text-rose-600 dark:text-rose-400" />
+            </div>
+            <div>
+              <p className="font-semibold">Apple Health</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Import cardio sessions (runs, rides, swims, etc.) from your Apple Health export file.
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                On iPhone: <span className="font-medium">Health app → profile icon → Export All Health Data</span> → unzip and upload <span className="font-mono text-xs">export.xml</span>.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => ahFileRef.current?.click()}
+              disabled={isPendingAH}
+              className="flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50 transition-colors"
+            >
+              <Upload className="size-3.5" />
+              {isPendingAH ? "Importing…" : "Import export.xml"}
+            </button>
+            <input
+              ref={ahFileRef}
+              type="file"
+              accept=".xml,application/xml,text/xml"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) { handleImportAppleHealth(file); e.target.value = ""; }
+              }}
+            />
+          </div>
+          {msgAH && (
+            <div className={`flex items-center gap-1.5 text-sm ${msgAH.type === "success" ? "text-emerald-600" : "text-destructive"}`}>
+              {msgAH.type === "success" ? <CheckCircle className="size-4" /> : <AlertCircle className="size-4" />}
+              {msgAH.text}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

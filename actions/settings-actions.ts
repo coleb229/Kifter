@@ -47,3 +47,31 @@ export async function updateSiteSettings(
     return { success: false, error: "Failed to update settings" };
   }
 }
+
+export async function updateIntegrationSettings(
+  integration: string,
+  config: Record<string, unknown>
+): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    const col = await getSiteSettingsCollection();
+    await col.updateOne(
+      { _id: "global" },
+      { $set: { [`integrations.${integration}`]: config } },
+      { upsert: true }
+    );
+    return { success: true, data: undefined };
+  } catch {
+    return { success: false, error: "Failed to update integration settings" };
+  }
+}
+
+export async function getIntegrationSettings(): Promise<SiteSettingsDoc["integrations"]> {
+  try {
+    const col = await getSiteSettingsCollection();
+    const doc = await col.findOne({ _id: "global" }, { projection: { integrations: 1 } });
+    return doc?.integrations ?? {};
+  } catch {
+    return {};
+  }
+}
