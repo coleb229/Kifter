@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { format, parseISO, addDays, subDays } from "date-fns";
 import {
@@ -20,18 +20,22 @@ import {
   X,
   Save,
   Copy,
+  Camera,
+  AlertTriangle,
 } from "lucide-react";
-import { addDietEntry, deleteDietEntry, getDietEntries, getDietHistory, getDietDataYears, getDietMonthlyHistory, copyDietDay } from "@/actions/diet-actions";
+import { addDietEntry, deleteDietEntry, getDietEntries, getDietHistory, getDietDataYears, getDietMonthlyHistory, copyDietDay, getRecentFoods } from "@/actions/diet-actions";
 import { getMealTemplates, createMealTemplate, deleteMealTemplate, applyMealTemplate } from "@/actions/meal-template-actions";
 import { MacroRings } from "@/components/diet/macro-rings";
 import { AddFoodForm } from "@/components/diet/add-food-form";
+import { BarcodeScanner } from "@/components/diet/barcode-scanner";
 import { MacroTargetForm } from "@/components/diet/macro-target-form";
 import { DietHistoryChart } from "@/components/diet/diet-history-chart";
 import { Button } from "@/components/ui/button";
 import { YearPicker } from "@/components/ui/year-picker";
 import { MEAL_TYPES } from "@/types";
 import { MEAL_TYPE_STYLES } from "@/lib/label-colors";
-import type { DietDaySummary, DietEntry, MacroTarget, MealTemplate, MealType } from "@/types";
+import type { DietDaySummary, DietEntry, MacroTarget, MealTemplate, MealType, RecentFood } from "@/types";
+import type { FoodSearchResult } from "@/actions/food-actions";
 
 interface Props {
   initialEntries: DietEntry[];
@@ -47,6 +51,14 @@ const mealConfig: Record<MealType, { label: string; Icon: React.ElementType }> =
   snack: { label: "Snack", Icon: Cookie },
 };
 
+function getMealTypeForTime(): MealType {
+  const hour = new Date().getHours();
+  if (hour < 10) return "breakfast";
+  if (hour < 14) return "lunch";
+  if (hour < 18) return "snack";
+  return "dinner";
+}
+
 export function DietLogView({ initialEntries, initialTargets, initialHistory, initialDate }: Props) {
   const router = useRouter();
   const [view, setView] = useState<"today" | "history">("today");
@@ -61,6 +73,9 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
   const [showTemplates, setShowTemplates] = useState(false);
   const [templates, setTemplates] = useState<MealTemplate[]>([]);
   const [templateName, setTemplateName] = useState("");
+  const [recentFoods, setRecentFoods] = useState<RecentFood[]>([]);
+  const [showBarcode, setShowBarcode] = useState(false);
+  const [nudgeDismissed, setNudgeDismissed] = useState(false);
   const [isDateLoading, startDateTransition] = useTransition();
   const [, startDeleteTransition] = useTransition();
   const [isPendingTemplate, startTemplateTransition] = useTransition();
@@ -108,9 +123,37 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
       ? history.filter((d) => d.calories >= targets.calories * 0.85 && d.calories <= targets.calories * 1.15).length
       : 0;
 
+  // Load recent foods on mount
+  useEffect(() => {
+    getRecentFoods(8).then((res) => {
+      if (res.success) setRecentFoods(res.data);
+    });
+  }, []);
+
+  // Check nudge dismiss state
+  useEffect(() => {
+    const key = `kifted-nudge-dismissed-${today}`;
+    setNudgeDismissed(localStorage.getItem(key) === "true");
+  }, [today]);
+
+  // End-of-day nudge check (re-evaluates when entries change)
+  const showNudge =
+    isToday &&
+    !nudgeDismissed &&
+    targets != null &&
+    targets.calories > 0 &&
+    totals.calories < targets.calories * 0.8 &&
+    new Date().getHours() >= 21;
+
+  function dismissNudge() {
+    localStorage.setItem(`kifted-nudge-dismissed-${today}`, "true");
+    setNudgeDismissed(true);
+  }
+
   async function changeDate(newDate: string) {
     setShowAddForm(false);
     setEditingEntry(undefined);
+    setShowBarcode(false);
     startDateTransition(async () => {
       setSelectedDate(newDate);
       const result = await getDietEntries(newDate);
@@ -144,11 +187,14 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
   function handleAddClose() {
     setShowAddForm(false);
     setEditingEntry(undefined);
+    setShowBarcode(false);
     router.refresh();
-    // Also refresh local entries
     startDateTransition(async () => {
       const result = await getDietEntries(selectedDate);
       if (result.success) setEntries(result.data);
+      // Refresh recent foods after adding
+      const recentRes = await getRecentFoods(8);
+      if (recentRes.success) setRecentFoods(recentRes.data);
     });
   }
 
@@ -164,11 +210,13 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
     setEditingEntry(undefined);
     setAddMealType(mealType);
     setShowAddForm(true);
+    setShowBarcode(false);
   }
 
   function openEditForm(entry: DietEntry) {
     setShowAddForm(false);
     setEditingEntry(entry);
+    setShowBarcode(false);
   }
 
   async function openTemplates() {
@@ -222,6 +270,32 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
         const refreshed = await getDietEntries(selectedDate);
         if (refreshed.success) setEntries(refreshed.data);
       }
+    });
+  }
+
+  function handleBarcodeFoodSelect(food: FoodSearchResult) {
+    // Pre-fill the add form with barcode result then show the form
+    setAddMealType(getMealTypeForTime());
+    setShowBarcode(false);
+    setShowAddForm(true);
+    // The form will open; we surface the food by triggering handleAddClose which refreshes.
+    // Actually we need to pass food to AddFoodForm - use a quick-add instead:
+    startQuickAddTransition(async () => {
+      await addDietEntry({
+        date: selectedDate,
+        mealType: getMealTypeForTime(),
+        food: food.name,
+        calories: food.calories,
+        protein: food.protein,
+        carbs: food.carbs,
+        fat: food.fat,
+      });
+      const refreshed = await getDietEntries(selectedDate);
+      if (refreshed.success) setEntries(refreshed.data);
+      const recentRes = await getRecentFoods(8);
+      if (recentRes.success) setRecentFoods(recentRes.data);
+      setShowBarcode(false);
+      setShowAddForm(false);
     });
   }
 
@@ -300,7 +374,7 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
             )}
           </div>
 
-          {/* Today's macros summary bar — sticky, only when targets set and entries exist */}
+          {/* Today's macros summary bar — sticky */}
           {targets && entries.length > 0 && (
             <div className="sticky top-0 z-10 -mx-4 flex items-center gap-4 border-b border-border bg-background/95 px-4 py-2 text-xs backdrop-blur animate-fade-up">
               {([
@@ -348,46 +422,88 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
             </div>
           )}
 
-          {/* Add food + Templates buttons */}
+          {/* End-of-day nudge banner */}
+          {showNudge && (
+            <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/50 dark:bg-amber-950/30 animate-fade-up">
+              <AlertTriangle className="size-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                  You&apos;re {Math.round(targets!.calories - totals.calories)} kcal below your goal today
+                </p>
+                <button
+                  type="button"
+                  onClick={() => openAddForm("snack")}
+                  className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-400 underline underline-offset-2"
+                >
+                  Quick log a snack →
+                </button>
+              </div>
+              <button type="button" onClick={dismissNudge} className="text-amber-600 hover:text-amber-800 dark:text-amber-400">
+                <X className="size-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Recent foods carousel */}
+          {recentFoods.length > 0 && (
+            <div className="animate-fade-up" style={{ animationDelay: "90ms" }}>
+              <p className="mb-1.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Recent</p>
+              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+                {recentFoods.map((food) => (
+                  <button
+                    key={food.name}
+                    type="button"
+                    onClick={() => {
+                      startQuickAddTransition(async () => {
+                        await addDietEntry({
+                          date: selectedDate,
+                          mealType: getMealTypeForTime(),
+                          food: food.name,
+                          calories: food.calories,
+                          protein: food.protein,
+                          carbs: food.carbs,
+                          fat: food.fat,
+                        });
+                        const refreshed = await getDietEntries(selectedDate);
+                        if (refreshed.success) setEntries(refreshed.data);
+                      });
+                    }}
+                    className="shrink-0 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground whitespace-nowrap"
+                  >
+                    + {food.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Add food + Templates + Camera buttons */}
           <div id="add-food-section" className="flex flex-wrap items-center gap-2 animate-fade-up" style={{ animationDelay: "100ms" }}>
-            <Button size="sm" onClick={() => openAddForm("breakfast")} className="gap-1.5">
+            <Button size="sm" onClick={() => openAddForm(getMealTypeForTime())} className="gap-1.5">
               <Plus className="size-3.5" />
               Add Food
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => { setShowBarcode((v) => !v); setShowAddForm(false); setEditingEntry(undefined); }}
+              className="gap-1.5"
+            >
+              <Camera className="size-3.5" />
+              Scan
             </Button>
             <Button size="sm" variant="outline" onClick={openTemplates} className="gap-1.5">
               <BookTemplate className="size-3.5" />
               Templates
             </Button>
-            {/* Recent food chips — one-tap re-log */}
-            {entries.length > 0 && (() => {
-              const seen = new Set<string>();
-              const recent = entries.filter((e) => { if (seen.has(e.food)) return false; seen.add(e.food); return true; }).slice(0, 5);
-              return recent.map((e) => (
-                <button
-                  key={e.food}
-                  type="button"
-                  onClick={() => {
-                    startQuickAddTransition(async () => {
-                      await addDietEntry({
-                        date: selectedDate,
-                        mealType: e.mealType,
-                        food: e.food,
-                        calories: e.calories,
-                        protein: e.protein,
-                        carbs: e.carbs,
-                        fat: e.fat,
-                      });
-                      const refreshed = await getDietEntries(selectedDate);
-                      if (refreshed.success) setEntries(refreshed.data);
-                    });
-                  }}
-                  className="rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                >
-                  + {e.food}
-                </button>
-              ));
-            })()}
           </div>
+
+          {/* Inline barcode scanner shortcut */}
+          {showBarcode && (
+            <div className="animate-fade-up">
+              <BarcodeScanner onSelect={handleBarcodeFoodSelect} defaultOpen />
+            </div>
+          )}
 
           {/* Templates overlay */}
           {showTemplates && (
@@ -401,7 +517,6 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
                   </button>
                 </div>
                 <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-5">
-                  {/* Saved templates */}
                   {templates.length === 0 ? (
                     <p className="text-sm text-muted-foreground">No templates saved yet.</p>
                   ) : (
@@ -424,7 +539,6 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
                     </div>
                   )}
 
-                  {/* Save today as template */}
                   {entries.length > 0 && (
                     <div className="border-t border-border pt-4">
                       <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">Save today as template</p>
@@ -473,7 +587,6 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
                   className="rounded-xl border border-border bg-card overflow-hidden animate-fade-up"
                   style={{ animationDelay: `${(i + 2) * 60}ms` }}
                 >
-                  {/* Meal header */}
                   <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
                     <div className="flex items-center gap-2">
                       <Icon className={`size-4 ${MEAL_TYPE_STYLES[mealType].icon}`} />
@@ -492,7 +605,6 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
                     </button>
                   </div>
 
-                  {/* Entries */}
                   {mealEntries.length === 0 ? (
                     <div className="px-4 py-3 text-xs text-muted-foreground">
                       No food logged
@@ -563,7 +675,6 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
       ) : (
         /* History view */
         <div className="flex flex-col gap-5">
-          {/* Year picker */}
           {dietYears.length > 1 && (
             <div className="animate-fade-up">
               <YearPicker
@@ -575,7 +686,6 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
           )}
 
           {selectedHistoryYear !== null ? (
-            /* Annual monthly view */
             <>
               <div className="rounded-xl border border-border bg-card p-5 animate-fade-up">
                 <h2 className="mb-1 text-sm font-semibold">{selectedHistoryYear} Overview</h2>
@@ -583,7 +693,6 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
                 <DietHistoryChart history={yearlyHistory} targets={targets} mode="monthly" />
               </div>
 
-              {/* Annual summary cards */}
               {(() => {
                 const activeDays = yearlyHistory.filter((d) => d.entryCount > 0);
                 const annualAvgKcal = activeDays.length > 0
@@ -627,7 +736,6 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
               })()}
             </>
           ) : (
-            /* Default rolling 7-day view */
             <>
               <div className="rounded-xl border border-border bg-card p-5 animate-fade-up">
                 <h2 className="mb-1 text-sm font-semibold">Last 7 Days</h2>
@@ -635,7 +743,6 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
                 <DietHistoryChart history={history} targets={targets} mode="daily" />
               </div>
 
-              {/* Summary cards */}
               <div className="grid grid-cols-3 gap-3 animate-fade-up" style={{ animationDelay: "80ms" }}>
                 <div className="rounded-xl border border-border bg-card p-4">
                   <p className="text-xs text-muted-foreground mb-1">Avg Daily Kcal</p>

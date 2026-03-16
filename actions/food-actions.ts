@@ -2,9 +2,9 @@
 
 import { ObjectId } from "mongodb";
 import { auth } from "@/auth";
-import { getCommunityFoodsCollection } from "@/lib/db";
+import { getCommunityFoodsCollection, getFavoriteFoodsCollection } from "@/lib/db";
 import { searchFoodDatabase } from "@/lib/food-database";
-import type { ActionResult, CommunityFood, SubmitCommunityFoodInput } from "@/types";
+import type { ActionResult, CommunityFood, FavoriteFood, SubmitCommunityFoodInput } from "@/types";
 
 // ── searchFoods ───────────────────────────────────────────────────────────────
 // Returns combined results from the static DB and community foods.
@@ -18,7 +18,8 @@ export interface FoodSearchResult {
   fat: number;
   servingSize: number;
   servingUnit: string;
-  source: "preset" | "community";
+  source: "preset" | "community" | "favorite";
+  category?: string;
   submittedBy?: string;
 }
 
@@ -27,22 +28,45 @@ export async function searchFoods(
 ): Promise<ActionResult<FoodSearchResult[]>> {
   const session = await auth();
   if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+  const userId = session.user.id;
 
   const q = query.trim();
   if (q.length < 1) return { success: true, data: [] };
 
-  // Static presets (client-side fast filter, already loaded)
-  const presets = searchFoodDatabase(q, 8).map((f) => ({
-    id: f.id,
-    name: f.name,
-    calories: f.calories,
-    protein: f.protein,
-    carbs: f.carbs,
-    fat: f.fat,
-    servingSize: f.servingSize,
-    servingUnit: f.servingUnit,
-    source: "preset" as const,
+  // User favorites (prefixed to show first)
+  const favCol = await getFavoriteFoodsCollection();
+  const favDocs = await favCol
+    .find({ userId, name: { $regex: q, $options: "i" } })
+    .limit(5)
+    .toArray();
+  const favorites: FoodSearchResult[] = favDocs.map((d) => ({
+    id: d._id.toHexString(),
+    name: d.name,
+    calories: d.calories,
+    protein: d.protein,
+    carbs: d.carbs,
+    fat: d.fat,
+    servingSize: d.servingSize,
+    servingUnit: d.servingUnit,
+    source: "favorite" as const,
   }));
+  const favNames = new Set(favorites.map((f) => f.name.toLowerCase()));
+
+  // Static presets (client-side fast filter, already loaded)
+  const presets = searchFoodDatabase(q, 8)
+    .filter((f) => !favNames.has(f.name.toLowerCase()))
+    .map((f) => ({
+      id: f.id,
+      name: f.name,
+      calories: f.calories,
+      protein: f.protein,
+      carbs: f.carbs,
+      fat: f.fat,
+      servingSize: f.servingSize,
+      servingUnit: f.servingUnit,
+      source: "preset" as const,
+      category: f.category,
+    }));
 
   // Community foods from DB (case-insensitive prefix/contains search)
   const col = await getCommunityFoodsCollection();
@@ -65,11 +89,82 @@ export async function searchFoods(
     submittedBy: d.submittedBy,
   }));
 
-  // Deduplicate by name (case-insensitive), preferring presets
-  const seen = new Set(presets.map((p) => p.name.toLowerCase()));
+  // Deduplicate by name (case-insensitive), preferring presets over community
+  const seen = new Set([...favNames, ...presets.map((p) => p.name.toLowerCase())]);
   const uniqueCommunity = community.filter((c) => !seen.has(c.name.toLowerCase()));
 
-  return { success: true, data: [...presets, ...uniqueCommunity] };
+  return { success: true, data: [...favorites, ...presets, ...uniqueCommunity] };
+}
+
+// ── getFavoriteFoods ──────────────────────────────────────────────────────────
+
+export async function getFavoriteFoods(): Promise<ActionResult<FavoriteFood[]>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+  const userId = session.user.id;
+
+  const col = await getFavoriteFoodsCollection();
+  const docs = await col.find({ userId }).sort({ createdAt: -1 }).toArray();
+  return {
+    success: true,
+    data: docs.map((d) => ({
+      id: d._id.toHexString(),
+      userId: d.userId,
+      name: d.name,
+      calories: d.calories,
+      protein: d.protein,
+      carbs: d.carbs,
+      fat: d.fat,
+      servingSize: d.servingSize,
+      servingUnit: d.servingUnit,
+      createdAt: d.createdAt.toISOString(),
+    })),
+  };
+}
+
+// ── addFavoriteFood ───────────────────────────────────────────────────────────
+
+export async function addFavoriteFood(food: FoodSearchResult): Promise<ActionResult> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+  const userId = session.user.id;
+
+  const col = await getFavoriteFoodsCollection();
+  const count = await col.countDocuments({ userId });
+  if (count >= 10) return { success: false, error: "Maximum 10 favorites allowed" };
+
+  // Upsert by name (case-insensitive)
+  await col.updateOne(
+    { userId, name: { $regex: `^${food.name.trim()}$`, $options: "i" } },
+    {
+      $set: {
+        userId,
+        name: food.name.trim(),
+        calories: food.calories,
+        protein: food.protein,
+        carbs: food.carbs,
+        fat: food.fat,
+        servingSize: food.servingSize,
+        servingUnit: food.servingUnit,
+        createdAt: new Date(),
+      },
+      $setOnInsert: { _id: new ObjectId() },
+    },
+    { upsert: true }
+  );
+  return { success: true, data: undefined };
+}
+
+// ── removeFavoriteFood ────────────────────────────────────────────────────────
+
+export async function removeFavoriteFood(name: string): Promise<ActionResult> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+  const userId = session.user.id;
+
+  const col = await getFavoriteFoodsCollection();
+  await col.deleteOne({ userId, name: { $regex: `^${name.trim()}$`, $options: "i" } });
+  return { success: true, data: undefined };
 }
 
 // ── submitCommunityFood ───────────────────────────────────────────────────────

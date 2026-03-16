@@ -376,6 +376,46 @@ export interface DietDaySummary {
   entryCount: number;
 }
 
+// ── Favorite Foods ────────────────────────────────────────────────────────────
+
+export interface FavoriteFoodDoc {
+  _id: ObjectId;
+  userId: string;
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  servingSize: number;
+  servingUnit: string;
+  createdAt: Date;
+}
+
+export interface FavoriteFood {
+  id: string;
+  userId: string;
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  servingSize: number;
+  servingUnit: string;
+  createdAt: string;
+}
+
+// ── Recent Foods ──────────────────────────────────────────────────────────────
+
+export interface RecentFood {
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  mealType: MealType;
+  lastUsed: string;
+}
+
 // ── Community Foods ───────────────────────────────────────────────────────────
 
 export interface CommunityFoodDoc {

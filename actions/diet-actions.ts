@@ -10,6 +10,7 @@ import type {
   DietDaySummary,
   DietEntry,
   MacroTarget,
+  RecentFood,
   UpdateDietEntryInput,
 } from "@/types";
 
@@ -318,6 +319,49 @@ export async function getDietHistory(
   }
 
   return { success: true, data: result };
+}
+
+// ── getRecentFoods ────────────────────────────────────────────────────────────
+// Returns the user's N most recently logged unique foods across all days.
+
+export async function getRecentFoods(limit = 8): Promise<ActionResult<RecentFood[]>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+  const userId = session.user.id;
+
+  const col = await getDietEntriesCollection();
+  const docs = await col
+    .aggregate<{ _id: string; calories: number; protein: number; carbs: number; fat: number; mealType: string; lastUsed: Date }>([
+      { $match: { userId } },
+      { $sort: { createdAt: -1 } },
+      {
+        $group: {
+          _id: "$food",
+          calories: { $first: "$calories" },
+          protein: { $first: "$protein" },
+          carbs: { $first: "$carbs" },
+          fat: { $first: "$fat" },
+          mealType: { $first: "$mealType" },
+          lastUsed: { $first: "$createdAt" },
+        },
+      },
+      { $sort: { lastUsed: -1 } },
+      { $limit: limit },
+    ])
+    .toArray();
+
+  return {
+    success: true,
+    data: docs.map((d) => ({
+      name: d._id,
+      calories: d.calories,
+      protein: d.protein,
+      carbs: d.carbs,
+      fat: d.fat,
+      mealType: d.mealType as RecentFood["mealType"],
+      lastUsed: d.lastUsed.toISOString(),
+    })),
+  };
 }
 
 // ── copyDietDay ────────────────────────────────────────────────────────────────

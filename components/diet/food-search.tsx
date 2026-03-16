@@ -1,15 +1,18 @@
 "use client";
 
 import { useState, useEffect, useRef, useTransition } from "react";
-import { Search, Loader2, BookOpen, Users } from "lucide-react";
+import { Search, Loader2, BookOpen, Users, Star } from "lucide-react";
 import { searchFoods } from "@/actions/food-actions";
 import type { FoodSearchResult } from "@/actions/food-actions";
+import type { FavoriteFood } from "@/types";
 
 interface Props {
   onSelect: (food: FoodSearchResult) => void;
+  favorites?: FavoriteFood[];
+  onToggleFavorite?: (food: FoodSearchResult) => void;
 }
 
-export function FoodSearch({ onSelect }: Props) {
+export function FoodSearch({ onSelect, favorites = [], onToggleFavorite }: Props) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<FoodSearchResult[]>([]);
   const [open, setOpen] = useState(false);
@@ -18,6 +21,8 @@ export function FoodSearch({ onSelect }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const favNames = new Set(favorites.map((f) => f.name.toLowerCase()));
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -65,6 +70,32 @@ export function FoodSearch({ onSelect }: Props) {
     }
   }
 
+  function sourceIcon(source: FoodSearchResult["source"]) {
+    if (source === "favorite") return <Star className="size-3.5 text-amber-400 fill-amber-400" />;
+    if (source === "preset") return <BookOpen className="size-3.5 text-indigo-400" />;
+    return <Users className="size-3.5 text-emerald-400" />;
+  }
+
+  function sourceBadge(source: FoodSearchResult["source"]) {
+    if (source === "favorite")
+      return (
+        <span className="shrink-0 self-center rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide bg-amber-100 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400">
+          Fav
+        </span>
+      );
+    if (source === "preset")
+      return (
+        <span className="shrink-0 self-center rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide bg-indigo-100 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400">
+          Library
+        </span>
+      );
+    return (
+      <span className="shrink-0 self-center rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
+        Community
+      </span>
+    );
+  }
+
   return (
     <div className="relative">
       <div className="relative">
@@ -88,48 +119,58 @@ export function FoodSearch({ onSelect }: Props) {
       {open && results.length > 0 && (
         <ul
           ref={listRef}
-          className="absolute z-50 mt-1 w-full overflow-hidden rounded-xl border border-border bg-card shadow-lg"
+          className="absolute z-50 mt-1 w-full overflow-hidden rounded-xl border border-border bg-card shadow-lg max-h-72 overflow-y-auto"
         >
-          {results.map((food, i) => (
-            <li key={food.id}>
-              <button
-                type="button"
-                onMouseDown={() => handleSelect(food)}
-                className={`flex w-full items-start gap-3 px-3 py-2.5 text-left transition-colors ${
-                  i === activeIndex ? "bg-indigo-50 dark:bg-indigo-950/30" : "hover:bg-muted/60"
-                }`}
-              >
-                {/* Source icon */}
-                <span className="mt-0.5 shrink-0">
-                  {food.source === "preset" ? (
-                    <BookOpen className="size-3.5 text-indigo-400" />
-                  ) : (
-                    <Users className="size-3.5 text-emerald-400" />
-                  )}
-                </span>
-
-                {/* Name + macros */}
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium leading-tight">{food.name}</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    {food.calories} kcal · P {food.protein}g · C {food.carbs}g · F {food.fat}g
-                    <span className="ml-1 opacity-60">per {food.servingSize}{food.servingUnit}</span>
-                  </p>
-                </div>
-
-                {/* Source badge */}
-                <span
-                  className={`shrink-0 self-center rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${
-                    food.source === "preset"
-                      ? "bg-indigo-100 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
-                      : "bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
+          {results.map((food, i) => {
+            const isFav = favNames.has(food.name.toLowerCase());
+            return (
+              <li key={food.id}>
+                <div
+                  className={`flex w-full items-start gap-2 px-3 py-2.5 transition-colors ${
+                    i === activeIndex ? "bg-indigo-50 dark:bg-indigo-950/30" : "hover:bg-muted/60"
                   }`}
                 >
-                  {food.source === "preset" ? "Library" : "Community"}
-                </span>
-              </button>
-            </li>
-          ))}
+                  <button
+                    type="button"
+                    onMouseDown={() => handleSelect(food)}
+                    className="flex min-w-0 flex-1 items-start gap-2 text-left"
+                  >
+                    {/* Source icon */}
+                    <span className="mt-0.5 shrink-0">{sourceIcon(food.source)}</span>
+
+                    {/* Name + macros */}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium leading-tight">{food.name}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {food.calories} kcal · P {food.protein}g · C {food.carbs}g · F {food.fat}g
+                        <span className="ml-1 opacity-60">per {food.servingSize}{food.servingUnit}</span>
+                      </p>
+                    </div>
+
+                    {/* Source badge */}
+                    {sourceBadge(food.source)}
+                  </button>
+
+                  {/* Favorite star toggle */}
+                  {onToggleFavorite && (
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        onToggleFavorite(food);
+                      }}
+                      className="ml-1 shrink-0 self-center p-0.5 text-muted-foreground transition-colors hover:text-amber-500"
+                      title={isFav ? "Remove from favorites" : "Add to favorites"}
+                    >
+                      <Star
+                        className={`size-3.5 ${isFav ? "fill-amber-400 text-amber-400" : ""}`}
+                      />
+                    </button>
+                  )}
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
