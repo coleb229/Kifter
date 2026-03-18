@@ -32,6 +32,7 @@ export async function getAllUsers(): Promise<ActionResult<UserSummary[]>> {
       restrictions: u.restrictions,
       adminPermissions: u.adminPermissions,
       aiRateLimit: u.aiRateLimit,
+      lastSeenAt: u.lastSeenAt?.toISOString(),
       bannedAt: u.bannedAt?.toISOString(),
       createdAt: u.createdAt?.toISOString(),
     }));

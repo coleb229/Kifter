@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { format } from "date-fns";
-import { Lightbulb, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
+import { Lightbulb, ChevronDown, ChevronRight, Trash2, ChevronLeft } from "lucide-react";
 import { updateSuggestionStatus, deleteUserSuggestion } from "@/actions/suggestion-actions";
 import type { UserSuggestion, SuggestionStatus } from "@/types";
 
@@ -23,6 +23,16 @@ const STATUS_STYLES: Record<SuggestionStatus, string> = {
   done: "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300",
   declined: "bg-muted text-muted-foreground",
 };
+
+const PAGE_SIZE = 10;
+const FILTER_OPTIONS: { value: "all" | SuggestionStatus; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "new", label: "New" },
+  { value: "under_review", label: "Under Review" },
+  { value: "testing", label: "Testing" },
+  { value: "done", label: "Done" },
+  { value: "declined", label: "Declined" },
+];
 
 function SuggestionCard({ suggestion, onDelete }: { suggestion: UserSuggestion; onDelete: (id: string) => void }) {
   const [expanded, setExpanded] = useState(false);
@@ -126,10 +136,23 @@ function SuggestionCard({ suggestion, onDelete }: { suggestion: UserSuggestion; 
 
 export function UserSuggestionsPanel({ initialSuggestions }: { initialSuggestions: UserSuggestion[] }) {
   const [suggestions, setSuggestions] = useState(initialSuggestions);
+  const [filter, setFilter] = useState<"all" | SuggestionStatus>("new");
+  const [page, setPage] = useState(1);
+
   const openCount = suggestions.filter((s) => s.status === "new" || s.status === "under_review").length;
 
   function handleDelete(id: string) {
     setSuggestions((prev) => prev.filter((s) => s.id !== id));
+  }
+
+  const filtered = filter === "all" ? suggestions : suggestions.filter((s) => s.status === filter);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  function handleFilterChange(value: "all" | SuggestionStatus) {
+    setFilter(value);
+    setPage(1);
   }
 
   return (
@@ -146,16 +169,60 @@ export function UserSuggestionsPanel({ initialSuggestions }: { initialSuggestion
         </div>
       </div>
 
-      {suggestions.length === 0 ? (
+      {/* Filter pills */}
+      <div className="mb-3 flex flex-wrap gap-1.5">
+        {FILTER_OPTIONS.map(({ value, label }) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => handleFilterChange(value)}
+            className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
+              filter === value
+                ? value === "all"
+                  ? "border-transparent bg-foreground text-background"
+                  : STATUS_STYLES[value as SuggestionStatus] + " border-transparent"
+                : "border-border text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {filtered.length === 0 ? (
         <div className="rounded-xl border border-border bg-card px-5 py-8 text-center text-sm text-muted-foreground">
-          No suggestions yet.
+          No suggestions match this filter.
         </div>
       ) : (
-        <div className="space-y-2">
-          {suggestions.map((s) => (
-            <SuggestionCard key={s.id} suggestion={s} onDelete={handleDelete} />
-          ))}
-        </div>
+        <>
+          <div className="space-y-2">
+            {paginated.map((s) => (
+              <SuggestionCard key={s.id} suggestion={s} onDelete={handleDelete} />
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 transition-colors hover:bg-muted disabled:opacity-40"
+              >
+                <ChevronLeft className="size-3.5" /> Prev
+              </button>
+              <span>Page {currentPage} of {totalPages}</span>
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 transition-colors hover:bg-muted disabled:opacity-40"
+              >
+                Next <ChevronRight className="size-3.5" />
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

@@ -39,6 +39,22 @@ export async function getCurrentUser(): Promise<ActionResult<UserSummary>> {
   }
 }
 
+// ── Update last seen ─────────────────────────────────────────────────────────
+
+export async function updateLastSeen(): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) return;
+  try {
+    const col = await getUsersCollection();
+    await col.updateOne(
+      { _id: new ObjectId(session.user.id) },
+      { $set: { lastSeenAt: new Date() } }
+    );
+  } catch {
+    // Non-critical — ignore errors
+  }
+}
+
 // ── Update profile ────────────────────────────────────────────────────────────
 
 export async function updateProfile(data: {

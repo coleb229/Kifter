@@ -35,14 +35,14 @@ export default async function TrainingPage() {
 
   return (
     <div>
-      <div className="mb-8 flex items-center justify-between animate-fade-up">
+      <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between animate-fade-up">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Training</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {sessions.length} workout{sessions.length !== 1 ? "s" : ""} logged
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:items-center">
           <Button size="sm" variant="outline" render={<Link href="/training/analytics" />}>
             Analytics
           </Button>

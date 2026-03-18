@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { format } from "date-fns";
-import { Bug, ChevronDown, ChevronRight, ExternalLink, Trash2 } from "lucide-react";
+import { Bug, ChevronDown, ChevronRight, ExternalLink, Trash2, ChevronLeft } from "lucide-react";
 import { updateBugReportStatus, deleteBugReport } from "@/actions/bug-report-actions";
 import type { BugReport, BugStatus } from "@/types";
 
@@ -39,6 +39,12 @@ const STATUS_STYLES: Record<BugStatus, string> = {
   testing: "bg-violet-100 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300",
   resolved: "bg-muted text-muted-foreground",
 };
+
+const PAGE_SIZE = 10;
+const FILTER_OPTIONS: { value: "all" | BugStatus; label: string }[] = [
+  { value: "all", label: "All" },
+  ...STATUS_OPTIONS,
+];
 
 function BugReportCard({ report, onDelete }: { report: BugReport; onDelete: (id: string) => void }) {
   const [expanded, setExpanded] = useState(false);
@@ -173,10 +179,23 @@ function BugReportCard({ report, onDelete }: { report: BugReport; onDelete: (id:
 
 export function BugReportsPanel({ initialReports }: BugReportsPanelProps) {
   const [reports, setReports] = useState(initialReports);
+  const [filter, setFilter] = useState<"all" | BugStatus>("open");
+  const [page, setPage] = useState(1);
+
   const openCount = reports.filter((r) => r.status !== "resolved").length;
 
   function handleDelete(id: string) {
     setReports((prev) => prev.filter((r) => r.id !== id));
+  }
+
+  const filtered = filter === "all" ? reports : reports.filter((r) => r.status === filter);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  function handleFilterChange(value: "all" | BugStatus) {
+    setFilter(value);
+    setPage(1);
   }
 
   return (
@@ -193,16 +212,60 @@ export function BugReportsPanel({ initialReports }: BugReportsPanelProps) {
         </div>
       </div>
 
-      {reports.length === 0 ? (
+      {/* Filter pills */}
+      <div className="mb-3 flex flex-wrap gap-1.5">
+        {FILTER_OPTIONS.map(({ value, label }) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => handleFilterChange(value)}
+            className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
+              filter === value
+                ? value === "all"
+                  ? "border-transparent bg-foreground text-background"
+                  : STATUS_STYLES[value as BugStatus] + " border-transparent"
+                : "border-border text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {filtered.length === 0 ? (
         <div className="rounded-xl border border-border bg-card px-5 py-8 text-center text-sm text-muted-foreground">
-          No bug reports yet.
+          No bug reports match this filter.
         </div>
       ) : (
-        <div className="space-y-2">
-          {reports.map((report) => (
-            <BugReportCard key={report.id} report={report} onDelete={handleDelete} />
-          ))}
-        </div>
+        <>
+          <div className="space-y-2">
+            {paginated.map((report) => (
+              <BugReportCard key={report.id} report={report} onDelete={handleDelete} />
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 transition-colors hover:bg-muted disabled:opacity-40"
+              >
+                <ChevronLeft className="size-3.5" /> Prev
+              </button>
+              <span>Page {currentPage} of {totalPages}</span>
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 transition-colors hover:bg-muted disabled:opacity-40"
+              >
+                Next <ChevronRight className="size-3.5" />
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

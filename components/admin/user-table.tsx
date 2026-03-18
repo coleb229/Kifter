@@ -154,15 +154,23 @@ function UserRow({
 
         {/* Status */}
         <td className="py-3 pr-4">
-          <span
-            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-              isBanned
-                ? "bg-destructive/10 text-destructive"
-                : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
-            }`}
-          >
-            {isBanned ? "Banned" : "Active"}
-          </span>
+          {isBanned ? (
+            <span className="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium bg-destructive/10 text-destructive">
+              Banned
+            </span>
+          ) : (() => {
+            const lastSeen = user.lastSeenAt ? new Date(user.lastSeenAt) : null;
+            const minAgo = lastSeen ? (Date.now() - lastSeen.getTime()) / 60_000 : Infinity;
+            const dotColor = minAgo < 2 ? "bg-emerald-500" : minAgo < 15 ? "bg-amber-400" : "bg-muted-foreground/40";
+            const label = minAgo < 2 ? "Online" : minAgo < 15 ? "Away" : "Offline";
+            const textColor = minAgo < 2 ? "text-emerald-700 dark:text-emerald-300" : minAgo < 15 ? "text-amber-700 dark:text-amber-300" : "text-muted-foreground";
+            return (
+              <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${textColor}`}>
+                <span className={`size-1.5 rounded-full ${dotColor}`} />
+                {label}
+              </span>
+            );
+          })()}
         </td>
 
         {/* Actions */}

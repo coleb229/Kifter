@@ -8,6 +8,7 @@ import { AdminFab } from "@/components/admin-fab";
 import { BugReportButton } from "@/components/bug-report-button";
 import { SuggestionButton } from "@/components/suggestion-button";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { PresenceTracker } from "@/components/admin/presence-tracker";
 import "./globals.css";
 
 const geistMono = Geist_Mono({
@@ -51,6 +52,7 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             {children}
+            {session && <PresenceTracker />}
             <MobileBottomNav />
             <AdminFab />
             <SuggestionButton />

@@ -36,6 +36,7 @@ import { YearPicker } from "@/components/ui/year-picker";
 import { MEAL_TYPES } from "@/types";
 import { MEAL_TYPE_STYLES } from "@/lib/label-colors";
 import type { BodyTarget, DietDaySummary, DietEntry, MacroTarget, MealTemplate, MealType, RecentFood } from "@/types";
+import { submitCommunityFood } from "@/actions/food-actions";
 import type { FoodSearchResult } from "@/actions/food-actions";
 import { calculateTDEE } from "@/lib/tdee";
 
@@ -132,6 +133,20 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
     targets && targets.calories > 0
       ? history.filter((d) => d.calories >= targets.calories * 0.85 && d.calories <= targets.calories * 1.15).length
       : 0;
+
+  // Correct for server-UTC date mismatch: if initialDate is in the future
+  // relative to client's local timezone, reset to today and reload entries.
+  useEffect(() => {
+    const clientToday = format(new Date(), "yyyy-MM-dd");
+    if (selectedDate > clientToday) {
+      setSelectedDate(clientToday);
+      startDateTransition(async () => {
+        const res = await getDietEntries(clientToday);
+        if (res.success) setEntries(res.data);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Load recent foods on mount
   useEffect(() => {
@@ -307,6 +322,16 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
       setShowBarcode(false);
       setShowAddForm(false);
     });
+    // Silently contribute to community food library (ignore duplicates)
+    submitCommunityFood({
+      name: food.name,
+      calories: food.calories,
+      protein: food.protein,
+      carbs: food.carbs,
+      fat: food.fat,
+      servingSize: food.servingSize,
+      servingUnit: food.servingUnit,
+    }).catch(() => {});
   }
 
   return (
@@ -739,7 +764,7 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
                               <p className="text-xs text-muted-foreground italic">{entry.notes}</p>
                             )}
                           </div>
-                          <div className="flex shrink-0 items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex shrink-0 items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                             <button
                               type="button"
                               onClick={() => openEditForm(entry)}

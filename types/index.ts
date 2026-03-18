@@ -177,6 +177,7 @@ export interface UserDoc {
     dailyLimit?: number;  // overrides site default; 0 = unlimited
     disabled?: boolean;   // block AI entirely for this user
   };
+  lastSeenAt?: Date;
   bannedAt?: Date;
   createdAt?: Date;
 }
@@ -221,6 +222,7 @@ export interface UserSummary {
     dailyLimit?: number;
     disabled?: boolean;
   };
+  lastSeenAt?: string;
   bannedAt?: string;
   createdAt?: string;
 }

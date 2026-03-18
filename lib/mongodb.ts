@@ -8,7 +8,7 @@ const uri = process.env.MONGODB_URI;
 
 const options: MongoClientOptions = {
   maxPoolSize: 10,
-  serverSelectionTimeoutMS: 5000,
+  serverSelectionTimeoutMS: 10000,
   connectTimeoutMS: 10000,
   socketTimeoutMS: 30000,
 };
@@ -20,7 +20,11 @@ declare global {
 
 if (!global._mongoClientPromise) {
   const client = new MongoClient(uri, options);
-  global._mongoClientPromise = client.connect();
+  global._mongoClientPromise = client.connect().catch((err) => {
+    // Clear cached rejected promise so the next request retries
+    global._mongoClientPromise = undefined;
+    return Promise.reject(err);
+  });
 }
 
 const clientPromise: Promise<MongoClient> = global._mongoClientPromise;
