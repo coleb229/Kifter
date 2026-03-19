@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Sparkles, ChevronDown, ChevronRight, Trash2, Check, X, Loader2 } from "lucide-react";
-import { generateSiteIdeas, acceptClaudeIdea, deleteClaudeIdea, updateClaudeIdeaStatus } from "@/actions/claude-ideas-actions";
+import { generateSiteIdeas, acceptClaudeIdea, deleteClaudeIdea, updateClaudeIdeaStatus, retryTooComplexIdeas } from "@/actions/claude-ideas-actions";
 import type { ClaudeIdea, ClaudeIdeaStatus } from "@/types";
 
 const CATEGORIES = ["UI/UX", "Performance", "New Features", "Mobile", "Data & Analytics"];
@@ -176,6 +176,7 @@ export function ClaudeIdeasPanel({ initialIdeas }: Props) {
   const [savedIdeas, setSavedIdeas] = useState<ClaudeIdea[]>(initialIdeas);
   const [isGenerating, startGenerate] = useTransition();
   const [isAccepting, startAccept] = useTransition();
+  const [isRetrying, startRetry] = useTransition();
   const [error, setError] = useState("");
 
   function handleGenerate() {
@@ -225,6 +226,21 @@ export function ClaudeIdeasPanel({ initialIdeas }: Props) {
 
   function handleDeleteSaved(id: string) {
     setSavedIdeas((prev) => prev.filter((idea) => idea.id !== id));
+  }
+
+  function handleRetryAll() {
+    startRetry(async () => {
+      const result = await retryTooComplexIdeas();
+      if (result.success) {
+        setSavedIdeas((prev) =>
+          prev.map((idea) =>
+            idea.status === "too_complex"
+              ? { ...idea, status: "accepted", complexityReason: undefined }
+              : idea
+          )
+        );
+      }
+    });
   }
 
   const visibleEphemeral = ephemeralIdeas.filter((idea) => !idea.declined);
@@ -332,7 +348,17 @@ export function ClaudeIdeasPanel({ initialIdeas }: Props) {
             <p className="text-sm text-muted-foreground">
               {savedIdeas.filter((i) => i.status === "accepted" || i.status === "in_progress").length} active ·{" "}
               {savedIdeas.filter((i) => i.status === "too_complex").length > 0 && (
-                <>{savedIdeas.filter((i) => i.status === "too_complex").length} too complex · </>
+                <>
+                  {savedIdeas.filter((i) => i.status === "too_complex").length} too complex ·{" "}
+                  <button
+                    type="button"
+                    onClick={handleRetryAll}
+                    disabled={isRetrying}
+                    className="text-rose-600 dark:text-rose-400 hover:underline disabled:opacity-50"
+                  >
+                    {isRetrying ? "retrying…" : "retry all"}
+                  </button>{" "}·{" "}
+                </>
               )}
               {savedIdeas.length} total
             </p>
@@ -346,7 +372,7 @@ export function ClaudeIdeasPanel({ initialIdeas }: Props) {
         ) : (
           <div className="space-y-2">
             {savedIdeas.map((idea) => (
-              <SavedIdeaCard key={idea.id} idea={idea} onDelete={handleDeleteSaved} />
+              <SavedIdeaCard key={idea.id + "-" + idea.status} idea={idea} onDelete={handleDeleteSaved} />
             ))}
           </div>
         )}

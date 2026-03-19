@@ -42,6 +42,46 @@ export async function generateSiteIdeas(
     const model = await getDefaultAiModel();
     const categoryContext = CATEGORY_PROMPTS[category] ?? "Focus on general improvements to the fitness tracking app.";
 
+    // Fetch existing ideas to inject as context so Claude avoids duplicates
+    const col = await getClaudeIdeasCollection();
+    const existing = await col
+      .find({})
+      .project<{ title: string; status: ClaudeIdeaStatus; complexityReason?: string }>({
+        title: 1,
+        status: 1,
+        complexityReason: 1,
+      })
+      .toArray();
+
+    const byStatus = (s: ClaudeIdeaStatus) => existing.filter((d) => d.status === s);
+    const doneIdeas = byStatus("done");
+    const inProgress = byStatus("in_progress");
+    const accepted = byStatus("accepted");
+    const declined = byStatus("declined");
+    const tooComplex = byStatus("too_complex");
+
+    const contextLines: string[] = [];
+    if (doneIdeas.length) contextLines.push(`Already implemented: ${doneIdeas.map((d) => `"${d.title}"`).join(", ")}`);
+    if (inProgress.length) contextLines.push(`Currently in progress: ${inProgress.map((d) => `"${d.title}"`).join(", ")}`);
+    if (accepted.length) contextLines.push(`Already queued for implementation: ${accepted.map((d) => `"${d.title}"`).join(", ")}`);
+    if (declined.length) contextLines.push(`Previously declined: ${declined.map((d) => `"${d.title}"`).join(", ")}`);
+    if (tooComplex.length) {
+      contextLines.push(`Too complex to implement — avoid these or suggest simpler scoped-down alternatives:`);
+      tooComplex.forEach((d) => {
+        contextLines.push(`- "${d.title}"${d.complexityReason ? `: ${d.complexityReason}` : ""}`);
+      });
+    }
+
+    const existingContext = contextLines.length
+      ? [
+          ``,
+          `Existing ideas already in the system — do NOT suggest these again or close variations:`,
+          ...contextLines,
+          ``,
+          `Generate 6 NEW ideas not covered by any of the above.`,
+        ].join("\n")
+      : "";
+
     const prompt = [
       `You are a senior product engineer reviewing a fitness tracking web app called Kifted. The app includes:`,
       `- Training session logging (exercises, sets, reps, weight)`,
@@ -55,6 +95,7 @@ export async function generateSiteIdeas(
       `Generate exactly 6 concrete, actionable improvement ideas for the following focus area:`,
       `**${category}**: ${categoryContext}`,
       customMessage ? `\nAdditional context from admin: ${customMessage}` : "",
+      existingContext,
       ``,
       `Return ONLY a JSON array (no markdown, no explanation) with exactly 6 objects, each with:`,
       `- "title": concise name (5-8 words)`,
@@ -155,4 +196,17 @@ export async function updateClaudeIdeaStatus(
   await col.updateOne({ _id: new ObjectId(id) }, { $set: update });
 
   return { success: true, data: undefined };
+}
+
+export async function retryTooComplexIdeas(): Promise<ActionResult<{ count: number }>> {
+  const session = await auth();
+  if (session?.user?.role !== "admin") return { success: false, error: "Unauthorized" };
+
+  const col = await getClaudeIdeasCollection();
+  const result = await col.updateMany(
+    { status: "too_complex" },
+    { $set: { status: "accepted" as ClaudeIdeaStatus, complexityReason: null } }
+  );
+
+  return { success: true, data: { count: result.modifiedCount } };
 }

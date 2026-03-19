@@ -6,7 +6,7 @@ Make a list of these items with status: accepted, then work on implementing each
 
 Please make use of Playwright to access devtools and inspect snapshots of the output while making changes to the UI.
 
-Once finished with each claudeIdea, please change their status property value to "testing".
+Once finished with each claudeIdea, please change their status property value to "testing" if they were not too complex to be reasonably accomplished.  If they were too complex, set them as too_complex, with the reasoning returned back to the client component.
 
 Then once all of the bug fixes are implemented, please push the changes to the repo on github and make sure that the README stays up-to-date with any changes.
 
