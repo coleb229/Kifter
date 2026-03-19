@@ -1,11 +1,12 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BODY_TARGETS } from "@/types";
 import { createSession } from "@/actions/workout-actions";
@@ -29,6 +30,7 @@ const textareaClass =
 export function SessionForm() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [showNotes, setShowNotes] = useState(false);
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<SessionFormValues>({
     resolver: zodResolver(sessionSchema),
@@ -91,10 +93,10 @@ export function SessionForm() {
             )}
           </div>
 
-          {/* Body target — colored pill selector */}
+          {/* Body target — colored tile selector */}
           <div className="flex flex-col gap-2 sm:col-span-2">
             <label className="text-sm font-medium">Body target</label>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
               {BODY_TARGETS.map((target) => {
                 const colors = BODY_TARGET_STYLES[target].pill;
                 const isSelected = selectedTarget === target;
@@ -103,7 +105,7 @@ export function SessionForm() {
                     key={target}
                     type="button"
                     onClick={() => handleBodyTargetChange(target)}
-                    className={`rounded-full border px-3.5 py-1 text-sm font-medium transition-colors ${
+                    className={`rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors ${
                       isSelected ? colors.active : colors.inactive
                     }`}
                   >
@@ -117,22 +119,31 @@ export function SessionForm() {
             )}
           </div>
 
-          {/* Notes */}
+          {/* Notes — collapsed by default */}
           <div className="flex flex-col gap-1.5 sm:col-span-2">
-            <label className="text-sm font-medium">
-              Notes <span className="text-muted-foreground">(optional)</span>
-            </label>
-            <textarea
-              {...register("notes")}
-              placeholder="Any pre-workout notes?"
-              className={textareaClass}
-            />
+            {showNotes ? (
+              <textarea
+                {...register("notes")}
+                placeholder="Any pre-workout notes?"
+                autoFocus
+                className={textareaClass}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowNotes(true)}
+                className="flex items-center gap-1 self-start text-xs text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <Plus className="size-3" />
+                Add notes
+              </button>
+            )}
           </div>
         </div>
       </div>
 
-      <Button type="submit" disabled={isPending} className="sm:self-end sm:px-10">
-        {isPending ? "Creating..." : "Start Session"}
+      <Button type="submit" disabled={isPending} className="w-full sm:w-auto sm:self-end sm:px-10">
+        {isPending ? "Creating..." : `Start ${selectedTarget} Session`}
       </Button>
     </form>
   );

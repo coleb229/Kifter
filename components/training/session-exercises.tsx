@@ -595,7 +595,7 @@ function ExerciseGroupCard({
           return (
             <div
               key={set.id}
-              className="group relative grid grid-cols-[2rem_1fr_1fr_4rem] items-center gap-2 rounded-md transition-transform"
+              className="group relative grid grid-cols-[2rem_1fr_1fr_4rem] items-center gap-2 min-h-10 py-1 rounded-md transition-transform"
               onTouchStart={(e) => {
                 touchStartX.current = e.touches[0].clientX;
                 touchActiveId.current = set.id;
@@ -633,7 +633,7 @@ function ExerciseGroupCard({
                 {set.weight} {set.weightUnit}
               </span>
               <span className={`text-sm ${set.completed ? "line-through text-muted-foreground" : ""}`}>{set.reps}</span>
-              <div className={`flex items-center gap-0.5 transition-opacity group-hover:opacity-100 ${isLastSet ? "opacity-100" : "opacity-0"}`}>
+              <div className={`flex items-center gap-0.5 opacity-100 sm:transition-opacity sm:group-hover:opacity-100 ${isLastSet ? "" : "sm:opacity-0"}`}>
                 <button
                   type="button"
                   onClick={() =>
@@ -725,14 +725,48 @@ function ExerciseGroupCard({
             </div>
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={handleAddSetOpen}
-            className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <Plus className="size-3.5" />
-            Add set
-          </button>
+          <div className="mt-2 flex items-center gap-2">
+            {lastSet ? (
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() => {
+                  const tempSet: WorkoutSet = {
+                    id: "optimistic-" + Date.now(),
+                    sessionId,
+                    userId: "",
+                    exercise: group.name,
+                    setNumber: optimisticSets.length + 1,
+                    weight: lastSet.weight,
+                    weightUnit: lastSet.weightUnit,
+                    reps: lastSet.reps,
+                    completed: false,
+                    createdAt: new Date().toISOString(),
+                  };
+                  startTransition(async () => {
+                    dispatchOptimistic({ type: "add", set: tempSet });
+                    await addExerciseToSession(sessionId, {
+                      exercise: group.name,
+                      sets: [{ setNumber: tempSet.setNumber, weight: lastSet.weight, weightUnit: lastSet.weightUnit, reps: lastSet.reps }],
+                    });
+                    router.refresh();
+                  });
+                }}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-border bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50 sm:flex-none sm:justify-start"
+              >
+                <Plus className="size-3.5" />
+                Add same ({lastSet.weight}{lastSet.weightUnit} × {lastSet.reps})
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={handleAddSetOpen}
+              className={`flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground ${lastSet ? "shrink-0" : "mt-1"}`}
+            >
+              <Plus className="size-3.5" />
+              {lastSet ? "Custom" : "Add set"}
+            </button>
+          </div>
         )}
       </div>
 

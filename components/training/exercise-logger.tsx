@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -44,6 +45,9 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
   const [comboOpen, setComboOpen] = useState(false);
   const comboRef = useRef<HTMLDivElement>(null);
   const [restTimer, setRestTimer] = useState<number | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (restTimer === null || restTimer <= 0) return;
@@ -80,17 +84,49 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
     if (weightResult.success && weightResult.data) {
       setUnit(weightResult.data.unit);
       const { weight } = weightResult.data;
-      const currentSets = form.getValues("sets");
-      currentSets.forEach((_, i) => {
-        form.setValue(`sets.${i}.weight`, weight);
-      });
       const increment = weightResult.data.unit === "kg" ? 1.25 : 2.5;
       setSuggested({ weight: weight + increment, unit: weightResult.data.unit });
     } else {
       setSuggested(null);
     }
+    // Pre-fill sets from last session (weight + reps), falling back to weight-only if no reps
+    if (lastSessionResult.success && lastSessionResult.data) {
+      const lastSets = lastSessionResult.data.sets;
+      form.setValue("sets", lastSets.map((s) => ({
+        weight: s.weight,
+        reps: s.reps,
+      })));
+    } else if (weightResult.success && weightResult.data) {
+      const { weight } = weightResult.data;
+      const currentSets = form.getValues("sets");
+      currentSets.forEach((_, i) => {
+        form.setValue(`sets.${i}.weight`, weight);
+      });
+    }
     setLastSession(lastSessionResult.success ? (lastSessionResult.data ?? null) : null);
     setHistory(historyResult.success ? historyResult.data : []);
+  }
+
+  function incrementWeight(index: number) {
+    const current = form.getValues(`sets.${index}.weight`);
+    const step = unit === "kg" ? 1.25 : 2.5;
+    form.setValue(`sets.${index}.weight`, Math.round((current + step) * 100) / 100);
+  }
+
+  function decrementWeight(index: number) {
+    const current = form.getValues(`sets.${index}.weight`);
+    const step = unit === "kg" ? 1.25 : 2.5;
+    form.setValue(`sets.${index}.weight`, Math.max(0, Math.round((current - step) * 100) / 100));
+  }
+
+  function incrementReps(index: number) {
+    const current = form.getValues(`sets.${index}.reps`);
+    form.setValue(`sets.${index}.reps`, current + 1);
+  }
+
+  function decrementReps(index: number) {
+    const current = form.getValues(`sets.${index}.reps`);
+    form.setValue(`sets.${index}.reps`, Math.max(1, current - 1));
   }
 
   function onSubmit(values: FormValues) {
@@ -119,212 +155,273 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Log Exercise
-        </h2>
-        {/* Inline unit toggle — single source of truth */}
-        <div className="flex items-center rounded-lg border border-border bg-muted p-0.5 text-xs font-medium">
-          <button
-            type="button"
-            onClick={() => setUnit("kg")}
-            className={`rounded-md px-2.5 py-1 transition-colors ${
-              unit === "kg"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            kg
-          </button>
-          <button
-            type="button"
-            onClick={() => setUnit("lb")}
-            className={`rounded-md px-2.5 py-1 transition-colors ${
-              unit === "lb"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            lb
-          </button>
-        </div>
-      </div>
-
-      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
-        {/* Exercise combobox */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">Exercise</label>
-          <div ref={comboRef} className="relative">
-            <input
-              type="text"
-              value={query || form.watch("exercise")}
-              placeholder="Search exercises…"
-              className={inputClass}
-              onFocus={() => { setQuery(""); setComboOpen(true); }}
-              onChange={(e) => { setQuery(e.target.value); setComboOpen(true); }}
-              onBlur={() => setTimeout(() => setComboOpen(false), 150)}
-            />
-            {comboOpen && (
-              <ul className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-border bg-popover shadow-md">
-                {exercises
-                  .filter((name) => name.toLowerCase().includes(query.toLowerCase()))
-                  .map((name) => (
-                    <li
-                      key={name}
-                      onMouseDown={() => {
-                        setQuery("");
-                        setComboOpen(false);
-                        handleExerciseChange(name);
-                      }}
-                      className="cursor-pointer px-3 py-2 text-sm hover:bg-muted"
-                    >
-                      {name}
-                    </li>
-                  ))}
-                {exercises.filter((n) => n.toLowerCase().includes(query.toLowerCase())).length === 0 && (
-                  <li className="px-3 py-2 text-sm text-muted-foreground">No matches</li>
-                )}
-              </ul>
-            )}
-          </div>
-          {form.formState.errors.exercise && (
-            <p className="text-xs text-destructive">
-              {form.formState.errors.exercise.message}
-            </p>
-          )}
-          {suggested && (
+    <>
+      <div className="rounded-xl border border-border bg-card p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Log Exercise
+          </h2>
+          {/* Inline unit toggle — single source of truth */}
+          <div className="flex items-center rounded-lg border border-border bg-muted p-0.5 text-xs font-medium">
             <button
               type="button"
-              onClick={() => {
-                const currentSets = form.getValues("sets");
-                currentSets.forEach((_, i) => {
-                  form.setValue(`sets.${i}.weight`, suggested.weight);
-                });
-              }}
-              className="self-start rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              onClick={() => setUnit("kg")}
+              className={`rounded-md px-2.5 py-1 transition-colors ${
+                unit === "kg"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
             >
-              Suggested: {suggested.weight} {suggested.unit} (+{suggested.unit === "kg" ? 1.25 : 2.5})
+              kg
             </button>
-          )}
-          {lastSession && (
-            <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-              <span className="font-medium">Last ({format(new Date(lastSession.date), "MMM d")}):</span>
-              {lastSession.sets.map((s, i) => (
-                <span key={i}> · {s.weight}{s.weightUnit}×{s.reps}</span>
-              ))}
-            </div>
-          )}
-          {history.length > 0 && (
-            <details className="text-xs text-muted-foreground">
-              <summary className="cursor-pointer select-none hover:text-foreground">History</summary>
-              <div className="mt-1 space-y-0.5 pl-2">
-                {history.map((s) => (
-                  <div key={s.date}>{format(new Date(s.date), "MMM d")}: {s.maxWeight}{s.weightUnit}</div>
-                ))}
-              </div>
-            </details>
-          )}
-        </div>
-
-        {/* Sets */}
-        <div className="flex flex-col gap-2">
-          <div className="grid grid-cols-[2rem_1fr_1fr_2rem] items-center gap-2 px-1 text-xs font-medium text-muted-foreground">
-            <span className="text-center">#</span>
-            <span>Weight ({unit})</span>
-            <span>Reps</span>
-            <span />
-          </div>
-
-          {fields.map((field, index) => (
-            <div
-              key={field.id}
-              className="grid grid-cols-[2rem_1fr_1fr_2rem] items-center gap-2"
+            <button
+              type="button"
+              onClick={() => setUnit("lb")}
+              className={`rounded-md px-2.5 py-1 transition-colors ${
+                unit === "lb"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
             >
-              <span className="text-center text-sm text-muted-foreground">
-                {index + 1}
-              </span>
-              <input
-                {...form.register(`sets.${index}.weight`, { valueAsNumber: true })}
-                type="number"
-                min="0"
-                step="0.5"
-                placeholder="0"
-                onFocus={(e) => e.target.select()}
-                className={inputClass}
-              />
-              <input
-                {...form.register(`sets.${index}.reps`, { valueAsNumber: true })}
-                type="number"
-                min="1"
-                placeholder="0"
-                onFocus={(e) => e.target.select()}
-                className={inputClass}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => remove(index)}
-                disabled={fields.length === 1}
-                aria-label="Remove set"
-              >
-                <Minus className="size-3.5" />
-              </Button>
-            </div>
-          ))}
+              lb
+            </button>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground"
-            onClick={() => {
-              const currentSets = form.getValues("sets");
-              const last = currentSets[currentSets.length - 1];
-              append({ weight: last?.weight ?? 0, reps: 0 });
-            }}
-          >
-            <Plus className="size-3.5" />
-            Add Set
-          </Button>
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-muted-foreground">Presets:</span>
-            {[3, 4, 5].map((n) => (
+        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
+          {/* Exercise combobox */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium">Exercise</label>
+            <div ref={comboRef} className="relative">
+              <input
+                type="text"
+                value={query || form.watch("exercise")}
+                placeholder="Search exercises…"
+                className={inputClass}
+                onFocus={() => { setQuery(""); setComboOpen(true); }}
+                onChange={(e) => { setQuery(e.target.value); setComboOpen(true); }}
+                onBlur={() => setTimeout(() => setComboOpen(false), 150)}
+              />
+              {comboOpen && (
+                <ul className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-border bg-popover shadow-md">
+                  {exercises
+                    .filter((name) => name.toLowerCase().includes(query.toLowerCase()))
+                    .map((name) => (
+                      <li
+                        key={name}
+                        onMouseDown={() => {
+                          setQuery("");
+                          setComboOpen(false);
+                          handleExerciseChange(name);
+                        }}
+                        className="cursor-pointer px-3 py-2 text-sm hover:bg-muted"
+                      >
+                        {name}
+                      </li>
+                    ))}
+                  {exercises.filter((n) => n.toLowerCase().includes(query.toLowerCase())).length === 0 && (
+                    <li className="px-3 py-2 text-sm text-muted-foreground">No matches</li>
+                  )}
+                </ul>
+              )}
+            </div>
+            {form.formState.errors.exercise && (
+              <p className="text-xs text-destructive">
+                {form.formState.errors.exercise.message}
+              </p>
+            )}
+            {suggested && (
               <button
-                key={n}
                 type="button"
                 onClick={() => {
-                  const last = form.getValues("sets").at(-1) ?? { weight: 0, reps: 0 };
-                  form.setValue("sets", Array.from({ length: n }, () => ({ weight: last.weight, reps: 0 })));
+                  const currentSets = form.getValues("sets");
+                  currentSets.forEach((_, i) => {
+                    form.setValue(`sets.${i}.weight`, suggested.weight);
+                  });
                 }}
-                className="rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                className="self-start rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
-                {n}×
+                Suggested: {suggested.weight} {suggested.unit} (+{suggested.unit === "kg" ? 1.25 : 2.5})
               </button>
+            )}
+            {lastSession && (
+              <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                <span className="font-medium">Last ({format(new Date(lastSession.date), "MMM d")}):</span>
+                {lastSession.sets.map((s, i) => (
+                  <span key={i}> · {s.weight}{s.weightUnit}×{s.reps}</span>
+                ))}
+              </div>
+            )}
+            {history.length > 0 && (
+              <details className="text-xs text-muted-foreground">
+                <summary className="cursor-pointer select-none hover:text-foreground">History</summary>
+                <div className="mt-1 space-y-0.5 pl-2">
+                  {history.map((s) => (
+                    <div key={s.date}>{format(new Date(s.date), "MMM d")}: {s.maxWeight}{s.weightUnit}</div>
+                  ))}
+                </div>
+              </details>
+            )}
+          </div>
+
+          {/* Sets with stepper controls */}
+          <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-[1.75rem_1fr_auto] items-center gap-3 px-1 text-xs font-medium text-muted-foreground">
+              <span className="text-center">#</span>
+              <div className="grid grid-cols-2 gap-2">
+                <span>Weight ({unit})</span>
+                <span>Reps</span>
+              </div>
+              <span className="w-7" />
+            </div>
+
+            {fields.map((field, index) => (
+              <div
+                key={field.id}
+                className="grid grid-cols-[1.75rem_1fr_auto] items-center gap-3"
+              >
+                <span className="text-center text-sm text-muted-foreground">
+                  {index + 1}
+                </span>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Weight stepper */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => decrementWeight(index)}
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
+                      aria-label="Decrease weight"
+                    >
+                      <Minus className="size-3.5" />
+                    </button>
+                    <input
+                      {...form.register(`sets.${index}.weight`, { valueAsNumber: true })}
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      placeholder="0"
+                      onFocus={(e) => e.target.select()}
+                      className="h-10 w-full min-w-0 rounded-lg border border-input bg-background px-2 py-2 text-center text-sm focus-visible:outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => incrementWeight(index)}
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
+                      aria-label="Increase weight"
+                    >
+                      <Plus className="size-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Reps stepper */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => decrementReps(index)}
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
+                      aria-label="Decrease reps"
+                    >
+                      <Minus className="size-3.5" />
+                    </button>
+                    <input
+                      {...form.register(`sets.${index}.reps`, { valueAsNumber: true })}
+                      type="number"
+                      min="1"
+                      placeholder="0"
+                      onFocus={(e) => e.target.select()}
+                      className="h-10 w-full min-w-0 rounded-lg border border-input bg-background px-2 py-2 text-center text-sm focus-visible:outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => incrementReps(index)}
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
+                      aria-label="Increase reps"
+                    >
+                      <Plus className="size-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => remove(index)}
+                  disabled={fields.length === 1}
+                  aria-label="Remove set"
+                  className="w-7"
+                >
+                  <Minus className="size-3.5" />
+                </Button>
+              </div>
             ))}
           </div>
-        </div>
 
-        {restTimer !== null && (
-          <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2 text-sm">
-            <span>{restTimer > 0 ? <>Rest: <strong>{restTimer}s</strong></> : "Time to go! 💪"}</span>
-            <button type="button" onClick={() => setRestTimer(null)} className="text-xs text-muted-foreground hover:text-foreground">Done</button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground"
+              onClick={() => {
+                const currentSets = form.getValues("sets");
+                const last = currentSets[currentSets.length - 1];
+                append({ weight: last?.weight ?? 0, reps: last?.reps ?? 0 });
+              }}
+            >
+              <Plus className="size-3.5" />
+              Add Set
+            </Button>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground">Presets:</span>
+              {[3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => {
+                    const last = form.getValues("sets").at(-1) ?? { weight: 0, reps: 0 };
+                    form.setValue("sets", Array.from({ length: n }, () => ({ weight: last.weight, reps: last.reps })));
+                  }}
+                  className="rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  {n}×
+                </button>
+              ))}
+            </div>
           </div>
-        )}
 
-        {form.formState.errors.root && (
-          <p className="text-sm text-destructive">
-            {form.formState.errors.root.message}
-          </p>
-        )}
+          {form.formState.errors.root && (
+            <p className="text-sm text-destructive">
+              {form.formState.errors.root.message}
+            </p>
+          )}
 
-        <Button type="submit" disabled={isPending} className="sm:self-end sm:px-8">
-          {isPending ? "Saving…" : "Log Exercise"}
-        </Button>
-      </form>
-    </div>
+          <Button type="submit" disabled={isPending} className="w-full sm:w-auto sm:self-end sm:px-8">
+            {isPending ? "Saving…" : "Log Exercise"}
+          </Button>
+        </form>
+      </div>
+
+      {/* Sticky rest timer — rendered via portal so it floats above everything */}
+      {mounted && restTimer !== null && createPortal(
+        <div className="fixed bottom-24 inset-x-4 z-40 flex items-center justify-between rounded-2xl border border-border bg-card px-4 py-3 shadow-xl sm:inset-x-auto sm:right-6 sm:w-64">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Rest</p>
+            <p className="text-2xl font-bold tabular-nums">
+              {restTimer > 0 ? `${restTimer}s` : "Go! 💪"}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setRestTimer(null)}
+            className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Done
+          </button>
+        </div>,
+        document.body
+      )}
+    </>
   );
 }
