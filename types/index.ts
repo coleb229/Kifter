@@ -987,7 +987,7 @@ export interface DailyNutritionSummaryDoc {
 
 // ── Claude Ideas ───────────────────────────────────────────────────────────────
 
-export type ClaudeIdeaStatus = "accepted" | "declined" | "in_progress" | "done";
+export type ClaudeIdeaStatus = "accepted" | "declined" | "in_progress" | "done" | "too_complex";
 
 export interface ClaudeIdeaDoc {
   _id: ObjectId;
@@ -997,6 +997,7 @@ export interface ClaudeIdeaDoc {
   status: ClaudeIdeaStatus;
   generatedAt: Date;
   acceptedAt?: Date;
+  complexityReason?: string;
 }
 
 export interface ClaudeIdea {
@@ -1007,4 +1008,5 @@ export interface ClaudeIdea {
   status: ClaudeIdeaStatus;
   generatedAt: string;
   acceptedAt?: string;
+  complexityReason?: string;
 }

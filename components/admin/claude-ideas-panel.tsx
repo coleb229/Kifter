@@ -12,6 +12,7 @@ const STATUS_OPTIONS: { value: ClaudeIdeaStatus; label: string }[] = [
   { value: "in_progress", label: "In Progress" },
   { value: "done", label: "Done" },
   { value: "declined", label: "Declined" },
+  { value: "too_complex", label: "Too Complex" },
 ];
 
 const STATUS_STYLES: Record<ClaudeIdeaStatus, string> = {
@@ -19,6 +20,7 @@ const STATUS_STYLES: Record<ClaudeIdeaStatus, string> = {
   in_progress: "bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300",
   done: "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300",
   declined: "bg-muted text-muted-foreground",
+  too_complex: "bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300",
 };
 
 interface EphemeralIdea {
@@ -30,14 +32,33 @@ interface EphemeralIdea {
 
 function SavedIdeaCard({ idea, onDelete }: { idea: ClaudeIdea; onDelete: (id: string) => void }) {
   const [status, setStatus] = useState<ClaudeIdeaStatus>(idea.status);
+  const [complexityReason, setComplexityReason] = useState(idea.complexityReason ?? "");
+  const [showReasonInput, setShowReasonInput] = useState(false);
+  const [reasonDraft, setReasonDraft] = useState("");
   const [isPending, startTransition] = useTransition();
   const [isDeleting, startDelete] = useTransition();
   const [expanded, setExpanded] = useState(false);
 
   function handleStatusChange(newStatus: ClaudeIdeaStatus) {
+    if (newStatus === "too_complex") {
+      setReasonDraft(complexityReason);
+      setShowReasonInput(true);
+      return;
+    }
     setStatus(newStatus);
+    setShowReasonInput(false);
     startTransition(async () => {
       await updateClaudeIdeaStatus(idea.id, newStatus);
+    });
+  }
+
+  function handleSaveTooComplex() {
+    const reason = reasonDraft.trim();
+    setStatus("too_complex");
+    setComplexityReason(reason);
+    setShowReasonInput(false);
+    startTransition(async () => {
+      await updateClaudeIdeaStatus(idea.id, "too_complex", reason);
     });
   }
 
@@ -62,7 +83,7 @@ function SavedIdeaCard({ idea, onDelete }: { idea: ClaudeIdea; onDelete: (id: st
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[status]}`}>
-              {status.replace("_", " ")}
+              {status.replace(/_/g, " ")}
             </span>
             <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
               {idea.category}
@@ -75,6 +96,14 @@ function SavedIdeaCard({ idea, onDelete }: { idea: ClaudeIdea; onDelete: (id: st
       {expanded && (
         <div className="border-t border-border px-4 pb-4 pt-3 space-y-3">
           <p className="text-sm text-muted-foreground">{idea.description}</p>
+
+          {status === "too_complex" && complexityReason && !showReasonInput && (
+            <div className="rounded-lg bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 p-3">
+              <p className="text-xs font-medium text-rose-700 dark:text-rose-400 mb-1">Why too complex:</p>
+              <p className="text-xs text-rose-600 dark:text-rose-300">{complexityReason}</p>
+            </div>
+          )}
+
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <span className="text-xs text-muted-foreground">Status:</span>
             {STATUS_OPTIONS.map(({ value, label }) => (
@@ -101,6 +130,35 @@ function SavedIdeaCard({ idea, onDelete }: { idea: ClaudeIdea; onDelete: (id: st
               Remove
             </button>
           </div>
+
+          {showReasonInput && (
+            <div className="space-y-2 rounded-lg border border-rose-200 dark:border-rose-900/40 bg-rose-50 dark:bg-rose-950/20 p-3">
+              <p className="text-xs font-medium text-rose-700 dark:text-rose-400">Why was this too complex to implement?</p>
+              <textarea
+                value={reasonDraft}
+                onChange={(e) => setReasonDraft(e.target.value)}
+                placeholder="Explain what made this infeasible (e.g. requires native API, third-party integration, architectural changes)…"
+                rows={3}
+                className="w-full resize-none rounded-lg border border-rose-200 dark:border-rose-800 bg-white dark:bg-rose-950/40 px-3 py-2 text-xs text-rose-900 dark:text-rose-100 outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-300/30 placeholder:text-rose-400 dark:placeholder:text-rose-600"
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleSaveTooComplex}
+                  className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-rose-700"
+                >
+                  Confirm
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowReasonInput(false)}
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -272,7 +330,11 @@ export function ClaudeIdeasPanel({ initialIdeas }: Props) {
           <div>
             <h2 className="text-lg font-semibold">Claude&apos;s Good Ideas</h2>
             <p className="text-sm text-muted-foreground">
-              {savedIdeas.filter((i) => i.status === "accepted" || i.status === "in_progress").length} active · {savedIdeas.length} total
+              {savedIdeas.filter((i) => i.status === "accepted" || i.status === "in_progress").length} active ·{" "}
+              {savedIdeas.filter((i) => i.status === "too_complex").length > 0 && (
+                <>{savedIdeas.filter((i) => i.status === "too_complex").length} too complex · </>
+              )}
+              {savedIdeas.length} total
             </p>
           </div>
         </div>

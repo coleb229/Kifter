@@ -122,6 +122,7 @@ export async function getClaudeIdeas(): Promise<ActionResult<ClaudeIdea[]>> {
       status: d.status,
       generatedAt: d.generatedAt.toISOString(),
       acceptedAt: d.acceptedAt?.toISOString(),
+      complexityReason: d.complexityReason ?? undefined,
     })),
   };
 }
@@ -138,13 +139,20 @@ export async function deleteClaudeIdea(id: string): Promise<ActionResult> {
 
 export async function updateClaudeIdeaStatus(
   id: string,
-  status: ClaudeIdeaStatus
+  status: ClaudeIdeaStatus,
+  complexityReason?: string
 ): Promise<ActionResult> {
   const session = await auth();
   if (session?.user?.role !== "admin") return { success: false, error: "Unauthorized" };
 
   const col = await getClaudeIdeasCollection();
-  await col.updateOne({ _id: new ObjectId(id) }, { $set: { status } });
+  const update: Record<string, unknown> = { status };
+  if (status === "too_complex" && complexityReason !== undefined) {
+    update.complexityReason = complexityReason;
+  } else if (status !== "too_complex") {
+    update.complexityReason = null;
+  }
+  await col.updateOne({ _id: new ObjectId(id) }, { $set: update });
 
   return { success: true, data: undefined };
 }
