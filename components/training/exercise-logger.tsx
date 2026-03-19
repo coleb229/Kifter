@@ -290,7 +290,7 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
                     <button
                       type="button"
                       onClick={() => decrementWeight(index)}
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
+                      className="flex h-10 w-8 shrink-0 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
                       aria-label="Decrease weight"
                     >
                       <Minus className="size-3.5" />
@@ -302,12 +302,12 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
                       step="0.5"
                       placeholder="0"
                       onFocus={(e) => e.target.select()}
-                      className="h-10 w-full min-w-0 rounded-lg border border-input bg-background px-2 py-2 text-center text-sm focus-visible:outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                      className="h-10 w-full min-w-0 rounded-lg border border-input bg-background px-1 py-2 text-center text-sm focus-visible:outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                     />
                     <button
                       type="button"
                       onClick={() => incrementWeight(index)}
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
+                      className="flex h-10 w-8 shrink-0 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
                       aria-label="Increase weight"
                     >
                       <Plus className="size-3.5" />
@@ -319,7 +319,7 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
                     <button
                       type="button"
                       onClick={() => decrementReps(index)}
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
+                      className="flex h-10 w-8 shrink-0 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
                       aria-label="Decrease reps"
                     >
                       <Minus className="size-3.5" />
@@ -330,12 +330,12 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
                       min="1"
                       placeholder="0"
                       onFocus={(e) => e.target.select()}
-                      className="h-10 w-full min-w-0 rounded-lg border border-input bg-background px-2 py-2 text-center text-sm focus-visible:outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                      className="h-10 w-full min-w-0 rounded-lg border border-input bg-background px-1 py-2 text-center text-sm focus-visible:outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                     />
                     <button
                       type="button"
                       onClick={() => incrementReps(index)}
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
+                      className="flex h-10 w-8 shrink-0 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
                       aria-label="Increase reps"
                     >
                       <Plus className="size-3.5" />

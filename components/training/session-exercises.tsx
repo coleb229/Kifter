@@ -56,7 +56,7 @@ type ExerciseEditState =
 // ── Input class ───────────────────────────────────────────────────────────────
 
 const inputClass =
-  "h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50";
+  "h-8 w-full min-w-0 rounded-md border border-input bg-background px-2 py-1 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50";
 
 // ── ExerciseGroupCard ─────────────────────────────────────────────────────────
 
@@ -499,7 +499,7 @@ function ExerciseGroupCard({
                   {set.setNumber}
                 </span>
                 {/* Weight + unit */}
-                <div className="flex gap-1">
+                <div className="flex min-w-0 gap-1">
                   <input
                     type="number"
                     min="0"
@@ -670,7 +670,7 @@ function ExerciseGroupCard({
             <span className="text-center text-sm text-muted-foreground">
               {optimisticSets.length + 1}
             </span>
-            <div className="flex gap-1">
+            <div className="flex min-w-0 gap-1">
               <input
                 type="number"
                 min="0"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useEffect, useRef } from "react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { useRouter } from "next/navigation";
 import { format, parseISO, addDays, subDays } from "date-fns";
@@ -90,6 +90,14 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
   const [bodyWeightKg, setBodyWeightKg] = useState(initialBodyWeightKg);
   const [editingWeight, setEditingWeight] = useState(false);
   const [weightInput, setWeightInput] = useState(String(Math.round(initialBodyWeightKg)));
+  const addFormRef = useRef<HTMLDivElement>(null);
+
+  // Scroll the add/edit form into view whenever it opens
+  useEffect(() => {
+    if ((showAddForm || editingEntry) && addFormRef.current) {
+      addFormRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [showAddForm, editingEntry]);
 
   // Year-based history state
   const currentYear = new Date().getFullYear();
@@ -703,7 +711,7 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
 
           {/* Add / Edit form */}
           {(showAddForm || editingEntry) && (
-            <div className="animate-fade-up">
+            <div ref={addFormRef} className="animate-fade-up">
               <AddFoodForm
                 date={selectedDate}
                 defaultMealType={addMealType}
