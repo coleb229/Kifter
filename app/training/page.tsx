@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import Link from "next/link";
-import { Plus, BookOpen, ChevronRight } from "lucide-react";
+import { Plus } from "lucide-react";
 import { getWorkoutSessions, getRestDaySuggestions, getProgressiveOverloadSuggestions, getExerciseTags } from "@/actions/workout-actions";
 import { getStreak } from "@/actions/streak-actions";
 import { getInjuries } from "@/actions/injury-actions";
@@ -82,23 +82,6 @@ export default async function TrainingPage() {
 
       <StartFromProgramCard programs={programs} />
 
-      {/* Guides promo card */}
-      <Link
-        href="/training/guides"
-        className="group mb-6 flex items-center gap-4 overflow-hidden rounded-xl border border-border bg-card p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md animate-fade-up"
-        style={{ animationDelay: "100ms" }}
-      >
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-indigo-500 to-violet-600">
-          <BookOpen className="size-5 text-white" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold">Guides & Resources</p>
-          <p className="text-xs text-muted-foreground">
-            36 guides on technique, programming, nutrition, and recovery
-          </p>
-        </div>
-        <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5" />
-      </Link>
 
       {sessions.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border p-12 text-center">

@@ -41,9 +41,6 @@ export function Navbar() {
               <a href="/goals" className="transition-colors hover:text-foreground">
                 Goals
               </a>
-              <a href="/training/guides" className="transition-colors hover:text-foreground">
-                Guides
-              </a>
               <a href="/community" className="transition-colors hover:text-foreground">
                 Community
               </a>

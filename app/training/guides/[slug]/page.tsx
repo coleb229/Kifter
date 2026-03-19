@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -115,6 +115,7 @@ export default async function GuideDetailPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  redirect("/training");
   const { slug } = await params;
   const guide = getGuideBySlug(slug);
   if (!guide) notFound();
