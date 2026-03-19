@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { format, subDays, startOfWeek, eachWeekOfInterval, getDay } from "date-fns";
 
 interface Props {
@@ -26,6 +26,13 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 
 export function TrainingHeatmap({ dates }: Props) {
   const [tooltip, setTooltip] = useState<{ date: string; count: number } | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
+    }
+  }, []);
 
   const { countMap, weeks, monthPositions } = useMemo(() => {
     const countMap = new Map<string, number>();
@@ -84,7 +91,7 @@ export function TrainingHeatmap({ dates }: Props) {
         </div>
       </div>
 
-      <div className="overflow-x-auto pb-1">
+      <div ref={scrollRef} className="overflow-x-auto pb-1">
         <div style={{ minWidth: "max-content" }}>
           {/* Month labels */}
           <div className="mb-1 flex pl-7">
