@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -41,6 +41,12 @@ export function SessionForm() {
       notes: "",
     },
   });
+
+  // Correct the date to local timezone after hydration — the server renders
+  // in UTC which can be a different calendar day than the user's local time.
+  useEffect(() => {
+    setValue("date", format(new Date(), "yyyy-MM-dd"));
+  }, [setValue]);
 
   const selectedTarget = watch("bodyTarget");
 

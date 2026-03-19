@@ -1,6 +1,7 @@
 "use client";
 
-import { format, startOfWeek, addDays, isToday, isSameDay } from "date-fns";
+import { useState, useEffect } from "react";
+import { format, startOfWeek, addDays } from "date-fns";
 import type { WorkoutSession } from "@/types";
 import { BODY_TARGET_STYLES } from "@/lib/label-colors";
 
@@ -11,6 +12,14 @@ interface Props {
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export function WeeklyPlanStrip({ sessions }: Props) {
+  // Use a client-side date string to avoid SSR/timezone mismatch where the
+  // server (UTC) and the user's browser are in different calendar days.
+  const [todayStr, setTodayStr] = useState("");
+  useEffect(() => {
+    const now = new Date();
+    setTodayStr(format(now, "yyyy-MM-dd"));
+  }, []);
+
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 }); // Monday
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
@@ -31,8 +40,8 @@ export function WeeklyPlanStrip({ sessions }: Props) {
         {days.map((day, i) => {
           const key = format(day, "yyyy-MM-dd");
           const daySessions = sessionsByDate.get(key) ?? [];
-          const today = isToday(day);
-          const isPast = day < new Date() && !today;
+          const today = todayStr !== "" && key === todayStr;
+          const isPast = todayStr !== "" && key < todayStr;
 
           return (
             <div
