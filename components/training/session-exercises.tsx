@@ -137,6 +137,7 @@ function ExerciseGroupCard({
   const lastSet = optimisticSets[optimisticSets.length - 1];
   const touchStartX = useRef<number>(0);
   const touchActiveId = useRef<string>("");
+  const touchThresholdCrossed = useRef<boolean>(false);
   const [editingVideo, setEditingVideo] = useState(false);
   const [videoUrlInput, setVideoUrlInput] = useState(videoUrl ?? "");
   const [showSubs, setShowSubs] = useState(false);
@@ -600,13 +601,29 @@ function ExerciseGroupCard({
               onTouchStart={(e) => {
                 touchStartX.current = e.touches[0].clientX;
                 touchActiveId.current = set.id;
+                touchThresholdCrossed.current = false;
               }}
               onTouchMove={(e) => {
                 if (touchActiveId.current !== set.id) return;
                 const delta = e.touches[0].clientX - touchStartX.current;
                 const clamped = Math.max(-80, Math.min(80, delta));
-                (e.currentTarget as HTMLDivElement).style.transform = `translateX(${clamped}px)`;
-                (e.currentTarget as HTMLDivElement).style.transition = "none";
+                const el = e.currentTarget as HTMLDivElement;
+                el.style.transform = `translateX(${clamped}px)`;
+                el.style.transition = "none";
+                // Background color affordance
+                const progress = Math.max(0, Math.abs(clamped) - 30) / 50;
+                if (clamped < -30) {
+                  el.style.backgroundColor = `rgba(239,68,68,${Math.min(0.18, progress * 0.18)})`;
+                } else if (clamped > 30) {
+                  el.style.backgroundColor = `rgba(16,185,129,${Math.min(0.18, progress * 0.18)})`;
+                } else {
+                  el.style.backgroundColor = "";
+                }
+                // Haptic at threshold
+                if (!touchThresholdCrossed.current && Math.abs(delta) >= 60) {
+                  touchThresholdCrossed.current = true;
+                  navigator.vibrate?.(50);
+                }
               }}
               onTouchEnd={(e) => {
                 if (touchActiveId.current !== set.id) return;
@@ -614,6 +631,7 @@ function ExerciseGroupCard({
                 const el = e.currentTarget as HTMLDivElement;
                 el.style.transition = "transform 0.2s ease";
                 el.style.transform = "";
+                el.style.backgroundColor = "";
                 touchActiveId.current = "";
                 if (delta > 60) {
                   handleToggleComplete(set);

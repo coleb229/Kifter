@@ -1,5 +1,5 @@
 import clientPromise from "@/lib/mongodb";
-import type { AiUsageDoc, BodyWeightDoc, BugReportDoc, CardioSessionDoc, ChallengeDoc, ClaudeIdeaDoc, CommunityFoodDoc, DietEntryDoc, ExerciseDoc, FavoriteFoodDoc, GoalDoc, InjuryDoc, MacroTargetDoc, MealTemplateDoc, PhysiqueMeasurementDoc, PostDoc, PostKudosDoc, PostLikeDoc, PostCommentDoc, ProgressPhotoDoc, StreakDoc, SupplementLogDoc, UserDoc, UserSuggestionDoc, WorkoutProgramDoc, WorkoutSessionDoc, WorkoutSetDoc, UserBlockDoc, SiteSettingsDoc } from "@/types";
+import type { AiUsageDoc, BodyWeightDoc, BugReportDoc, CardioSessionDoc, ChallengeDoc, ClaudeIdeaDoc, CommunityFoodDoc, DailyNutritionSummaryDoc, DietEntryDoc, ExerciseDoc, FavoriteFoodDoc, GoalDoc, InjuryDoc, MacroTargetDoc, MealTemplateDoc, PhysiqueMeasurementDoc, PostDoc, PostKudosDoc, PostLikeDoc, PostCommentDoc, ProgressPhotoDoc, StreakDoc, SupplementLogDoc, UserDoc, UserSuggestionDoc, WorkoutProgramDoc, WorkoutSessionDoc, WorkoutSetDoc, UserBlockDoc, SiteSettingsDoc } from "@/types";
 
 const DB_NAME = process.env.MONGODB_DB ?? "Kifted";
 
@@ -151,4 +151,12 @@ export async function getUserSuggestionsCollection() {
 export async function getClaudeIdeasCollection() {
   const db = await getDb();
   return db.collection<ClaudeIdeaDoc>("claudeIdeas");
+}
+
+export async function getDailyNutritionSummaryCollection() {
+  const db = await getDb();
+  const col = db.collection<DailyNutritionSummaryDoc>("dailyNutritionSummary");
+  // Ensure compound index exists (no-op if already present)
+  col.createIndex({ userId: 1, date: 1 }, { unique: true, background: true }).catch(() => {});
+  return col;
 }

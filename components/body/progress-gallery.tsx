@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { format } from "date-fns";
 import { Trash2, X, ChevronLeft, ChevronRight, Camera } from "lucide-react";
 import { UploadButton } from "@/lib/uploadthing-client";
@@ -94,11 +95,12 @@ export function ProgressGallery({ initialPhotos }: Props) {
               className="group relative aspect-square cursor-pointer overflow-hidden rounded-xl border border-border bg-muted"
               onClick={() => setLightboxIndex(i)}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={photo.photoUrl}
                 alt={`Progress photo ${photo.date}`}
-                className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                fill
+                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                className="object-cover transition-transform duration-200 group-hover:scale-105"
               />
               {/* Date overlay */}
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent px-2 pb-1.5 pt-4">

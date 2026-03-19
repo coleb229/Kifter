@@ -1,13 +1,27 @@
 import type { NextConfig } from "next";
 import path from "path";
+import withPWAInit from "@ducanh2912/next-pwa";
 
 const effectRoot = path.resolve("node_modules/effect");
+
+const withPWA = withPWAInit({
+  dest: "public",
+  register: true,
+
+  disable: process.env.NODE_ENV === "development",
+});
 
 const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
       bodySizeLimit: "200mb",
     },
+  },
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "utfs.io" },
+      { protocol: "https", hostname: "uploadthing.com" },
+    ],
   },
   // Empty turbopack config silences the "webpack config but no turbopack config" error
   // introduced in Next.js 16. The webpack config below is still used when building
@@ -25,4 +39,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withPWA(nextConfig);

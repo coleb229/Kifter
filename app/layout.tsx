@@ -9,6 +9,7 @@ import { BugReportButton } from "@/components/bug-report-button";
 import { SuggestionButton } from "@/components/suggestion-button";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { PresenceTracker } from "@/components/admin/presence-tracker";
+import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
 import "./globals.css";
 
 const geistMono = Geist_Mono({
@@ -19,11 +20,13 @@ const geistMono = Geist_Mono({
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  themeColor: "#4f46e5",
 };
 
 export const metadata: Metadata = {
   title: "Kifted",
   description: "Track your strength, nutrition, cardio, and goals — all in one place.",
+  manifest: "/manifest.json",
 };
 
 export default async function RootLayout({
@@ -57,6 +60,7 @@ export default async function RootLayout({
             <AdminFab />
             <SuggestionButton />
             <BugReportButton />
+            <PwaInstallPrompt />
           </ThemeProvider>
         </SessionProvider>
       </body>

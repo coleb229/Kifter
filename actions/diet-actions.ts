@@ -2,7 +2,7 @@
 
 import { ObjectId } from "mongodb";
 import { auth } from "@/auth";
-import { getDietEntriesCollection, getMacroTargetsCollection } from "@/lib/db";
+import { getDietEntriesCollection, getDailyNutritionSummaryCollection, getMacroTargetsCollection } from "@/lib/db";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import type {
   ActionResult,
@@ -24,6 +24,47 @@ function parseDateRange(dateIso: string) {
   const [year, month, day] = dateIso.split("-").map(Number);
   const d = new Date(year, month - 1, day);
   return { start: startOfDay(d), end: endOfDay(d) };
+}
+
+// ── upsertDailyNutritionSummary ────────────────────────────────────────────────
+// Fire-and-forget helper: recomputes and caches the daily macro totals for a user+date.
+
+async function upsertDailyNutritionSummary(userId: string, dateStr: string) {
+  try {
+    const dietCol = await getDietEntriesCollection();
+    const { start, end } = parseDateRange(dateStr);
+    const [agg] = await dietCol.aggregate<{
+      calories: number; protein: number; carbs: number; fat: number; entryCount: number;
+    }>([
+      { $match: { userId, date: { $gte: start, $lte: end } } },
+      { $group: {
+        _id: null,
+        calories: { $sum: "$calories" },
+        protein: { $sum: "$protein" },
+        carbs: { $sum: "$carbs" },
+        fat: { $sum: "$fat" },
+        entryCount: { $sum: 1 },
+      }},
+    ]).toArray();
+
+    const summaryCol = await getDailyNutritionSummaryCollection();
+    await summaryCol.replaceOne(
+      { _id: `${userId}:${dateStr}` },
+      {
+        userId,
+        date: dateStr,
+        calories: agg?.calories ?? 0,
+        protein: agg?.protein ?? 0,
+        carbs: agg?.carbs ?? 0,
+        fat: agg?.fat ?? 0,
+        entryCount: agg?.entryCount ?? 0,
+        updatedAt: new Date(),
+      } as unknown as import("@/types").DailyNutritionSummaryDoc,
+      { upsert: true }
+    );
+  } catch {
+    // Non-critical cache update — ignore errors
+  }
 }
 
 // ── getDietEntries ─────────────────────────────────────────────────────────────
@@ -86,6 +127,7 @@ export async function addDietEntry(
     createdAt: new Date(),
   });
 
+  upsertDailyNutritionSummary(userId, data.date);
   return { success: true, data: { id: id.toHexString() } };
 }
 
@@ -116,11 +158,14 @@ export async function updateDietEntry(
   if (data.fat !== undefined) update.fat = data.fat;
   if (data.notes !== undefined) update.notes = data.notes.trim() || undefined;
 
+  const existing = await col.findOne({ _id: objectId, userId });
+  if (!existing) return { success: false, error: "Entry not found" };
   const result = await col.updateOne(
     { _id: objectId, userId },
     { $set: update }
   );
   if (result.matchedCount === 0) return { success: false, error: "Entry not found" };
+  upsertDailyNutritionSummary(userId, format(existing.date, "yyyy-MM-dd"));
   return { success: true, data: undefined };
 }
 
@@ -139,7 +184,9 @@ export async function deleteDietEntry(id: string): Promise<ActionResult> {
   }
 
   const col = await getDietEntriesCollection();
+  const existing = await col.findOne({ _id: objectId, userId });
   await col.deleteOne({ _id: objectId, userId });
+  if (existing) upsertDailyNutritionSummary(userId, format(existing.date, "yyyy-MM-dd"));
   return { success: true, data: undefined };
 }
 
@@ -319,6 +366,97 @@ export async function getDietHistory(
   }
 
   return { success: true, data: result };
+}
+
+// ── getMacroAdherenceData ─────────────────────────────────────────────────────
+
+export interface MacroAdherenceData {
+  score: number; // 0–100 (% of logged days hitting calorie target ±10%)
+  hitDays: number;
+  loggedDays: number;
+  chartData: { date: string; calories: number; protein: number; carbs: number; fat: number; target: number }[];
+  insight: string;
+}
+
+export async function getMacroAdherenceData(): Promise<ActionResult<MacroAdherenceData>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+  const userId = session.user.id;
+
+  const now = new Date();
+  const DAYS = 28;
+  const since = startOfDay(subDays(now, DAYS - 1));
+
+  // Try precomputed summaries first
+  const summaryCol = await getDailyNutritionSummaryCollection();
+  const summaries = await summaryCol
+    .find({ userId, date: { $gte: format(since, "yyyy-MM-dd") } })
+    .sort({ date: 1 })
+    .toArray();
+
+  // Build day map from summaries or fall back to diet entries
+  const dayMap = new Map<string, { calories: number; protein: number; carbs: number; fat: number }>();
+  for (const s of summaries) {
+    if (s.entryCount > 0) {
+      dayMap.set(s.date, { calories: s.calories, protein: s.protein, carbs: s.carbs, fat: s.fat });
+    }
+  }
+
+  // If summaries are empty (collection not yet populated), fall back to live aggregation
+  if (dayMap.size === 0) {
+    const dietCol = await getDietEntriesCollection();
+    const docs = await dietCol.find({ userId, date: { $gte: since } }).toArray();
+    for (const d of docs) {
+      const key = format(d.date, "yyyy-MM-dd");
+      const existing = dayMap.get(key) ?? { calories: 0, protein: 0, carbs: 0, fat: 0 };
+      existing.calories += d.calories;
+      existing.protein += d.protein;
+      existing.carbs += d.carbs;
+      existing.fat += d.fat;
+      dayMap.set(key, existing);
+    }
+  }
+
+  // Get calorie target
+  const macroCol = await getMacroTargetsCollection();
+  const macroDoc = await macroCol.findOne({ userId });
+  const calorieTarget = macroDoc?.calories ?? 0;
+
+  // Build chart data (28 days)
+  const chartData = [];
+  for (let i = DAYS - 1; i >= 0; i--) {
+    const key = format(subDays(now, i), "yyyy-MM-dd");
+    const day = dayMap.get(key);
+    chartData.push({
+      date: key,
+      calories: day?.calories ?? 0,
+      protein: day?.protein ?? 0,
+      carbs: day?.carbs ?? 0,
+      fat: day?.fat ?? 0,
+      target: calorieTarget,
+    });
+  }
+
+  // Score: % of logged days hitting calorie target ±10%
+  const loggedDays = chartData.filter((d) => d.calories > 0);
+  const hitDays = calorieTarget > 0
+    ? loggedDays.filter((d) => Math.abs(d.calories - calorieTarget) / calorieTarget <= 0.1).length
+    : 0;
+  const score = loggedDays.length > 0 && calorieTarget > 0
+    ? Math.round((hitDays / loggedDays.length) * 100)
+    : 0;
+
+  const insight = calorieTarget === 0
+    ? "Set a calorie target to track adherence."
+    : loggedDays.length === 0
+    ? "No nutrition logged in the past 28 days."
+    : score >= 80
+    ? `Great consistency — you hit your calorie target on ${hitDays} of ${loggedDays.length} logged days.`
+    : score >= 50
+    ? `You hit your calorie target on ${hitDays} of ${loggedDays.length} logged days — room to improve.`
+    : `You hit your calorie target only ${hitDays} of ${loggedDays.length} logged days this month.`;
+
+  return { success: true, data: { score, hitDays, loggedDays: loggedDays.length, chartData, insight } };
 }
 
 // ── getRecentFoods ────────────────────────────────────────────────────────────

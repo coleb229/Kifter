@@ -167,6 +167,22 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ### 2026-03-19 (latest)
 
+**New Features (12 AI-accepted ideas)**
+- **Muscle Group Heatmap** — Weekly training volume visualized on an anatomical front/back SVG body diagram with color-coded intensity buckets; click any muscle to drill into contributing exercises. Available on the Training Analytics page and as a dashboard widget.
+- **Strength Progress Velocity Chart** — Rate-of-change bar chart per exercise (lb/week) with 4-week rolling average Line and deload-week annotations; accessible via the new "Velocity" tab in the exercise analytics dashboard.
+- **Macro Adherence Score Widget** — Gauge showing % of days calorie target was hit (last 28 days), backed by a stacked bar chart (protein/carbs/fat) + calorie reference line and a plain-language insight. Available as a dashboard widget.
+- **Cardio Performance Trend Chart** — Dual-axis chart on the Cardio Analytics page showing avg heart rate and pace over 90 days, with session duration as a background bar.
+- **Body Composition Timeline** — Multi-line chart at the top of the Body page correlating weight, waist, and hip measurements over time; photo markers on the timeline open a lightbox; recomposition events (stable weight + shrinking waist) are annotated.
+- **Personal Records Frequency Heatmap** — GitHub-style amber/gold calendar on the Training Analytics page highlighting PR days; stalest-lift sidebar shows exercises whose last PR was longest ago.
+- **Lazy-Load Dashboard Widgets** — Heavy Recharts widgets (Nutrition, Training & Cardio, Training Volume, Cardio HR, Muscle Heatmap) now defer rendering via IntersectionObserver — skeleton shown until scrolled into view.
+- **Precomputed Daily Macro Aggregations** — New `dailyNutritionSummary` MongoDB collection; macro totals are upserted on every diet entry add/update/delete so Macro Adherence reads from a fast pre-aggregated cache.
+- **CDN-Optimized Progress Photos** — Progress gallery thumbnails replaced `<img>` with Next.js `<Image>` for WebP conversion and UploadThing CDN delivery; `remotePatterns` extended in `next.config.ts`.
+- **Rest Timer Enhancements** — Configurable rest duration (60 / 90 / 120 / 180 s), Web Notifications API alert when rest ends (with permission request), and red countdown color in the final 10 seconds.
+- **Swipe Gesture Visual Affordance + Haptics** — Exercise rows in active sessions now reveal a red/green background as you swipe past the ±60 px threshold, with `navigator.vibrate(50)` haptic feedback.
+- **Progressive Web App** — `/public/manifest.json` with icons, service-worker via `@ducanh2912/next-pwa`, and a banner install prompt shown after the 3rd app session.
+
+### 2026-03-19
+
 **Bug Fixes**
 - Admin panel now live-updates when a user submits a bug report or suggestion (was missing `revalidatePath('/admin')`)
 - Diet history chart now uses dual y-axes — macro grams on the left, calorie target on the right (was on one scale, making the line invisible)

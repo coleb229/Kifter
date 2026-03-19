@@ -4,7 +4,8 @@ import { ObjectId } from "mongodb";
 import { format } from "date-fns";
 import { auth } from "@/auth";
 import { getSessionsCollection, getSetsCollection } from "@/lib/db";
-import type { ActionResult, BodyTarget } from "@/types";
+import { getMuscleGroupForExercise } from "@/lib/muscle-map";
+import type { ActionResult, BodyTarget, MuscleGroup } from "@/types";
 import type { WeightUnit } from "@/lib/weight";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -172,4 +173,47 @@ export async function getAppleHealthTrainingSessions(): Promise<ActionResult<App
   }));
 
   return { success: true, data: points };
+}
+
+// ── getMuscleGroupWeeklyVolume ─────────────────────────────────────────────────
+
+export interface MuscleVolumeData {
+  muscleGroup: MuscleGroup;
+  volumeLb: number;
+  exercises: string[];
+}
+
+export async function getMuscleGroupWeeklyVolume(): Promise<ActionResult<MuscleVolumeData[]>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+  const userId = session.user.id;
+
+  const since = new Date();
+  since.setDate(since.getDate() - 7);
+
+  const setsCol = await getSetsCollection();
+  const sets = await setsCol.find({ userId, createdAt: { $gte: since } }).toArray();
+
+  const volumeMap = new Map<MuscleGroup, { volumeLb: number; exercises: Set<string> }>();
+
+  for (const set of sets) {
+    const muscle = getMuscleGroupForExercise(set.exercise);
+    const weightLb = set.weightUnit === "kg" ? set.weight * 2.20462 : set.weight;
+    const vol = weightLb * set.reps;
+
+    if (!volumeMap.has(muscle)) {
+      volumeMap.set(muscle, { volumeLb: 0, exercises: new Set() });
+    }
+    const entry = volumeMap.get(muscle)!;
+    entry.volumeLb += vol;
+    entry.exercises.add(set.exercise);
+  }
+
+  const data: MuscleVolumeData[] = Array.from(volumeMap.entries()).map(([muscleGroup, { volumeLb, exercises }]) => ({
+    muscleGroup,
+    volumeLb: Math.round(volumeLb),
+    exercises: Array.from(exercises),
+  }));
+
+  return { success: true, data };
 }

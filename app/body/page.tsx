@@ -8,6 +8,7 @@ import { BodyWeightView } from "@/components/body/body-weight-view";
 import { ProgressGallery } from "@/components/body/progress-gallery";
 import { PhysiqueView } from "@/components/body/physique-view";
 import { PoseComparison } from "@/components/body/pose-comparison";
+import { CompositionTimeline } from "@/components/body/composition-timeline";
 
 export default async function BodyPage() {
   const session = await auth();
@@ -33,6 +34,11 @@ export default async function BodyPage() {
           </p>
         </div>
         <div className="flex flex-col gap-12">
+          {(entries.length > 0 || measurements.length > 0) && (
+            <div className="animate-fade-up" style={{ animationDelay: "40ms" }}>
+              <CompositionTimeline bodyWeights={entries} measurements={measurements} photos={photos} />
+            </div>
+          )}
           <div className="animate-fade-up" style={{ animationDelay: "60ms" }}>
             <BodyWeightView initialEntries={entries} />
           </div>

@@ -971,6 +971,20 @@ export interface UserSuggestion {
   createdAt: string;
 }
 
+// ── Daily Nutrition Summary (precomputed cache) ────────────────────────────────
+
+export interface DailyNutritionSummaryDoc {
+  _id: string; // "${userId}:${YYYY-MM-DD}"
+  userId: string;
+  date: string; // "YYYY-MM-DD"
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  entryCount: number;
+  updatedAt: Date;
+}
+
 // ── Claude Ideas ───────────────────────────────────────────────────────────────
 
 export type ClaudeIdeaStatus = "accepted" | "declined" | "in_progress" | "done";

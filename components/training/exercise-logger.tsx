@@ -49,15 +49,32 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
 
   useEffect(() => { setMounted(true); }, []);
 
+  const DEFAULT_REST = 90;
+
   useEffect(() => {
-    function handleRestTimerStart() { setRestTimer(90); }
+    function handleRestTimerStart() {
+      if (typeof Notification !== "undefined" && Notification.permission === "default") {
+        Notification.requestPermission();
+      }
+      const stored = localStorage.getItem("kifted_rest_duration");
+      setRestTimer(stored ? parseInt(stored, 10) : DEFAULT_REST);
+    }
     window.addEventListener("rest-timer-start", handleRestTimerStart);
     return () => window.removeEventListener("rest-timer-start", handleRestTimerStart);
   }, []);
 
   useEffect(() => {
-    if (restTimer === null || restTimer <= 0) return;
-    const id = setTimeout(() => setRestTimer((t) => (t !== null && t > 0 ? t - 1 : null)), 1000);
+    if (restTimer === null) return;
+    if (restTimer === 0) {
+      if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+        new Notification("Rest over — next set! 💪", {
+          body: "Time to get back to it.",
+          icon: "/icons/192x192.png",
+        });
+      }
+      return;
+    }
+    const id = setTimeout(() => setRestTimer((t) => (t !== null && t > 0 ? t - 1 : 0)), 1000);
     return () => clearTimeout(id);
   }, [restTimer]);
 
@@ -152,7 +169,11 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
         setSuggested(null);
         setLastSession(null);
         setHistory([]);
-        setRestTimer(90);
+        const stored = localStorage.getItem("kifted_rest_duration");
+        setRestTimer(stored ? parseInt(stored, 10) : DEFAULT_REST);
+        // Track session activity for PWA install prompt
+        const count = parseInt(localStorage.getItem("kifted_session_count") ?? "0", 10);
+        localStorage.setItem("kifted_session_count", String(count + 1));
         router.refresh();
       } else {
         form.setError("root", { message: result.error });
@@ -378,20 +399,37 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
 
       {/* Sticky rest timer — rendered via portal so it floats above everything */}
       {mounted && restTimer !== null && createPortal(
-        <div className="fixed bottom-24 inset-x-4 z-40 flex items-center justify-between rounded-2xl border border-border bg-card px-4 py-3 shadow-xl sm:inset-x-auto sm:right-6 sm:w-64">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Rest</p>
-            <p className="text-2xl font-bold tabular-nums">
-              {restTimer > 0 ? `${restTimer}s` : "Go! 💪"}
-            </p>
+        <div className="fixed bottom-24 inset-x-4 z-40 rounded-2xl border border-border bg-card px-4 py-3 shadow-xl sm:inset-x-auto sm:right-6 sm:w-72">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Rest Timer</p>
+              <p className={`text-2xl font-bold tabular-nums transition-colors ${restTimer > 0 && restTimer <= 10 ? "text-destructive" : restTimer === 0 ? "text-emerald-500" : ""}`}>
+                {restTimer > 0 ? `${restTimer}s` : "Go! 💪"}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setRestTimer(null)}
+              className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Done
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => setRestTimer(null)}
-            className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Done
-          </button>
+          <div className="mt-2 flex gap-1.5">
+            {[60, 90, 120, 180].map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => {
+                  localStorage.setItem("kifted_rest_duration", String(s));
+                  setRestTimer(s);
+                }}
+                className="flex-1 rounded-md border border-border py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              >
+                {s}s
+              </button>
+            ))}
+          </div>
         </div>,
         document.body
       )}

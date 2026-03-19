@@ -1,13 +1,16 @@
 import { format, subDays, parseISO } from "date-fns";
 import { getWorkoutSessions, getDashboardVolumeData } from "@/actions/workout-actions";
-import { getDietEntries, getMacroTargets, getDietHistory } from "@/actions/diet-actions";
+import { getDietEntries, getMacroTargets, getDietHistory, getMacroAdherenceData } from "@/actions/diet-actions";
+import type { MacroAdherenceData } from "@/actions/diet-actions";
 import { getCardioHistory, getCardioHrData } from "@/actions/cardio-actions";
+import { getMuscleGroupWeeklyVolume } from "@/actions/analytics-actions";
+import type { MuscleVolumeData } from "@/actions/analytics-actions";
 import { getCurrentUser } from "@/actions/user-actions";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 
 export async function UserOverview() {
   const today = format(new Date(), "yyyy-MM-dd");
-  const [sessionsResult, dietResult, targetsResult, historyResult, cardioHistoryResult, userResult, volumeResult, cardioHrResult] =
+  const [sessionsResult, dietResult, targetsResult, historyResult, cardioHistoryResult, userResult, volumeResult, cardioHrResult, adherenceResult, muscleVolumeResult] =
     await Promise.all([
       getWorkoutSessions(30),
       getDietEntries(today),
@@ -17,6 +20,8 @@ export async function UserOverview() {
       getCurrentUser(),
       getDashboardVolumeData(),
       getCardioHrData(30),
+      getMacroAdherenceData(),
+      getMuscleGroupWeeklyVolume(),
     ]);
 
   const sessions = sessionsResult.success ? sessionsResult.data : [];
@@ -27,6 +32,8 @@ export async function UserOverview() {
   const preferences = userResult.success ? userResult.data.preferences : undefined;
   const volumeChartData = volumeResult.success ? volumeResult.data : [];
   const cardioHrData = cardioHrResult.success ? cardioHrResult.data : [];
+  const adherenceData: MacroAdherenceData | null = adherenceResult.success ? adherenceResult.data : null;
+  const muscleVolumeData: MuscleVolumeData[] = muscleVolumeResult.success ? muscleVolumeResult.data : [];
 
   // Build last-7-days date keys
   const last7 = Array.from({ length: 7 }, (_, i) => format(subDays(new Date(), 6 - i), "yyyy-MM-dd"));
@@ -102,6 +109,8 @@ export async function UserOverview() {
         recentSessions,
         weekStart,
         weekEnd,
+        adherenceData,
+        muscleVolumeData,
       }}
       initialWidgets={preferences?.dashboardWidgets}
     />

@@ -4,6 +4,7 @@ import {
   getExercisesWithHistory,
   getExerciseHistory,
   getAppleHealthTrainingSessions,
+  getMuscleGroupWeeklyVolume,
 } from "@/actions/analytics-actions";
 import { getSessionDates, getDeloadRecommendation, getPersonalRecords, getBodyTargetDistribution, getVolumeHistory, getPRHistory } from "@/actions/workout-actions";
 import { auth } from "@/auth";
@@ -16,12 +17,14 @@ import { BodyTargetChart } from "@/components/training/body-target-chart";
 import { AppleHealthTrainingChart } from "@/components/training/apple-health-training-chart";
 import { VolumeChart } from "@/components/training/volume-chart";
 import { PRHistoryTimeline } from "@/components/training/pr-history-timeline";
+import { PrHeatmap } from "@/components/training/pr-heatmap";
+import { MuscleHeatmap } from "@/components/training/muscle-heatmap";
 
 export default async function AnalyticsPage() {
   const session = await auth();
   const isAdmin = session?.user?.role === "admin";
 
-  const [exercisesResult, sessionDatesResult, deloadResult, prResult, bodyTargetResult, ahResult, volumeResult, prHistoryResult] = await Promise.all([
+  const [exercisesResult, sessionDatesResult, deloadResult, prResult, bodyTargetResult, ahResult, volumeResult, prHistoryResult, muscleVolumeResult] = await Promise.all([
     getExercisesWithHistory(),
     getSessionDates(365),
     getDeloadRecommendation(),
@@ -30,6 +33,7 @@ export default async function AnalyticsPage() {
     getAppleHealthTrainingSessions(),
     getVolumeHistory(30),
     getPRHistory(),
+    getMuscleGroupWeeklyVolume(),
   ]);
   const exercises = exercisesResult.success ? exercisesResult.data : [];
   const sessionDates = sessionDatesResult.success ? sessionDatesResult.data : [];
@@ -39,6 +43,7 @@ export default async function AnalyticsPage() {
   const ahData = ahResult.success ? ahResult.data : [];
   const volumeData = volumeResult.success ? volumeResult.data : [];
   const prHistoryData = prHistoryResult.success ? prHistoryResult.data : [];
+  const muscleVolumeData = muscleVolumeResult.success ? muscleVolumeResult.data : [];
 
   let initialData = null;
   if (exercises.length > 0) {
@@ -106,7 +111,11 @@ export default async function AnalyticsPage() {
         </>
       )}
 
+      <MuscleHeatmap data={muscleVolumeData} />
+
       <PersonalRecords records={prData} />
+
+      {prHistoryData.length > 0 && <PrHeatmap prHistory={prHistoryData} />}
 
       {prHistoryData.length > 0 && <PRHistoryTimeline initialData={prHistoryData} />}
     </div>

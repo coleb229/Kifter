@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useTransition } from "react";
+import { useState, useRef, useEffect, useTransition } from "react";
 import Link from "next/link";
 import {
   DndContext,
@@ -28,6 +27,10 @@ import { CardioWeekChart } from "@/components/dashboard/cardio-week-chart";
 import { TrainingVolumeChart } from "@/components/dashboard/training-volume-chart";
 import { CardioHrChart } from "@/components/dashboard/cardio-hr-chart";
 import { StreakBadges } from "@/components/dashboard/streak-badges";
+import { MacroAdherenceWidget } from "@/components/dashboard/macro-adherence-widget";
+import { MuscleHeatmap } from "@/components/training/muscle-heatmap";
+import type { MacroAdherenceData } from "@/actions/diet-actions";
+import type { MuscleVolumeData } from "@/actions/analytics-actions";
 import { BODY_TARGET_STYLES } from "@/lib/label-colors";
 import { Button } from "@/components/ui/button";
 import { updatePreferences } from "@/actions/user-actions";
@@ -50,6 +53,8 @@ export interface DashboardData {
   recentSessions: { id: string; date: string; name?: string; bodyTarget: string; exerciseNames?: string[] }[];
   weekStart: string;
   weekEnd: string;
+  adherenceData: MacroAdherenceData | null;
+  muscleVolumeData: MuscleVolumeData[];
 }
 
 interface Props {
@@ -64,12 +69,43 @@ const DEFAULT_WIDGETS = ["stats", "nutrition", "training_cardio", "training_volu
 const WIDGET_LABELS: Record<string, string> = {
   stats: "Stats Overview",
   nutrition: "Nutrition Chart",
+  macro_adherence: "Macro Adherence Score",
   training_cardio: "Training & Cardio Charts",
   training_volume: "Training Load Volume",
   cardio_hr: "Cardio Heart Rate Trend",
+  muscle_heatmap: "Muscle Group Volume",
   recent_workouts: "Recent Workouts",
   quick_actions: "Quick Actions",
 };
+
+// ── Lazy chart renderer — defers heavy Recharts renders until in viewport ──────
+
+function LazyChartWidget({ children, minHeight = 220 }: { children: React.ReactNode; minHeight?: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setIsVisible(true); observer.disconnect(); } },
+      { rootMargin: "100px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref}>
+      {isVisible ? children : (
+        <div className="animate-pulse rounded-xl border border-border bg-card p-5">
+          <div className="mb-4 h-4 w-1/3 rounded bg-muted" />
+          <div style={{ height: minHeight }} className="rounded-lg bg-muted" />
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── Sortable wrapper ───────────────────────────────────────────────────────────
 
@@ -144,7 +180,7 @@ export function DashboardLayout({ data, initialWidgets }: Props) {
     saveLayout(widgets);
   }
 
-  const { trainingChartData, macroChartData, cardioChartData, volumeChartData, cardioHrData, workoutsThisWeek, todayKcal, todayProtein, cardioThisWeek, streak, calorieTarget, proteinTarget, recentSessions, weekStart, weekEnd } = data;
+  const { trainingChartData, macroChartData, cardioChartData, volumeChartData, cardioHrData, workoutsThisWeek, todayKcal, todayProtein, cardioThisWeek, streak, calorieTarget, proteinTarget, recentSessions, weekStart, weekEnd, adherenceData, muscleVolumeData } = data;
 
   function renderWidget(id: string) {
     switch (id) {
@@ -175,39 +211,50 @@ export function DashboardLayout({ data, initialWidgets }: Props) {
 
       case "nutrition":
         return (
-          <div className="rounded-xl border border-border bg-card p-5">
-            <div className="mb-1 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Utensils className="size-4 text-amber-500" />
-                <h3 className="text-sm font-semibold">Nutrition</h3>
+          <LazyChartWidget minHeight={220}>
+            <div className="rounded-xl border border-border bg-card p-5">
+              <div className="mb-1 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Utensils className="size-4 text-amber-500" />
+                  <h3 className="text-sm font-semibold">Nutrition</h3>
+                </div>
+                <Link href="/diet" className="text-xs text-muted-foreground transition-colors hover:text-foreground">View log</Link>
               </div>
-              <Link href="/diet" className="text-xs text-muted-foreground transition-colors hover:text-foreground">View log</Link>
+              <p className="mb-4 text-xs text-muted-foreground">Daily macros — last 7 days</p>
+              <MacroWeekChart data={macroChartData} height={220} />
             </div>
-            <p className="mb-4 text-xs text-muted-foreground">Daily macros — last 7 days</p>
-            <MacroWeekChart data={macroChartData} height={220} />
-          </div>
+          </LazyChartWidget>
         );
+
+      case "macro_adherence":
+        return adherenceData ? (
+          <LazyChartWidget minHeight={180}>
+            <MacroAdherenceWidget data={adherenceData} />
+          </LazyChartWidget>
+        ) : null;
 
       case "training_cardio":
         return (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="rounded-xl border border-border bg-card p-5">
-              <div className="mb-1 flex items-center gap-2">
-                <Dumbbell className="size-4 text-indigo-500" />
-                <h3 className="text-sm font-semibold">Training</h3>
+          <LazyChartWidget minHeight={180}>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="rounded-xl border border-border bg-card p-5">
+                <div className="mb-1 flex items-center gap-2">
+                  <Dumbbell className="size-4 text-indigo-500" />
+                  <h3 className="text-sm font-semibold">Training</h3>
+                </div>
+                <p className="mb-4 text-xs text-muted-foreground">Workouts per day</p>
+                <TrainingWeekChart data={trainingChartData} />
               </div>
-              <p className="mb-4 text-xs text-muted-foreground">Workouts per day</p>
-              <TrainingWeekChart data={trainingChartData} />
-            </div>
-            <div className="rounded-xl border border-border bg-card p-5">
-              <div className="mb-1 flex items-center gap-2">
-                <Activity className="size-4 text-sky-500" />
-                <h3 className="text-sm font-semibold">Cardio</h3>
+              <div className="rounded-xl border border-border bg-card p-5">
+                <div className="mb-1 flex items-center gap-2">
+                  <Activity className="size-4 text-sky-500" />
+                  <h3 className="text-sm font-semibold">Cardio</h3>
+                </div>
+                <p className="mb-4 text-xs text-muted-foreground">Active minutes per day</p>
+                <CardioWeekChart data={cardioChartData} />
               </div>
-              <p className="mb-4 text-xs text-muted-foreground">Active minutes per day</p>
-              <CardioWeekChart data={cardioChartData} />
             </div>
-          </div>
+          </LazyChartWidget>
         );
 
       case "recent_workouts":
@@ -244,26 +291,37 @@ export function DashboardLayout({ data, initialWidgets }: Props) {
 
       case "training_volume":
         return (
-          <div className="rounded-xl border border-border bg-card p-5">
-            <div className="mb-1 flex items-center gap-2">
-              <Dumbbell className="size-4 text-indigo-500" />
-              <h3 className="text-sm font-semibold">Training Load Volume</h3>
+          <LazyChartWidget minHeight={180}>
+            <div className="rounded-xl border border-border bg-card p-5">
+              <div className="mb-1 flex items-center gap-2">
+                <Dumbbell className="size-4 text-indigo-500" />
+                <h3 className="text-sm font-semibold">Training Load Volume</h3>
+              </div>
+              <p className="mb-4 text-xs text-muted-foreground">Total weight × reps per day (last 7 days)</p>
+              <TrainingVolumeChart data={volumeChartData} />
             </div>
-            <p className="mb-4 text-xs text-muted-foreground">Total weight × reps per day (last 7 days)</p>
-            <TrainingVolumeChart data={volumeChartData} />
-          </div>
+          </LazyChartWidget>
         );
 
       case "cardio_hr":
         return (
-          <div className="rounded-xl border border-border bg-card p-5">
-            <div className="mb-1 flex items-center gap-2">
-              <Activity className="size-4 text-rose-500" />
-              <h3 className="text-sm font-semibold">Cardio Heart Rate</h3>
+          <LazyChartWidget minHeight={180}>
+            <div className="rounded-xl border border-border bg-card p-5">
+              <div className="mb-1 flex items-center gap-2">
+                <Activity className="size-4 text-rose-500" />
+                <h3 className="text-sm font-semibold">Cardio Heart Rate</h3>
+              </div>
+              <p className="mb-4 text-xs text-muted-foreground">Avg heart rate per session (last 30 days)</p>
+              <CardioHrChart data={cardioHrData} />
             </div>
-            <p className="mb-4 text-xs text-muted-foreground">Avg heart rate per session (last 30 days)</p>
-            <CardioHrChart data={cardioHrData} />
-          </div>
+          </LazyChartWidget>
+        );
+
+      case "muscle_heatmap":
+        return (
+          <LazyChartWidget minHeight={220}>
+            <MuscleHeatmap data={muscleVolumeData} />
+          </LazyChartWidget>
         );
 
       case "quick_actions":
