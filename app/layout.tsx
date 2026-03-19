@@ -54,7 +54,9 @@ export default async function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            {children}
+            <div className={session ? "pb-16 sm:pb-0" : undefined}>
+              {children}
+            </div>
             {session && <PresenceTracker />}
             <MobileBottomNav />
             <AdminFab />

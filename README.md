@@ -20,10 +20,9 @@ A personal fitness tracking app for logging progressive overload, nutrition, car
   - Exercise demo video links and exercise substitution AI suggestions
   - One-tap workout sharing to the community feed
   - Injury & soreness log with severity tracking
-  - Training guides at `/training/guides`
 - **Training Analytics** — Per-exercise progress charts (Max Weight / Volume / Reps); training frequency heatmap (GitHub-style, last 12 months); body target distribution chart; personal records timeline; AI insights; Apple Health training overlay (duration, heart rate, calories)
 - **Cardio** — Log cardio sessions with activity type, duration, distance, and intensity; full CRUD; analytics with trend charts
-- **Diet** — Log meals with calories and macros (protein / carbs / fat); food library search with Open Food Facts barcode scanner; community foods; AI nutrition recommendations
+- **Diet** — Log meals with calories and macros (protein / carbs / fat); food library search with Open Food Facts barcode scanner; community foods; grocery list generator
 - **Goals** — Goal tracking at `/goals`
 - **Body** — Body measurements and photo progress gallery at `/body`
 - **Apple Health Import** — Upload Apple Health `.zip` or `export.xml`; cardio workouts import as new sessions; strength/HIIT/core workouts enrich existing training sessions with heart rate, duration, and calorie data (matched by calendar date)
@@ -31,7 +30,7 @@ A personal fitness tracking app for logging progressive overload, nutrition, car
 - **Community Feed** — Shared post feed with Progress Update and General post types; per-user and admin delete; restricted users see a locked view
 - **Social Challenges** — 30-day fitness challenges with leaderboards; opt-in community leaderboard ranked by weekly workout volume
 - **User Settings** — Profile (display name, bio, UploadThing profile photo); preferences (default weight unit); integration settings (Apple Health toggle, file size limit, deduplication)
-- **Admin Panel** — User management (role changes, ban/unban); AI rate limiting controls (site-wide and per-user); inline bug report and suggestion editing; Claude AI ideas panel (generate, accept, track improvement ideas by category)
+- **Admin Panel** — User management (role changes, ban/unban); AI rate limiting controls (site-wide and per-user); inline bug report and suggestion editing; Claude AI ideas panel (generate, accept, track improvement ideas by category, filterable by status and category)
 - **Mobile Navigation** — Bottom navigation bar for mobile-first use
 
 ---
@@ -167,6 +166,17 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ### 2026-03-19 (latest)
 
+**Bug Fixes**
+- Dashboard nutrition chart bars now show calories consumed (was stacking protein/carbs/fat grams, mismatching the calorie y-axis)
+- Mobile bottom navigation no longer overlaps page content — added `pb-16` body padding on mobile when authenticated
+- Claude Ideas panel now has status and category filter pills plus pagination (matches bug reports panel UX)
+- Removed AI nutrition insights from `/diet` page (liability concern)
+- Barcode scanner now scrolls into view on mobile when opened
+- Canceling a diet food edit on a past date no longer redirects back to today's date (was calling `router.refresh()` on cancel, re-rendering the server component)
+- Admin user table Status column now hidden on mobile to prevent it being clipped by the container border
+
+### 2026-03-19
+
 **New Features (7 AI-accepted ideas)**
 - **Community Feed Pagination** — Cursor-based pagination (20 posts per page) with a "Load more" button; sorted newest-first; `_id`-indexed MongoDB query replaces the previous 100-post limit.
 - **HTTP/2 + Compression** — `compress: true` added to `next.config.ts`; Brotli/gzip response compression enabled for all API and page responses.
@@ -229,7 +239,6 @@ Open [http://localhost:3000](http://localhost:3000).
 - Custom drag-and-drop dashboard widget layout
 - Food barcode scanner via Open Food Facts API
 - Opt-in community leaderboard ranked by weekly workout volume
-- AI nutrition recommendations on diet page
 - Workout streak milestone badges on dashboard
 - AI usage rate limiting — site-wide and per-user controls
 - GitHub-style training frequency heatmap on analytics page

@@ -22,6 +22,13 @@ export function BarcodeScanner({ onSelect, defaultOpen = false }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (open && containerRef.current) {
+      containerRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [open]);
 
   // Stop camera stream on close or unmount
   useEffect(() => {
@@ -160,7 +167,7 @@ export function BarcodeScanner({ onSelect, defaultOpen = false }: Props) {
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4 flex flex-col gap-3">
+    <div ref={containerRef} className="rounded-xl border border-border bg-card p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Barcode className="size-4 text-amber-500" />

@@ -34,7 +34,7 @@ interface Props {
   date: string;
   defaultMealType?: MealType;
   editingEntry?: DietEntry;
-  onClose: () => void;
+  onClose: (saved?: boolean) => void;
 }
 
 const labelClass = "block text-xs font-medium text-muted-foreground mb-1";
@@ -427,7 +427,7 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
       }
 
       router.refresh();
-      onClose();
+      onClose(true);
     });
   }
 

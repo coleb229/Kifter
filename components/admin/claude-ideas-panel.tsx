@@ -1,11 +1,21 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Sparkles, ChevronDown, ChevronRight, Trash2, Check, X, Loader2 } from "lucide-react";
+import { Sparkles, ChevronDown, ChevronRight, Trash2, Check, X, Loader2, ChevronLeft } from "lucide-react";
 import { generateSiteIdeas, acceptClaudeIdea, deleteClaudeIdea, updateClaudeIdeaStatus, retryTooComplexIdeas } from "@/actions/claude-ideas-actions";
 import type { ClaudeIdea, ClaudeIdeaStatus } from "@/types";
 
 const CATEGORIES = ["UI/UX", "Performance", "New Features", "Mobile", "Data & Analytics"];
+const PAGE_SIZE = 10;
+
+const STATUS_FILTER_OPTIONS: { value: "all" | ClaudeIdeaStatus; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "accepted", label: "Accepted" },
+  { value: "in_progress", label: "In Progress" },
+  { value: "done", label: "Done" },
+  { value: "declined", label: "Declined" },
+  { value: "too_complex", label: "Too Complex" },
+];
 
 const STATUS_OPTIONS: { value: ClaudeIdeaStatus; label: string }[] = [
   { value: "accepted", label: "Accepted" },
@@ -178,6 +188,9 @@ export function ClaudeIdeasPanel({ initialIdeas }: Props) {
   const [isAccepting, startAccept] = useTransition();
   const [isRetrying, startRetry] = useTransition();
   const [error, setError] = useState("");
+  const [filterStatus, setFilterStatus] = useState<"all" | ClaudeIdeaStatus>("all");
+  const [filterCategory, setFilterCategory] = useState<"all" | string>("all");
+  const [page, setPage] = useState(1);
 
   function handleGenerate() {
     setError("");
@@ -244,6 +257,25 @@ export function ClaudeIdeasPanel({ initialIdeas }: Props) {
   }
 
   const visibleEphemeral = ephemeralIdeas.filter((idea) => !idea.declined);
+
+  const filteredIdeas = savedIdeas.filter((idea) => {
+    if (filterStatus !== "all" && idea.status !== filterStatus) return false;
+    if (filterCategory !== "all" && idea.category !== filterCategory) return false;
+    return true;
+  });
+  const totalPages = Math.max(1, Math.ceil(filteredIdeas.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedIdeas = filteredIdeas.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  function handleFilterStatus(value: "all" | ClaudeIdeaStatus) {
+    setFilterStatus(value);
+    setPage(1);
+  }
+
+  function handleFilterCategory(value: "all" | string) {
+    setFilterCategory(value);
+    setPage(1);
+  }
 
   return (
     <div className="flex flex-col gap-8">
@@ -365,16 +397,93 @@ export function ClaudeIdeasPanel({ initialIdeas }: Props) {
           </div>
         </div>
 
+        {/* Status filter pills */}
+        <div className="mb-2 flex flex-wrap gap-1.5">
+          {STATUS_FILTER_OPTIONS.map(({ value, label }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => handleFilterStatus(value)}
+              className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                filterStatus === value
+                  ? value === "all"
+                    ? "border-transparent bg-foreground text-background"
+                    : STATUS_STYLES[value as ClaudeIdeaStatus] + " border-transparent"
+                  : "border-border text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Category filter pills */}
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => handleFilterCategory("all")}
+            className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
+              filterCategory === "all"
+                ? "border-transparent bg-foreground text-background"
+                : "border-border text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            All Categories
+          </button>
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => handleFilterCategory(cat)}
+              className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                filterCategory === cat
+                  ? "border-transparent bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300"
+                  : "border-border text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+
         {savedIdeas.length === 0 ? (
           <div className="rounded-xl border border-border bg-card px-5 py-8 text-center text-sm text-muted-foreground">
             No ideas accepted yet. Generate some ideas above to get started.
           </div>
-        ) : (
-          <div className="space-y-2">
-            {savedIdeas.map((idea) => (
-              <SavedIdeaCard key={idea.id + "-" + idea.status} idea={idea} onDelete={handleDeleteSaved} />
-            ))}
+        ) : filteredIdeas.length === 0 ? (
+          <div className="rounded-xl border border-border bg-card px-5 py-8 text-center text-sm text-muted-foreground">
+            No ideas match this filter.
           </div>
+        ) : (
+          <>
+            <div className="space-y-2">
+              {paginatedIdeas.map((idea) => (
+                <SavedIdeaCard key={idea.id + "-" + idea.status} idea={idea} onDelete={handleDeleteSaved} />
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 transition-colors hover:bg-muted disabled:opacity-40"
+                >
+                  <ChevronLeft className="size-3.5" /> Prev
+                </button>
+                <span>Page {currentPage} of {totalPages}</span>
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 transition-colors hover:bg-muted disabled:opacity-40"
+                >
+                  Next <ChevronRight className="size-3.5" />
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

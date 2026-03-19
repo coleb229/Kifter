@@ -49,7 +49,7 @@ function CustomTooltip({
           <span className="size-2 rounded-full" style={{ backgroundColor: p.color }} />
           <span className="text-muted-foreground capitalize">{p.name}:</span>
           <span className="font-medium">
-            {p.name === "target" ? `${Math.round(p.value)} kcal` : `${Math.round(p.value)}g`}
+            {`${Math.round(p.value)} kcal`}
           </span>
         </div>
       ))}
@@ -88,9 +88,7 @@ export function MacroWeekChart({ data, height = 160 }: Props) {
           className="fill-muted-foreground"
         />
         <Tooltip content={<CustomTooltip />} />
-        <Bar dataKey="protein" stackId="m" fill="#10b981" name="protein" radius={[0, 0, 0, 0]} />
-        <Bar dataKey="carbs" stackId="m" fill="#f59e0b" name="carbs" radius={[0, 0, 0, 0]} />
-        <Bar dataKey="fat" stackId="m" fill="#f43f5e" name="fat" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="calories" fill="#6366f1" name="calories" radius={[4, 4, 0, 0]} />
         {hasTarget && (
           <Line
             type="monotone"

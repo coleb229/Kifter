@@ -217,18 +217,19 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
     });
   }
 
-  function handleAddClose() {
+  function handleAddClose(saved = false) {
     setShowAddForm(false);
     setEditingEntry(undefined);
     setShowBarcode(false);
-    router.refresh();
-    startDateTransition(async () => {
-      const result = await getDietEntries(selectedDate);
-      if (result.success) setEntries(result.data);
-      // Refresh recent foods after adding
-      const recentRes = await getRecentFoods(8);
-      if (recentRes.success) setRecentFoods(recentRes.data);
-    });
+    if (saved) {
+      startDateTransition(async () => {
+        const result = await getDietEntries(selectedDate);
+        if (result.success) setEntries(result.data);
+        // Refresh recent foods after adding
+        const recentRes = await getRecentFoods(8);
+        if (recentRes.success) setRecentFoods(recentRes.data);
+      });
+    }
   }
 
   function handleDeleteEntry(id: string) {

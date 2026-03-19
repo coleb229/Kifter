@@ -153,7 +153,7 @@ function UserRow({
         </td>
 
         {/* Status */}
-        <td className="py-3 pr-4">
+        <td className="hidden py-3 pr-4 sm:table-cell">
           {isBanned ? (
             <span className="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium bg-destructive/10 text-destructive">
               Banned
@@ -224,7 +224,7 @@ export function UserTable({ users, currentUserId }: Props) {
                 <th className="py-3 pr-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Role
                 </th>
-                <th className="py-3 pr-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <th className="hidden py-3 pr-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground sm:table-cell">
                   Status
                 </th>
                 <th className="py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
