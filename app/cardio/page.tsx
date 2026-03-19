@@ -6,6 +6,7 @@ import { getCardioSessions } from "@/actions/cardio-actions";
 import { CardioLogView } from "@/components/cardio/cardio-log-view";
 import { Button } from "@/components/ui/button";
 import { QuickLogFAB } from "@/components/quick-log-fab";
+import { OnboardingTip } from "@/components/ui/onboarding-tip";
 
 export default async function CardioPage() {
   const result = await getCardioSessions();
@@ -32,6 +33,14 @@ export default async function CardioPage() {
         </div>
       </div>
 
+      {sessions.length < 3 && (
+        <OnboardingTip
+          tipKey="cardio-start"
+          title="Track your runs, rides & more"
+          description="Log any cardio activity — runs, cycling, swimming, or custom sessions. Track distance, duration, heart rate, and view trends on the Analytics page."
+          className="mb-6"
+        />
+      )}
       <CardioLogView sessions={sessions} />
       <QuickLogFAB href="/cardio/new" label="Log Cardio" />
     </div>

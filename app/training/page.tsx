@@ -14,6 +14,7 @@ import { StreakBanner } from "@/components/training/streak-banner";
 import { StartFromProgramCard } from "@/components/training/start-from-program-card";
 import { WeeklyPlanStrip } from "@/components/training/weekly-plan-strip";
 import { Button } from "@/components/ui/button";
+import { OnboardingTip } from "@/components/ui/onboarding-tip";
 
 export default async function TrainingPage() {
   const [result, suggestionsResult, overloadResult, injuriesResult, streakResult, programsResult, tagsResult] = await Promise.all([
@@ -65,6 +66,14 @@ export default async function TrainingPage() {
         </div>
       </div>
 
+      {sessions.length < 3 && (
+        <OnboardingTip
+          tipKey="training-start"
+          title="Get started with your first workout"
+          description="Tap &quot;Log Workout&quot; to create a session. Add exercises, track sets with weight and reps, and watch your progress build over time."
+          className="mb-6"
+        />
+      )}
       {streak && <StreakBanner streak={streak} />}
       <WeeklyPlanStrip sessions={sessions} />
       {suggestions.length > 0 && <RestDaySuggestions suggestions={suggestions} />}

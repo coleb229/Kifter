@@ -109,7 +109,7 @@ export async function createPost(data: {
 
 // ── Get posts (feed) ──────────────────────────────────────────────────────────
 
-export async function getPosts(): Promise<ActionResult<Post[]>> {
+export async function getPosts(cursor?: string, limit = 20): Promise<ActionResult<{ posts: Post[]; nextCursor: string | null }>> {
   const session = await auth();
   if (!session?.user?.id) return { success: false, error: "Not authenticated" };
 
@@ -128,15 +128,21 @@ export async function getPosts(): Promise<ActionResult<Post[]>> {
       .toArray()
       .then((docs) => docs.map((d) => d.blockedId));
 
-    const query = blockedIds.length > 0 ? { userId: { $nin: blockedIds } } : {};
+    const baseQuery: Record<string, unknown> = blockedIds.length > 0 ? { userId: { $nin: blockedIds } } : {};
+    if (cursor) {
+      baseQuery._id = { $lt: new ObjectId(cursor) };
+    }
 
     const docs = await postsCol
-      .find(query)
-      .sort({ createdAt: 1 })
-      .limit(100)
+      .find(baseQuery)
+      .sort({ _id: -1 })
+      .limit(limit + 1)
       .toArray();
 
-    if (docs.length === 0) return { success: true, data: [] };
+    const hasMore = docs.length > limit;
+    if (hasMore) docs.pop();
+
+    if (docs.length === 0) return { success: true, data: { posts: [], nextCursor: null } };
 
     const postIds = docs.map((d) => d._id.toHexString());
 
@@ -202,7 +208,8 @@ export async function getPosts(): Promise<ActionResult<Post[]>> {
       };
     });
 
-    return { success: true, data: posts };
+    const nextCursor = hasMore ? docs[docs.length - 1]._id.toHexString() : null;
+    return { success: true, data: { posts, nextCursor } };
   } catch {
     return { success: false, error: "Failed to fetch posts" };
   }

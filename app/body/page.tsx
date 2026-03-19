@@ -9,19 +9,23 @@ import { ProgressGallery } from "@/components/body/progress-gallery";
 import { PhysiqueView } from "@/components/body/physique-view";
 import { PoseComparison } from "@/components/body/pose-comparison";
 import { CompositionTimeline } from "@/components/body/composition-timeline";
+import { MacroCorrelationChart } from "@/components/body/macro-correlation-chart";
+import { getMacroCorrelationData } from "@/actions/diet-actions";
 
 export default async function BodyPage() {
   const session = await auth();
   if (!session) redirect("/");
 
-  const [result, photosResult, physiqueResult] = await Promise.all([
+  const [result, photosResult, physiqueResult, correlationResult] = await Promise.all([
     getBodyWeightHistory(),
     getProgressPhotos(),
     getPhysiqueMeasurements(),
+    getMacroCorrelationData(),
   ]);
   const entries = result.success ? result.data : [];
   const photos = photosResult.success ? photosResult.data : [];
   const measurements = physiqueResult.success ? physiqueResult.data : [];
+  const correlationData = correlationResult.success ? correlationResult.data : [];
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -37,6 +41,14 @@ export default async function BodyPage() {
           {(entries.length > 0 || measurements.length > 0) && (
             <div className="animate-fade-up" style={{ animationDelay: "40ms" }}>
               <CompositionTimeline bodyWeights={entries} measurements={measurements} photos={photos} />
+            </div>
+          )}
+          {correlationData.length > 0 && (
+            <div className="animate-fade-up" style={{ animationDelay: "60ms" }}>
+              <h2 className="mb-3 text-base font-semibold">Nutrition vs Body Weight</h2>
+              <div className="rounded-xl border border-border bg-card p-4">
+                <MacroCorrelationChart data={correlationData} />
+              </div>
             </div>
           )}
           <div className="animate-fade-up" style={{ animationDelay: "60ms" }}>

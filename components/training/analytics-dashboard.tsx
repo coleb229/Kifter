@@ -6,6 +6,7 @@ import { Trophy, Dumbbell, Zap, BarChart2 } from "lucide-react";
 import { getExerciseHistory } from "@/actions/analytics-actions";
 import { AnalyticsChart } from "@/components/training/analytics-chart";
 import { VelocityChart } from "@/components/training/velocity-chart";
+import { StrengthProgressionCurve } from "@/components/training/strength-progression-curve";
 import { YearPicker } from "@/components/ui/year-picker";
 import type { SessionDataPoint } from "@/actions/analytics-actions";
 
@@ -65,7 +66,7 @@ export function AnalyticsDashboard({
   const [selected, setSelected] = useState(initialExercise);
   const [data, setData] = useState<SessionDataPoint[]>(initialData);
   const [isPending, startTransition] = useTransition();
-  const [chartTab, setChartTab] = useState<"progress" | "velocity">("progress");
+  const [chartTab, setChartTab] = useState<"progress" | "velocity" | "curve">("progress");
 
   const years = useMemo(
     () => [...new Set(data.map((p) => new Date(p.isoDate).getFullYear()))].sort((a, b) => b - a),
@@ -184,7 +185,7 @@ export function AnalyticsDashboard({
 
       {/* Chart tabs */}
       <div className="flex gap-1 rounded-lg border border-border bg-muted p-1 w-fit">
-        {(["progress", "velocity"] as const).map((tab) => (
+        {(["progress", "velocity", "curve"] as const).map((tab) => (
           <button
             key={tab}
             type="button"
@@ -193,7 +194,7 @@ export function AnalyticsDashboard({
               chartTab === tab ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            {tab === "velocity" ? "Velocity" : "Progress"}
+            {tab === "velocity" ? "Velocity" : tab === "curve" ? "1RM Curve" : "Progress"}
           </button>
         ))}
       </div>
@@ -201,6 +202,10 @@ export function AnalyticsDashboard({
       {chartTab === "velocity" ? (
         <div className={`transition-opacity ${isPending ? "opacity-50" : ""}`}>
           <VelocityChart data={data} />
+        </div>
+      ) : chartTab === "curve" ? (
+        <div className={`transition-opacity ${isPending ? "opacity-50" : ""}`}>
+          <StrengthProgressionCurve data={data} />
         </div>
       ) : (
         <AnalyticsChart data={filteredData} isPending={isPending} />

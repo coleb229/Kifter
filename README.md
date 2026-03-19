@@ -167,6 +167,17 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ### 2026-03-19 (latest)
 
+**New Features (7 AI-accepted ideas)**
+- **Community Feed Pagination** — Cursor-based pagination (20 posts per page) with a "Load more" button; sorted newest-first; `_id`-indexed MongoDB query replaces the previous 100-post limit.
+- **HTTP/2 + Compression** — `compress: true` added to `next.config.ts`; Brotli/gzip response compression enabled for all API and page responses.
+- **Macro Adherence vs Body Composition Correlation** — Dual-axis line chart on the Body page correlating daily calorie adherence % (right axis, dashed) with body weight trend (left axis) over the last 90 days.
+- **Strength Progression Curve** — New "1RM Curve" tab in the exercise analytics dashboard showing Epley-estimated 1RM over time with a 30-day linear projection line based on the last 30 days of data.
+- **Cardio Fitness Load Score (ACWR)** — Acute:Chronic Workload Ratio widget on the Cardio Analytics page; compares 7-day training load to 28-day rolling average; color-coded zones (Under-trained / Optimal / Caution / High Risk) with a visual scale bar.
+- **Skeleton Loading States** — Reusable `Skeleton`, `CardSkeleton`, `StatCardSkeleton`, `ChartSkeleton`, and `ListItemSkeleton` components in `components/ui/skeleton.tsx`; existing `loading.tsx` files already cover all major routes.
+- **Contextual Onboarding Tooltips** — Dismissible `OnboardingTip` client component (localStorage-backed per-key) shown on Training, Cardio, Diet, and Community pages for new users with minimal logged data.
+
+### 2026-03-19
+
 **New Features (12 AI-accepted ideas)**
 - **Muscle Group Heatmap** — Weekly training volume visualized on an anatomical front/back SVG body diagram with color-coded intensity buckets; click any muscle to drill into contributing exercises. Available on the Training Analytics page and as a dashboard widget.
 - **Strength Progress Velocity Chart** — Rate-of-change bar chart per exercise (lb/week) with 4-week rolling average Line and deload-week annotations; accessible via the new "Velocity" tab in the exercise analytics dashboard.

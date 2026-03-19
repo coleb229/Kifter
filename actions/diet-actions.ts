@@ -2,7 +2,7 @@
 
 import { ObjectId } from "mongodb";
 import { auth } from "@/auth";
-import { getDietEntriesCollection, getDailyNutritionSummaryCollection, getMacroTargetsCollection } from "@/lib/db";
+import { getDietEntriesCollection, getDailyNutritionSummaryCollection, getMacroTargetsCollection, getBodyWeightCollection } from "@/lib/db";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import type {
   ActionResult,
@@ -457,6 +457,72 @@ export async function getMacroAdherenceData(): Promise<ActionResult<MacroAdheren
     : `You hit your calorie target only ${hitDays} of ${loggedDays.length} logged days this month.`;
 
   return { success: true, data: { score, hitDays, loggedDays: loggedDays.length, chartData, insight } };
+}
+
+// ── getMacroCorrelationData ───────────────────────────────────────────────────
+// Returns daily calorie adherence % and body weight for correlating nutrition
+// consistency with body composition changes over the last 90 days.
+
+export interface MacroCorrelationPoint {
+  date: string;
+  calorieAdherence: number | null; // % of target (0–200)
+  bodyWeight: number | null;
+  weightUnit: string;
+}
+
+export async function getMacroCorrelationData(): Promise<ActionResult<MacroCorrelationPoint[]>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+  const userId = session.user.id;
+
+  const DAYS = 90;
+  const now = new Date();
+  const since = subDays(now, DAYS - 1);
+  const sinceStr = format(since, "yyyy-MM-dd");
+
+  const [summaryCol, macroCol, bodyCol] = await Promise.all([
+    getDailyNutritionSummaryCollection(),
+    getMacroTargetsCollection(),
+    getBodyWeightCollection(),
+  ]);
+
+  const [summaries, macroDoc, bodyDocs] = await Promise.all([
+    summaryCol.find({ userId, date: { $gte: sinceStr } }).sort({ date: 1 }).toArray(),
+    macroCol.findOne({ userId }),
+    bodyCol.find({ userId, date: { $gte: sinceStr } }).sort({ date: 1 }).toArray(),
+  ]);
+
+  const calorieTarget = macroDoc?.calories ?? 0;
+
+  const nutritionMap = new Map<string, number>();
+  for (const s of summaries) {
+    if (s.entryCount > 0 && calorieTarget > 0) {
+      nutritionMap.set(s.date, (s.calories / calorieTarget) * 100);
+    }
+  }
+
+  const weightMap = new Map<string, { weight: number; unit: string }>();
+  for (const b of bodyDocs) {
+    const key = typeof b.date === "string" ? b.date.slice(0, 10) : format(b.date as Date, "yyyy-MM-dd");
+    weightMap.set(key, { weight: b.weight, unit: b.weightUnit ?? "lb" });
+  }
+
+  const points: MacroCorrelationPoint[] = [];
+  for (let i = DAYS - 1; i >= 0; i--) {
+    const key = format(subDays(now, i), "yyyy-MM-dd");
+    const adherence = nutritionMap.get(key) ?? null;
+    const bw = weightMap.get(key);
+    if (adherence !== null || bw) {
+      points.push({
+        date: key,
+        calorieAdherence: adherence,
+        bodyWeight: bw?.weight ?? null,
+        weightUnit: bw?.unit ?? "lb",
+      });
+    }
+  }
+
+  return { success: true, data: points };
 }
 
 // ── getRecentFoods ────────────────────────────────────────────────────────────

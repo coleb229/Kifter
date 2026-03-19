@@ -185,7 +185,7 @@ export async function generateAdminInsights(): Promise<ActionResult<AIInsight[]>
     if (!usersResult.success) return { success: false, error: usersResult.error };
 
     const users = usersResult.data;
-    const posts = postsResult.success ? postsResult.data : [];
+    const posts = postsResult.success ? postsResult.data.posts : [];
 
     const sessionsCol = await getSessionsCollection();
     const setsCol = await getSetsCollection();

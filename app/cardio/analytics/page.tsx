@@ -6,6 +6,7 @@ import { getCardioSessions } from "@/actions/cardio-actions";
 import { CardioAnalyticsDashboard } from "@/components/cardio/cardio-analytics-dashboard";
 import { HRZoneChart } from "@/components/cardio/hr-zone-chart";
 import { CardioTrendChart } from "@/components/cardio/cardio-trend-chart";
+import { CardioLoadScore } from "@/components/cardio/cardio-load-score";
 
 export default async function CardioAnalyticsPage() {
   const result = await getCardioSessions(5000);
@@ -38,6 +39,13 @@ export default async function CardioAnalyticsPage() {
       ) : (
         <>
           <CardioAnalyticsDashboard sessions={sessions} />
+          <div className="rounded-xl border border-border bg-card p-5">
+            <h2 className="mb-1 text-sm font-semibold">Fitness Load Score (ACWR)</h2>
+            <p className="mb-4 text-xs text-muted-foreground">
+              Acute:Chronic Workload Ratio — 7-day load vs 28-day average. Optimal range: 0.8–1.3
+            </p>
+            <CardioLoadScore sessions={sessions} />
+          </div>
           <div className="rounded-xl border border-border bg-card p-5">
             <h2 className="mb-1 text-sm font-semibold">Performance Trend</h2>
             <p className="mb-4 text-xs text-muted-foreground">Heart rate and pace trends over the past 90 days</p>

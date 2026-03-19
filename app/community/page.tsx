@@ -4,12 +4,14 @@ import { auth } from "@/auth";
 import { getPosts } from "@/actions/post-actions";
 import { Button } from "@/components/ui/button";
 import { PostFeed } from "@/components/community/post-feed";
+import { OnboardingTip } from "@/components/ui/onboarding-tip";
 
 
 export default async function CommunityPage() {
   const session = await auth();
   const result = await getPosts();
-  const posts = result.success ? result.data : [];
+  const posts = result.success ? result.data.posts : [];
+  const nextCursor = result.success ? result.data.nextCursor : null;
 
   return (
     <div>
@@ -40,8 +42,17 @@ export default async function CommunityPage() {
         </div>
       </div>
 
+      {posts.length === 0 && (
+        <OnboardingTip
+          tipKey="community-start"
+          title="Share your progress with the community"
+          description="Post progress updates, share completed workouts with one tap from Training, join 30-day challenges, and climb the weekly leaderboard."
+          className="mb-6"
+        />
+      )}
       <PostFeed
         posts={posts}
+        initialNextCursor={nextCursor}
         currentUserId={session!.user.id}
         currentUserRole={session!.user.role}
       />

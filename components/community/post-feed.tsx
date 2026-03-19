@@ -1,21 +1,26 @@
 "use client";
 
-import { useState } from "react";
-import { Search } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Search, Loader2 } from "lucide-react";
 import { PostCard } from "@/components/community/post-card";
+import { getPosts } from "@/actions/post-actions";
 import type { Post, UserRole } from "@/types";
 
 interface Props {
   posts: Post[];
+  initialNextCursor: string | null;
   currentUserId: string;
   currentUserRole: UserRole;
 }
 
 type TypeFilter = "all" | "progress" | "general";
 
-export function PostFeed({ posts, currentUserId, currentUserRole }: Props) {
+export function PostFeed({ posts: initialPosts, initialNextCursor, currentUserId, currentUserRole }: Props) {
+  const [posts, setPosts] = useState<Post[]>(initialPosts);
+  const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor);
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
+  const [isPending, startTransition] = useTransition();
 
   const filtered = posts.filter((p) => {
     const matchesType = typeFilter === "all" || p.type === typeFilter;
@@ -23,6 +28,17 @@ export function PostFeed({ posts, currentUserId, currentUserRole }: Props) {
       !query || p.content.toLowerCase().includes(query.toLowerCase());
     return matchesType && matchesQuery;
   });
+
+  function loadMore() {
+    if (!nextCursor || isPending) return;
+    startTransition(async () => {
+      const result = await getPosts(nextCursor);
+      if (result.success) {
+        setPosts((prev) => [...prev, ...result.data.posts]);
+        setNextCursor(result.data.nextCursor);
+      }
+    });
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -79,6 +95,27 @@ export function PostFeed({ posts, currentUserId, currentUserRole }: Props) {
               index={i}
             />
           ))}
+        </div>
+      )}
+
+      {/* Load more */}
+      {nextCursor && !query && typeFilter === "all" && (
+        <div className="flex justify-center pt-2">
+          <button
+            type="button"
+            onClick={loadMore}
+            disabled={isPending}
+            className="flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+          >
+            {isPending ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                Loading…
+              </>
+            ) : (
+              "Load more posts"
+            )}
+          </button>
         </div>
       )}
     </div>

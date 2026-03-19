@@ -13,6 +13,7 @@ import { DietLogView } from "@/components/diet/diet-log-view";
 import { NutritionAIInsights } from "@/components/diet/nutrition-ai-insights";
 import { GroceryList } from "@/components/diet/grocery-list";
 import { Button } from "@/components/ui/button";
+import { OnboardingTip } from "@/components/ui/onboarding-tip";
 
 export default async function DietPage() {
   const session = await auth();
@@ -66,6 +67,13 @@ export default async function DietPage() {
         </div>
       </div>
 
+      {entries.length === 0 && history.length < 3 && (
+        <OnboardingTip
+          tipKey="diet-start"
+          title="Start logging your meals"
+          description="Tap the + button to add meals and track calories, protein, carbs, and fat. Set your macro targets in Settings → Preferences to see daily progress rings."
+        />
+      )}
       <DietLogView
         initialEntries={entries}
         initialTargets={targets}
