@@ -6,8 +6,8 @@ import { usePathname } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Bug, X, ExternalLink, ImagePlus, Loader2 } from "lucide-react";
-import { submitBugReport } from "@/actions/bug-report-actions";
+import { Bug, X, ExternalLink, ImagePlus, Loader2, Link2 } from "lucide-react";
+import { submitBugReport, getOpenBugReportsForLinking } from "@/actions/bug-report-actions";
 import { useUploadThing } from "@/lib/uploadthing-client";
 import type { BugCategory, BugSeverity } from "@/types";
 
@@ -72,6 +72,9 @@ export function BugReportButton() {
   const [isPending, startTransition] = useTransition();
   const [submitted, setSubmitted] = useState<{ githubIssueUrl?: string } | null>(null);
   const [screenshotUrls, setScreenshotUrls] = useState<string[]>([]);
+  const [relatedBugIds, setRelatedBugIds] = useState<string[]>([]);
+  const [openBugs, setOpenBugs] = useState<{ id: string; title: string }[]>([]);
+  const [showRelated, setShowRelated] = useState(false);
   const { startUpload, isUploading } = useUploadThing("bugScreenshot", {
     onClientUploadComplete: (res) => {
       setScreenshotUrls((prev) => [...prev, ...res.map((f) => f.url)]);
@@ -93,10 +96,13 @@ export function BugReportButton() {
   const selectedCategory = watch("category");
   const selectedSeverity = watch("severity");
 
-  // Update page field when modal opens
+  // Update page field and load open bugs when modal opens
   useEffect(() => {
     if (open) {
       setValue("page", pathname);
+      getOpenBugReportsForLinking().then((res) => {
+        if (res.success) setOpenBugs(res.data);
+      });
     }
   }, [open, pathname, setValue]);
 
@@ -114,6 +120,8 @@ export function BugReportButton() {
     setOpen(false);
     setSubmitted(null);
     setScreenshotUrls([]);
+    setRelatedBugIds([]);
+    setShowRelated(false);
     reset();
   }
 
@@ -128,6 +136,7 @@ export function BugReportButton() {
         steps: values.steps || undefined,
         deviceInfo: getDeviceInfo(),
         screenshotUrls: screenshotUrls.length ? screenshotUrls : undefined,
+        relatedBugIds: relatedBugIds.length ? relatedBugIds : undefined,
       });
       if (result.success) {
         setSubmitted({ githubIssueUrl: result.data.githubIssueUrl });
@@ -348,6 +357,41 @@ export function BugReportButton() {
                     </label>
                   )}
                 </div>
+
+                {/* Related Reports */}
+                {openBugs.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowRelated((v) => !v)}
+                      className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <Link2 className="size-3.5" />
+                      Link to related reports{relatedBugIds.length > 0 ? ` (${relatedBugIds.length})` : " (optional)"}
+                    </button>
+                    {showRelated && (
+                      <div className="max-h-40 overflow-y-auto rounded-lg border border-border bg-muted/30 divide-y divide-border">
+                        {openBugs.map((bug) => (
+                          <label key={bug.id} className="flex cursor-pointer items-start gap-2.5 px-3 py-2 hover:bg-muted/50 transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={relatedBugIds.includes(bug.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setRelatedBugIds((prev) => [...prev, bug.id]);
+                                } else {
+                                  setRelatedBugIds((prev) => prev.filter((id) => id !== bug.id));
+                                }
+                              }}
+                              className="mt-0.5 shrink-0 accent-primary"
+                            />
+                            <span className="text-xs leading-snug">{bug.title}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Device Info — read-only */}
                 <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">

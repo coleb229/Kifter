@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { getBugReportsCollection } from "@/lib/db";
 import type { ActionResult, BugCategory, BugReport, BugSeverity, BugStatus } from "@/types";
@@ -14,6 +15,7 @@ interface SubmitBugReportInput {
   steps?: string;
   deviceInfo: string;
   screenshotUrls?: string[];
+  relatedBugIds?: string[];
 }
 
 export async function submitBugReport(
@@ -38,6 +40,7 @@ export async function submitBugReport(
     steps: data.steps || undefined,
     deviceInfo: data.deviceInfo,
     screenshotUrls: data.screenshotUrls?.length ? data.screenshotUrls : undefined,
+    relatedBugIds: data.relatedBugIds?.length ? data.relatedBugIds : undefined,
     createdAt: now,
   });
 
@@ -113,6 +116,7 @@ export async function submitBugReport(
     }
   }
 
+  revalidatePath("/admin");
   return { success: true, data: { id, githubIssueUrl } };
 }
 
@@ -140,6 +144,7 @@ export async function getBugReports(): Promise<ActionResult<BugReport[]>> {
       githubIssueUrl: d.githubIssueUrl,
       githubIssueNumber: d.githubIssueNumber,
       screenshotUrls: d.screenshotUrls,
+      relatedBugIds: d.relatedBugIds,
       createdAt: d.createdAt.toISOString(),
     })),
   };
@@ -174,4 +179,41 @@ export async function updateBugReportStatus(
   );
 
   return { success: true, data: undefined };
+}
+
+interface UpdateBugReportPatch {
+  title?: string;
+  description?: string;
+  steps?: string;
+  screenshotUrls?: string[];
+  severity?: BugSeverity;
+}
+
+export async function updateBugReport(
+  id: string,
+  patch: UpdateBugReportPatch
+): Promise<ActionResult> {
+  const session = await auth();
+  if (session?.user?.role !== "admin") return { success: false, error: "Unauthorized" };
+
+  const col = await getBugReportsCollection();
+  await col.updateOne({ _id: new ObjectId(id) }, { $set: patch });
+
+  return { success: true, data: undefined };
+}
+
+export async function getOpenBugReportsForLinking(): Promise<ActionResult<{ id: string; title: string }[]>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+
+  const col = await getBugReportsCollection();
+  const docs = await col
+    .find({ status: "open" }, { projection: { _id: 1, title: 1 } })
+    .sort({ createdAt: -1 })
+    .toArray();
+
+  return {
+    success: true,
+    data: docs.map((d) => ({ id: d._id.toString(), title: d.title })),
+  };
 }

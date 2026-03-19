@@ -127,6 +127,7 @@ function MacroStepper({
         value={value}
         min={0}
         max={max}
+        step={0.1}
         onChange={(e) => {
           const n = parseFloat(e.target.value);
           if (!isNaN(n)) onChange(Math.max(0, Math.min(max, n)));

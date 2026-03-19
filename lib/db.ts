@@ -1,5 +1,5 @@
 import clientPromise from "@/lib/mongodb";
-import type { AiUsageDoc, BodyWeightDoc, BugReportDoc, CardioSessionDoc, ChallengeDoc, CommunityFoodDoc, DietEntryDoc, ExerciseDoc, FavoriteFoodDoc, GoalDoc, InjuryDoc, MacroTargetDoc, MealTemplateDoc, PhysiqueMeasurementDoc, PostDoc, PostKudosDoc, PostLikeDoc, PostCommentDoc, ProgressPhotoDoc, StreakDoc, SupplementLogDoc, UserDoc, UserSuggestionDoc, WorkoutProgramDoc, WorkoutSessionDoc, WorkoutSetDoc, UserBlockDoc, SiteSettingsDoc } from "@/types";
+import type { AiUsageDoc, BodyWeightDoc, BugReportDoc, CardioSessionDoc, ChallengeDoc, ClaudeIdeaDoc, CommunityFoodDoc, DietEntryDoc, ExerciseDoc, FavoriteFoodDoc, GoalDoc, InjuryDoc, MacroTargetDoc, MealTemplateDoc, PhysiqueMeasurementDoc, PostDoc, PostKudosDoc, PostLikeDoc, PostCommentDoc, ProgressPhotoDoc, StreakDoc, SupplementLogDoc, UserDoc, UserSuggestionDoc, WorkoutProgramDoc, WorkoutSessionDoc, WorkoutSetDoc, UserBlockDoc, SiteSettingsDoc } from "@/types";
 
 const DB_NAME = process.env.MONGODB_DB ?? "Kifted";
 
@@ -146,4 +146,9 @@ export async function getFavoriteFoodsCollection() {
 export async function getUserSuggestionsCollection() {
   const db = await getDb();
   return db.collection<UserSuggestionDoc>("userSuggestions");
+}
+
+export async function getClaudeIdeasCollection() {
+  const db = await getDb();
+  return db.collection<ClaudeIdeaDoc>("claudeIdeas");
 }

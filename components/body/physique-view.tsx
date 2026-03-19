@@ -219,12 +219,12 @@ export function PhysiqueView({ initialMeasurements }: Props) {
         <p className="mb-4 text-sm font-semibold">Log measurements</p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="flex flex-col gap-1">
+            <div className="flex min-w-0 flex-col gap-1">
               <label className="text-xs text-muted-foreground">Date</label>
               <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
                 className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
             </div>
-            <div className="flex flex-col gap-1">
+            <div className="flex min-w-0 flex-col gap-1">
               <label className="text-xs text-muted-foreground">Unit</label>
               <select value={unit} onChange={(e) => setUnit(e.target.value as MeasurementUnit)}
                 className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30">
@@ -245,7 +245,7 @@ export function PhysiqueView({ initialMeasurements }: Props) {
               { label: "Thigh (R)", val: thighR, set: setThighR },
               { label: `Height (${unit})`, val: height, set: setHeight },
             ].map(({ label, val, set }) => (
-              <div key={label} className="flex flex-col gap-1">
+              <div key={label} className="flex min-w-0 flex-col gap-1">
                 <label className="text-xs text-muted-foreground">{label}</label>
                 <input type="number" step="0.1" min="0" placeholder="—" value={val}
                   onChange={(e) => set(e.target.value)}
@@ -269,7 +269,7 @@ export function PhysiqueView({ initialMeasurements }: Props) {
         </div>
         <div className="flex flex-col gap-3">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <div className="flex flex-col gap-1">
+            <div className="flex min-w-0 flex-col gap-1">
               <label className="text-xs text-muted-foreground">Gender</label>
               <select value={bfGender} onChange={(e) => setBfGender(e.target.value as "male" | "female")}
                 className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30">
@@ -277,7 +277,7 @@ export function PhysiqueView({ initialMeasurements }: Props) {
                 <option value="female">Female</option>
               </select>
             </div>
-            <div className="flex flex-col gap-1">
+            <div className="flex min-w-0 flex-col gap-1">
               <label className="text-xs text-muted-foreground">Unit</label>
               <select value={bfUnit} onChange={(e) => setBfUnit(e.target.value as MeasurementUnit)}
                 className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30">
@@ -285,26 +285,26 @@ export function PhysiqueView({ initialMeasurements }: Props) {
                 <option value="cm">cm</option>
               </select>
             </div>
-            <div className="flex flex-col gap-1">
+            <div className="flex min-w-0 flex-col gap-1">
               <label className="text-xs text-muted-foreground">Height</label>
               <input type="number" step="0.1" min="0" placeholder={bfUnit === "in" ? "70" : "178"} value={bfHeight}
                 onChange={(e) => setBfHeight(e.target.value)}
                 className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
             </div>
-            <div className="flex flex-col gap-1">
+            <div className="flex min-w-0 flex-col gap-1">
               <label className="text-xs text-muted-foreground">Neck</label>
               <input type="number" step="0.1" min="0" placeholder="—" value={bfNeck}
                 onChange={(e) => setBfNeck(e.target.value)}
                 className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
             </div>
-            <div className="flex flex-col gap-1">
+            <div className="flex min-w-0 flex-col gap-1">
               <label className="text-xs text-muted-foreground">Waist (navel)</label>
               <input type="number" step="0.1" min="0" placeholder="—" value={bfWaist}
                 onChange={(e) => setBfWaist(e.target.value)}
                 className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
             </div>
             {bfGender === "female" && (
-              <div className="flex flex-col gap-1">
+              <div className="flex min-w-0 flex-col gap-1">
                 <label className="text-xs text-muted-foreground">Hips (widest)</label>
                 <input type="number" step="0.1" min="0" placeholder="—" value={bfHips}
                   onChange={(e) => setBfHips(e.target.value)}

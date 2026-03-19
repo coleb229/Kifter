@@ -79,17 +79,17 @@ export function MacroTargetForm({ currentTargets, onClose }: Props) {
           </div>
           <div>
             <label className={labelClass}>Protein (g)</label>
-            <input {...register("protein", { valueAsNumber: true })} type="number" min={0} className={inputClass} />
+            <input {...register("protein", { valueAsNumber: true })} type="number" min={0} step={0.1} className={inputClass} />
             {errors.protein && <p className={errorClass}>{errors.protein.message}</p>}
           </div>
           <div>
             <label className={labelClass}>Carbs (g)</label>
-            <input {...register("carbs", { valueAsNumber: true })} type="number" min={0} className={inputClass} />
+            <input {...register("carbs", { valueAsNumber: true })} type="number" min={0} step={0.1} className={inputClass} />
             {errors.carbs && <p className={errorClass}>{errors.carbs.message}</p>}
           </div>
           <div>
             <label className={labelClass}>Fat (g)</label>
-            <input {...register("fat", { valueAsNumber: true })} type="number" min={0} className={inputClass} />
+            <input {...register("fat", { valueAsNumber: true })} type="number" min={0} step={0.1} className={inputClass} />
             {errors.fat && <p className={errorClass}>{errors.fat.message}</p>}
           </div>
         </div>

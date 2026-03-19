@@ -164,7 +164,7 @@ export function BodyWeightView({ initialEntries }: Props) {
         <p className="mb-4 text-sm font-semibold">Log weight</p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="flex flex-col gap-1">
+            <div className="flex min-w-0 flex-col gap-1">
               <label className="text-xs text-muted-foreground">Date</label>
               <input
                 type="date"
@@ -173,7 +173,7 @@ export function BodyWeightView({ initialEntries }: Props) {
                 className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
               />
             </div>
-            <div className="flex flex-col gap-1">
+            <div className="flex min-w-0 flex-col gap-1">
               <label className="text-xs text-muted-foreground">Weight</label>
               <input
                 type="number"
@@ -185,7 +185,7 @@ export function BodyWeightView({ initialEntries }: Props) {
                 className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
               />
             </div>
-            <div className="flex flex-col gap-1">
+            <div className="flex min-w-0 flex-col gap-1">
               <label className="text-xs text-muted-foreground">Unit</label>
               <select
                 value={unit}
@@ -196,7 +196,7 @@ export function BodyWeightView({ initialEntries }: Props) {
                 <option value="kg">kg</option>
               </select>
             </div>
-            <div className="flex flex-col gap-1">
+            <div className="flex min-w-0 flex-col gap-1">
               <label className="text-xs text-muted-foreground">Notes (optional)</label>
               <input
                 type="text"

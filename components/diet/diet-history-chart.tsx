@@ -80,7 +80,7 @@ export function DietHistoryChart({ history, targets, mode = "daily" }: Props) {
 
   return (
     <ResponsiveContainer width="100%" height={220}>
-      <ComposedChart data={data} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
+      <ComposedChart data={data} margin={{ top: 4, right: targets ? 48 : 4, left: -16, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
         <XAxis
           dataKey="date"
@@ -89,23 +89,39 @@ export function DietHistoryChart({ history, targets, mode = "daily" }: Props) {
           axisLine={false}
           className="fill-muted-foreground"
         />
+        {/* Left axis: macro grams */}
         <YAxis
+          yAxisId="left"
           tick={{ fontSize: 10 }}
           tickLine={false}
           axisLine={false}
           className="fill-muted-foreground"
         />
+        {/* Right axis: calories / target (kcal) */}
+        {targets && (
+          <YAxis
+            yAxisId="right"
+            orientation="right"
+            tick={{ fontSize: 10 }}
+            tickLine={false}
+            axisLine={false}
+            className="fill-muted-foreground"
+            tickFormatter={(v) => `${Math.round(v)}`}
+            width={44}
+          />
+        )}
         <Tooltip content={<CustomTooltip mode={mode} />} />
         <Legend
           iconType="circle"
           iconSize={8}
           wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }}
         />
-        <Bar dataKey="protein" stackId="macros" fill="#10b981" name="protein" radius={[0, 0, 0, 0]} />
-        <Bar dataKey="carbs" stackId="macros" fill="#f59e0b" name="carbs" radius={[0, 0, 0, 0]} />
-        <Bar dataKey="fat" stackId="macros" fill="#f43f5e" name="fat" radius={[4, 4, 0, 0]} />
+        <Bar yAxisId="left" dataKey="protein" stackId="macros" fill="#10b981" name="protein" radius={[0, 0, 0, 0]} />
+        <Bar yAxisId="left" dataKey="carbs" stackId="macros" fill="#f59e0b" name="carbs" radius={[0, 0, 0, 0]} />
+        <Bar yAxisId="left" dataKey="fat" stackId="macros" fill="#f43f5e" name="fat" radius={[4, 4, 0, 0]} />
         {targets && (
           <Line
+            yAxisId="right"
             type="monotone"
             dataKey="target"
             stroke="#6366f1"

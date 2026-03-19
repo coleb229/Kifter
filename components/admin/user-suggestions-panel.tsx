@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { format } from "date-fns";
-import { Lightbulb, ChevronDown, ChevronRight, Trash2, ChevronLeft } from "lucide-react";
-import { updateSuggestionStatus, deleteUserSuggestion } from "@/actions/suggestion-actions";
+import { Lightbulb, ChevronDown, ChevronRight, Trash2, ChevronLeft, Pencil, Check, X } from "lucide-react";
+import { updateSuggestionStatus, deleteUserSuggestion, updateUserSuggestion } from "@/actions/suggestion-actions";
 import type { UserSuggestion, SuggestionStatus } from "@/types";
 
 const STATUS_OPTIONS: { value: SuggestionStatus; label: string }[] = [
@@ -39,6 +39,18 @@ function SuggestionCard({ suggestion, onDelete }: { suggestion: UserSuggestion; 
   const [status, setStatus] = useState<SuggestionStatus>(suggestion.status);
   const [isPending, startTransition] = useTransition();
   const [isDeleting, startDelete] = useTransition();
+  const [isSaving, startSave] = useTransition();
+
+  // Edit state
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(suggestion.title);
+  const [editDescription, setEditDescription] = useState(suggestion.description);
+  const [editImages, setEditImages] = useState<string[]>(suggestion.imageUrls ?? []);
+
+  // Displayed values
+  const [displayTitle, setDisplayTitle] = useState(suggestion.title);
+  const [displayDescription, setDisplayDescription] = useState(suggestion.description);
+  const [displayImages, setDisplayImages] = useState<string[]>(suggestion.imageUrls ?? []);
 
   function handleStatusChange(newStatus: SuggestionStatus) {
     setStatus(newStatus);
@@ -55,11 +67,35 @@ function SuggestionCard({ suggestion, onDelete }: { suggestion: UserSuggestion; 
     });
   }
 
+  function handleEditSave() {
+    startSave(async () => {
+      const filteredImages = editImages.filter((u) => u.trim());
+      await updateUserSuggestion(suggestion.id, {
+        title: editTitle.trim(),
+        description: editDescription.trim(),
+        imageUrls: filteredImages.length ? filteredImages : undefined,
+      });
+      setDisplayTitle(editTitle.trim());
+      setDisplayDescription(editDescription.trim());
+      setDisplayImages(filteredImages);
+      setEditing(false);
+    });
+  }
+
+  function handleEditCancel() {
+    setEditTitle(displayTitle);
+    setEditDescription(displayDescription);
+    setEditImages(displayImages);
+    setEditing(false);
+  }
+
+  const inputClass = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30";
+
   return (
     <div className={`rounded-xl border border-border bg-card transition-opacity ${isPending ? "opacity-60" : ""}`}>
       <button
         type="button"
-        onClick={() => setExpanded((v) => !v)}
+        onClick={() => !editing && setExpanded((v) => !v)}
         className="flex w-full items-start gap-3 p-4 text-left"
       >
         <div className="mt-0.5 shrink-0">
@@ -71,7 +107,7 @@ function SuggestionCard({ suggestion, onDelete }: { suggestion: UserSuggestion; 
               {status.replace("_", " ")}
             </span>
           </div>
-          <p className="mt-1.5 text-sm font-medium leading-snug">{suggestion.title}</p>
+          <p className="mt-1.5 text-sm font-medium leading-snug">{displayTitle}</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {format(new Date(suggestion.createdAt), "MMM d, yyyy 'at' h:mm a")}
             {suggestion.userEmail && ` · ${suggestion.userEmail}`}
@@ -81,23 +117,58 @@ function SuggestionCard({ suggestion, onDelete }: { suggestion: UserSuggestion; 
 
       {expanded && (
         <div className="border-t border-border px-4 pb-4 pt-3 space-y-3">
-          <div>
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Description</p>
-            <p className="text-sm whitespace-pre-wrap">{suggestion.description}</p>
-          </div>
-
-          {suggestion.imageUrls && suggestion.imageUrls.length > 0 && (
-            <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Images</p>
-              <div className="flex flex-wrap gap-2">
-                {suggestion.imageUrls.map((url, i) => (
-                  <a key={url} href={url} target="_blank" rel="noopener noreferrer">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={url} alt={`Image ${i + 1}`} className="h-24 rounded-lg border border-border object-cover hover:opacity-80 transition-opacity" />
-                  </a>
-                ))}
+          {editing ? (
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1 block">Title</label>
+                <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className={inputClass} />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1 block">Description</label>
+                <textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} rows={4} className={`${inputClass} resize-y`} />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1 block">Image URLs (one per line)</label>
+                <textarea
+                  value={editImages.join("\n")}
+                  onChange={(e) => setEditImages(e.target.value.split("\n"))}
+                  rows={3}
+                  placeholder="https://..."
+                  className={`${inputClass} resize-y font-mono text-xs`}
+                />
+              </div>
+              <div className="flex gap-2">
+                <button type="button" onClick={handleEditSave} disabled={isSaving}
+                  className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50">
+                  <Check className="size-3" /> {isSaving ? "Saving…" : "Save"}
+                </button>
+                <button type="button" onClick={handleEditCancel} disabled={isSaving}
+                  className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted">
+                  <X className="size-3" /> Cancel
+                </button>
               </div>
             </div>
+          ) : (
+            <>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Description</p>
+                <p className="text-sm whitespace-pre-wrap">{displayDescription}</p>
+              </div>
+
+              {displayImages.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Images</p>
+                  <div className="flex flex-wrap gap-2">
+                    {displayImages.map((url, i) => (
+                      <a key={url} href={url} target="_blank" rel="noopener noreferrer">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt={`Image ${i + 1}`} className="h-24 rounded-lg border border-border object-cover hover:opacity-80 transition-opacity" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           <div className="flex flex-wrap items-center gap-2 pt-1">
@@ -117,16 +188,29 @@ function SuggestionCard({ suggestion, onDelete }: { suggestion: UserSuggestion; 
               </button>
             ))}
 
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={isDeleting}
-              title="Delete suggestion"
-              className="ml-auto flex items-center gap-1 rounded-full border border-destructive/30 px-2.5 py-0.5 text-xs text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
-            >
-              <Trash2 className="size-3" />
-              Delete
-            </button>
+            <div className="ml-auto flex items-center gap-2">
+              {!editing && (
+                <button
+                  type="button"
+                  onClick={() => setEditing(true)}
+                  title="Edit suggestion"
+                  className="flex items-center gap-1 rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                >
+                  <Pencil className="size-3" />
+                  Edit
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={isDeleting}
+                title="Delete suggestion"
+                className="flex items-center gap-1 rounded-full border border-destructive/30 px-2.5 py-0.5 text-xs text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+              >
+                <Trash2 className="size-3" />
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

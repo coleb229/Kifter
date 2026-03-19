@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { getUserSuggestionsCollection } from "@/lib/db";
 import type { ActionResult, UserSuggestion, UserSuggestionDoc, SuggestionStatus } from "@/types";
@@ -91,6 +92,7 @@ export async function submitSuggestion(
     }
   }
 
+  revalidatePath("/admin");
   return { success: true, data: { id } };
 }
 
@@ -135,6 +137,25 @@ export async function updateSuggestionStatus(
 
   const col = await getUserSuggestionsCollection();
   await col.updateOne({ _id: new ObjectId(id) }, { $set: { status } });
+
+  return { success: true, data: undefined };
+}
+
+interface UpdateUserSuggestionPatch {
+  title?: string;
+  description?: string;
+  imageUrls?: string[];
+}
+
+export async function updateUserSuggestion(
+  id: string,
+  patch: UpdateUserSuggestionPatch
+): Promise<ActionResult> {
+  const session = await auth();
+  if (session?.user?.role !== "admin") return { success: false, error: "Unauthorized" };
+
+  const col = await getUserSuggestionsCollection();
+  await col.updateOne({ _id: new ObjectId(id) }, { $set: patch });
 
   return { success: true, data: undefined };
 }

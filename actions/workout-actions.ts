@@ -528,6 +528,11 @@ export async function getRestDaySuggestions(): Promise<ActionResult<RestDaySugge
   const upperBodyRec = byTarget.get("Upper Body")?.recommendation;
   const lowerBodyRec = byTarget.get("Lower Body")?.recommendation;
 
+  // Reverse cascade: parent trained → sub-groups also on cooldown
+  if (upperBodyRec === "rest") { forceRest("Push"); forceRest("Pull"); }
+  if (lowerBodyRec === "rest") forceRest("Legs");
+
+  // Forward cascade: sub-group recovering → parent cannot be ready
   if (pushRec === "rest" || pullRec === "rest") forceRest("Upper Body");
   if (legsRec === "rest") forceRest("Lower Body");
   if (
@@ -1242,4 +1247,51 @@ export async function unlinkSuperset(sessionId: string, groupId: string): Promis
   );
 
   return { success: true, data: undefined };
+}
+
+// ── getDashboardVolumeData ─────────────────────────────────────────────────────
+
+export interface VolumeDashboardPoint {
+  day: string;
+  volume: number;
+}
+
+export async function getDashboardVolumeData(): Promise<ActionResult<VolumeDashboardPoint[]>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+
+  const userId = session.user.id;
+  const today = new Date();
+  const cutoff = new Date(today);
+  cutoff.setDate(cutoff.getDate() - 6);
+  cutoff.setHours(0, 0, 0, 0);
+
+  const setsCol = await getSetsCollection();
+  const sets = await setsCol
+    .find({ userId, createdAt: { $gte: cutoff }, completed: true })
+    .toArray();
+
+  const volumeByDate = new Map<string, number>();
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    volumeByDate.set(d.toISOString().slice(0, 10), 0);
+  }
+
+  for (const s of sets) {
+    const date = s.createdAt.toISOString().slice(0, 10);
+    const weightLb = s.weightUnit === "kg" ? s.weight * 2.20462 : s.weight;
+    if (volumeByDate.has(date)) {
+      volumeByDate.set(date, (volumeByDate.get(date) ?? 0) + weightLb * s.reps);
+    }
+  }
+
+  const data: VolumeDashboardPoint[] = Array.from(volumeByDate.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, vol]) => ({
+      day: format(new Date(date + "T12:00:00"), "EEE"),
+      volume: Math.round(vol),
+    }));
+
+  return { success: true, data };
 }

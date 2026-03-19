@@ -102,7 +102,7 @@ function UserRow({
       )}
       <tr className="border-b border-border last:border-0">
         {/* User */}
-        <td className="py-3 pr-4">
+        <td className="px-4 py-3">
           <div className="flex items-center gap-3">
             <Avatar.Root className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted">
               <Avatar.Image src={avatarSrc} alt={displayName} className="size-full object-cover" />

@@ -25,6 +25,8 @@ import { Dumbbell, Flame, TrendingUp, Calendar, Plus, Utensils, Activity, GripVe
 import { TrainingWeekChart } from "@/components/dashboard/training-week-chart";
 import { MacroWeekChart } from "@/components/dashboard/macro-week-chart";
 import { CardioWeekChart } from "@/components/dashboard/cardio-week-chart";
+import { TrainingVolumeChart } from "@/components/dashboard/training-volume-chart";
+import { CardioHrChart } from "@/components/dashboard/cardio-hr-chart";
 import { StreakBadges } from "@/components/dashboard/streak-badges";
 import { BODY_TARGET_STYLES } from "@/lib/label-colors";
 import { Button } from "@/components/ui/button";
@@ -36,6 +38,8 @@ export interface DashboardData {
   trainingChartData: { day: string; sessions: number; exercises: number }[];
   macroChartData: { day: string; protein: number; carbs: number; fat: number; calories: number; target: number }[];
   cardioChartData: { day: string; minutes: number }[];
+  volumeChartData: { day: string; volume: number }[];
+  cardioHrData: { date: string; avgHr: number; activity: string }[];
   workoutsThisWeek: number;
   todayKcal: number;
   todayProtein: number;
@@ -55,12 +59,14 @@ interface Props {
 
 // ── Widget IDs & default order ─────────────────────────────────────────────────
 
-const DEFAULT_WIDGETS = ["stats", "nutrition", "training_cardio", "recent_workouts", "quick_actions"];
+const DEFAULT_WIDGETS = ["stats", "nutrition", "training_cardio", "training_volume", "recent_workouts", "quick_actions"];
 
 const WIDGET_LABELS: Record<string, string> = {
   stats: "Stats Overview",
   nutrition: "Nutrition Chart",
   training_cardio: "Training & Cardio Charts",
+  training_volume: "Training Load Volume",
+  cardio_hr: "Cardio Heart Rate Trend",
   recent_workouts: "Recent Workouts",
   quick_actions: "Quick Actions",
 };
@@ -108,7 +114,8 @@ export function DashboardLayout({ data, initialWidgets }: Props) {
   const [editMode, setEditMode] = useState(false);
   const [isSaving, startSave] = useTransition();
 
-  const hiddenWidgets = DEFAULT_WIDGETS.filter((id) => !widgets.includes(id));
+  const ALL_WIDGET_IDS = Object.keys(WIDGET_LABELS);
+  const hiddenWidgets = ALL_WIDGET_IDS.filter((id) => !widgets.includes(id));
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -137,7 +144,7 @@ export function DashboardLayout({ data, initialWidgets }: Props) {
     saveLayout(widgets);
   }
 
-  const { trainingChartData, macroChartData, cardioChartData, workoutsThisWeek, todayKcal, todayProtein, cardioThisWeek, streak, calorieTarget, proteinTarget, recentSessions, weekStart, weekEnd } = data;
+  const { trainingChartData, macroChartData, cardioChartData, volumeChartData, cardioHrData, workoutsThisWeek, todayKcal, todayProtein, cardioThisWeek, streak, calorieTarget, proteinTarget, recentSessions, weekStart, weekEnd } = data;
 
   function renderWidget(id: string) {
     switch (id) {
@@ -232,6 +239,30 @@ export function DashboardLayout({ data, initialWidgets }: Props) {
                 ))}
               </div>
             )}
+          </div>
+        );
+
+      case "training_volume":
+        return (
+          <div className="rounded-xl border border-border bg-card p-5">
+            <div className="mb-1 flex items-center gap-2">
+              <Dumbbell className="size-4 text-indigo-500" />
+              <h3 className="text-sm font-semibold">Training Load Volume</h3>
+            </div>
+            <p className="mb-4 text-xs text-muted-foreground">Total weight × reps per day (last 7 days)</p>
+            <TrainingVolumeChart data={volumeChartData} />
+          </div>
+        );
+
+      case "cardio_hr":
+        return (
+          <div className="rounded-xl border border-border bg-card p-5">
+            <div className="mb-1 flex items-center gap-2">
+              <Activity className="size-4 text-rose-500" />
+              <h3 className="text-sm font-semibold">Cardio Heart Rate</h3>
+            </div>
+            <p className="mb-4 text-xs text-muted-foreground">Avg heart rate per session (last 30 days)</p>
+            <CardioHrChart data={cardioHrData} />
           </div>
         );
 

@@ -31,7 +31,7 @@ A personal fitness tracking app for logging progressive overload, nutrition, car
 - **Community Feed** — Shared post feed with Progress Update and General post types; per-user and admin delete; restricted users see a locked view
 - **Social Challenges** — 30-day fitness challenges with leaderboards; opt-in community leaderboard ranked by weekly workout volume
 - **User Settings** — Profile (display name, bio, UploadThing profile photo); preferences (default weight unit); integration settings (Apple Health toggle, file size limit, deduplication)
-- **Admin Panel** — User management (role changes, ban/unban); AI rate limiting controls (site-wide and per-user)
+- **Admin Panel** — User management (role changes, ban/unban); AI rate limiting controls (site-wide and per-user); inline bug report and suggestion editing; Claude AI ideas panel (generate, accept, track improvement ideas by category)
 - **Mobile Navigation** — Bottom navigation bar for mobile-first use
 
 ---
@@ -165,7 +165,24 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Changelog
 
-### 2026-03-15 (latest)
+### 2026-03-19 (latest)
+
+**Bug Fixes**
+- Admin panel now live-updates when a user submits a bug report or suggestion (was missing `revalidatePath('/admin')`)
+- Diet history chart now uses dual y-axes — macro grams on the left, calorie target on the right (was on one scale, making the line invisible)
+- Body page form inputs no longer overflow on iOS — added `min-w-0` to grid wrappers in body weight and physique views
+- Macro number inputs now accept decimal values (added `step={0.1}` to all macro spinners and target form fields)
+- User table in admin panel left-column padding corrected (was missing `pl-4`, breaking alignment with header)
+- Admin can now edit bug report and suggestion content inline (title, description, steps, severity, image URLs)
+- Training "Upper Body" sessions now correctly put Push and Pull sub-groups on recovery cooldown (bidirectional cascade in `getRestDaySuggestions`)
+
+**New Features**
+- Claude AI Ideas Panel in admin: generate improvement ideas by category (UI/UX, Performance, New Features, Mobile, Data & Analytics), accept to persist, manage status (accepted → in progress → done → declined)
+- Dashboard: Training Load Volume widget (daily weight × reps bar chart, last 7 days) and Cardio Heart Rate Trend widget (avg BPM per session line chart, last 30 days) — both available in Customize mode
+- Bug report form: optional "Related Reports" section to link related open bugs; related IDs shown in admin expanded view
+- Mobile REST API: JWT-based API under `/api/mobile/*` covering training, cardio, nutrition, body weight, goals, exercises, and profile settings; Google token exchange at `/api/mobile/auth/google`
+
+### 2026-03-15
 - Fixed Apple Health training enrichment date matching — UTC timezone mismatch caused AH data to be applied to the wrong session (off by one day)
 
 ### 2026-03-14

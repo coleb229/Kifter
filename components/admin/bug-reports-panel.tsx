@@ -2,9 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { format } from "date-fns";
-import { Bug, ChevronDown, ChevronRight, ExternalLink, Trash2, ChevronLeft } from "lucide-react";
-import { updateBugReportStatus, deleteBugReport } from "@/actions/bug-report-actions";
-import type { BugReport, BugStatus } from "@/types";
+import { Bug, ChevronDown, ChevronRight, ExternalLink, Trash2, ChevronLeft, Pencil, Check, X } from "lucide-react";
+import { updateBugReportStatus, deleteBugReport, updateBugReport } from "@/actions/bug-report-actions";
+import type { BugReport, BugSeverity, BugStatus } from "@/types";
 
 interface BugReportsPanelProps {
   initialReports: BugReport[];
@@ -46,11 +46,29 @@ const FILTER_OPTIONS: { value: "all" | BugStatus; label: string }[] = [
   ...STATUS_OPTIONS,
 ];
 
+const SEVERITY_OPTIONS: BugSeverity[] = ["low", "medium", "high", "critical"];
+
 function BugReportCard({ report, onDelete }: { report: BugReport; onDelete: (id: string) => void }) {
   const [expanded, setExpanded] = useState(false);
   const [status, setStatus] = useState<BugStatus>(report.status);
   const [isPending, startTransition] = useTransition();
   const [isDeleting, startDelete] = useTransition();
+  const [isSaving, startSave] = useTransition();
+
+  // Edit state
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(report.title);
+  const [editDescription, setEditDescription] = useState(report.description);
+  const [editSteps, setEditSteps] = useState(report.steps ?? "");
+  const [editSeverity, setEditSeverity] = useState<BugSeverity>(report.severity);
+  const [editScreenshots, setEditScreenshots] = useState<string[]>(report.screenshotUrls ?? []);
+
+  // Displayed values (updated optimistically after save)
+  const [displayTitle, setDisplayTitle] = useState(report.title);
+  const [displayDescription, setDisplayDescription] = useState(report.description);
+  const [displaySteps, setDisplaySteps] = useState(report.steps);
+  const [displaySeverity, setDisplaySeverity] = useState<BugSeverity>(report.severity);
+  const [displayScreenshots, setDisplayScreenshots] = useState<string[]>(report.screenshotUrls ?? []);
 
   function handleStatusChange(newStatus: BugStatus) {
     setStatus(newStatus);
@@ -67,11 +85,41 @@ function BugReportCard({ report, onDelete }: { report: BugReport; onDelete: (id:
     });
   }
 
+  function handleEditSave() {
+    startSave(async () => {
+      const filteredScreenshots = editScreenshots.filter((u) => u.trim());
+      await updateBugReport(report.id, {
+        title: editTitle.trim(),
+        description: editDescription.trim(),
+        steps: editSteps.trim() || undefined,
+        severity: editSeverity,
+        screenshotUrls: filteredScreenshots.length ? filteredScreenshots : undefined,
+      });
+      setDisplayTitle(editTitle.trim());
+      setDisplayDescription(editDescription.trim());
+      setDisplaySteps(editSteps.trim() || undefined);
+      setDisplaySeverity(editSeverity);
+      setDisplayScreenshots(filteredScreenshots);
+      setEditing(false);
+    });
+  }
+
+  function handleEditCancel() {
+    setEditTitle(displayTitle);
+    setEditDescription(displayDescription);
+    setEditSteps(displaySteps ?? "");
+    setEditSeverity(displaySeverity);
+    setEditScreenshots(displayScreenshots);
+    setEditing(false);
+  }
+
+  const inputClass = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30";
+
   return (
     <div className={`rounded-xl border border-border bg-card transition-opacity ${isPending ? "opacity-60" : ""}`}>
       <button
         type="button"
-        onClick={() => setExpanded((v) => !v)}
+        onClick={() => !editing && setExpanded((v) => !v)}
         className="flex w-full items-start gap-3 p-4 text-left"
       >
         <div className="mt-0.5 shrink-0">
@@ -79,8 +127,8 @@ function BugReportCard({ report, onDelete }: { report: BugReport; onDelete: (id:
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${SEVERITY_STYLES[report.severity]}`}>
-              {report.severity}
+            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${SEVERITY_STYLES[displaySeverity]}`}>
+              {displaySeverity}
             </span>
             <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
               {CATEGORY_LABELS[report.category]}
@@ -89,7 +137,7 @@ function BugReportCard({ report, onDelete }: { report: BugReport; onDelete: (id:
               {status.replace("_", " ")}
             </span>
           </div>
-          <p className="mt-1.5 text-sm font-medium leading-snug">{report.title}</p>
+          <p className="mt-1.5 text-sm font-medium leading-snug">{displayTitle}</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {report.page} · {format(new Date(report.createdAt), "MMM d, yyyy 'at' h:mm a")}
             {report.userEmail && ` · ${report.userEmail}`}
@@ -99,35 +147,98 @@ function BugReportCard({ report, onDelete }: { report: BugReport; onDelete: (id:
 
       {expanded && (
         <div className="border-t border-border px-4 pb-4 pt-3 space-y-3">
-          <div>
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Description</p>
-            <p className="text-sm whitespace-pre-wrap">{report.description}</p>
-          </div>
-
-          {report.steps && (
-            <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Steps to Reproduce</p>
-              <p className="text-sm whitespace-pre-wrap">{report.steps}</p>
-            </div>
-          )}
-
-          <div>
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Device</p>
-            <p className="text-sm text-muted-foreground">{report.deviceInfo}</p>
-          </div>
-
-          {report.screenshotUrls && report.screenshotUrls.length > 0 && (
-            <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Screenshots</p>
-              <div className="flex flex-wrap gap-2">
-                {report.screenshotUrls.map((url, i) => (
-                  <a key={url} href={url} target="_blank" rel="noopener noreferrer">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={url} alt={`Screenshot ${i + 1}`} className="h-24 rounded-lg border border-border object-cover hover:opacity-80 transition-opacity" />
-                  </a>
-                ))}
+          {editing ? (
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1 block">Title</label>
+                <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className={inputClass} />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1 block">Severity</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {SEVERITY_OPTIONS.map((s) => (
+                    <button key={s} type="button" onClick={() => setEditSeverity(s)}
+                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${editSeverity === s ? SEVERITY_STYLES[s] : "border border-border text-muted-foreground hover:bg-muted"}`}>
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1 block">Description</label>
+                <textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} rows={4} className={`${inputClass} resize-y`} />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1 block">Steps to Reproduce (optional)</label>
+                <textarea value={editSteps} onChange={(e) => setEditSteps(e.target.value)} rows={3} className={`${inputClass} resize-y`} />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1 block">Screenshot URLs (one per line)</label>
+                <textarea
+                  value={editScreenshots.join("\n")}
+                  onChange={(e) => setEditScreenshots(e.target.value.split("\n"))}
+                  rows={3}
+                  placeholder="https://..."
+                  className={`${inputClass} resize-y font-mono text-xs`}
+                />
+              </div>
+              <div className="flex gap-2">
+                <button type="button" onClick={handleEditSave} disabled={isSaving}
+                  className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50">
+                  <Check className="size-3" /> {isSaving ? "Saving…" : "Save"}
+                </button>
+                <button type="button" onClick={handleEditCancel} disabled={isSaving}
+                  className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted">
+                  <X className="size-3" /> Cancel
+                </button>
               </div>
             </div>
+          ) : (
+            <>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Description</p>
+                <p className="text-sm whitespace-pre-wrap">{displayDescription}</p>
+              </div>
+
+              {displaySteps && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Steps to Reproduce</p>
+                  <p className="text-sm whitespace-pre-wrap">{displaySteps}</p>
+                </div>
+              )}
+
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Device</p>
+                <p className="text-sm text-muted-foreground">{report.deviceInfo}</p>
+              </div>
+
+              {report.relatedBugIds && report.relatedBugIds.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Related Reports</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {report.relatedBugIds.map((id) => (
+                      <span key={id} className="rounded-full border border-border bg-muted/40 px-2 py-0.5 font-mono text-xs text-muted-foreground">
+                        #{id.slice(-6)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {displayScreenshots.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Screenshots</p>
+                  <div className="flex flex-wrap gap-2">
+                    {displayScreenshots.map((url, i) => (
+                      <a key={url} href={url} target="_blank" rel="noopener noreferrer">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt={`Screenshot ${i + 1}`} className="h-24 rounded-lg border border-border object-cover hover:opacity-80 transition-opacity" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           <div className="flex flex-wrap items-center gap-2 pt-1">
@@ -148,6 +259,17 @@ function BugReportCard({ report, onDelete }: { report: BugReport; onDelete: (id:
             ))}
 
             <div className="ml-auto flex items-center gap-2">
+              {!editing && (
+                <button
+                  type="button"
+                  onClick={() => setEditing(true)}
+                  title="Edit report"
+                  className="flex items-center gap-1 rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                >
+                  <Pencil className="size-3" />
+                  Edit
+                </button>
+              )}
               {report.githubIssueUrl && (
                 <a
                   href={report.githubIssueUrl}

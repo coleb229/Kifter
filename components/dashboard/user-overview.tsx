@@ -1,13 +1,13 @@
 import { format, subDays, parseISO } from "date-fns";
-import { getWorkoutSessions } from "@/actions/workout-actions";
+import { getWorkoutSessions, getDashboardVolumeData } from "@/actions/workout-actions";
 import { getDietEntries, getMacroTargets, getDietHistory } from "@/actions/diet-actions";
-import { getCardioHistory } from "@/actions/cardio-actions";
+import { getCardioHistory, getCardioHrData } from "@/actions/cardio-actions";
 import { getCurrentUser } from "@/actions/user-actions";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 
 export async function UserOverview() {
   const today = format(new Date(), "yyyy-MM-dd");
-  const [sessionsResult, dietResult, targetsResult, historyResult, cardioHistoryResult, userResult] =
+  const [sessionsResult, dietResult, targetsResult, historyResult, cardioHistoryResult, userResult, volumeResult, cardioHrResult] =
     await Promise.all([
       getWorkoutSessions(30),
       getDietEntries(today),
@@ -15,6 +15,8 @@ export async function UserOverview() {
       getDietHistory(7),
       getCardioHistory(7),
       getCurrentUser(),
+      getDashboardVolumeData(),
+      getCardioHrData(30),
     ]);
 
   const sessions = sessionsResult.success ? sessionsResult.data : [];
@@ -23,6 +25,8 @@ export async function UserOverview() {
   const dietHistory = historyResult.success ? historyResult.data : [];
   const cardioHistory = cardioHistoryResult.success ? cardioHistoryResult.data : [];
   const preferences = userResult.success ? userResult.data.preferences : undefined;
+  const volumeChartData = volumeResult.success ? volumeResult.data : [];
+  const cardioHrData = cardioHrResult.success ? cardioHrResult.data : [];
 
   // Build last-7-days date keys
   const last7 = Array.from({ length: 7 }, (_, i) => format(subDays(new Date(), 6 - i), "yyyy-MM-dd"));
@@ -86,6 +90,8 @@ export async function UserOverview() {
         trainingChartData,
         macroChartData,
         cardioChartData,
+        volumeChartData,
+        cardioHrData,
         workoutsThisWeek,
         todayKcal,
         todayProtein,

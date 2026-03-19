@@ -921,6 +921,7 @@ export interface BugReportDoc {
   githubIssueUrl?: string;
   githubIssueNumber?: number;
   screenshotUrls?: string[];
+  relatedBugIds?: string[];
   createdAt: Date;
   resolvedAt?: Date;
 }
@@ -940,6 +941,7 @@ export interface BugReport {
   githubIssueUrl?: string;
   githubIssueNumber?: number;
   screenshotUrls?: string[];
+  relatedBugIds?: string[];
   createdAt: string;
 }
 
@@ -967,4 +969,28 @@ export interface UserSuggestion {
   status: SuggestionStatus;
   imageUrls?: string[];
   createdAt: string;
+}
+
+// ── Claude Ideas ───────────────────────────────────────────────────────────────
+
+export type ClaudeIdeaStatus = "accepted" | "declined" | "in_progress" | "done";
+
+export interface ClaudeIdeaDoc {
+  _id: ObjectId;
+  title: string;
+  description: string;
+  category: string;
+  status: ClaudeIdeaStatus;
+  generatedAt: Date;
+  acceptedAt?: Date;
+}
+
+export interface ClaudeIdea {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  status: ClaudeIdeaStatus;
+  generatedAt: string;
+  acceptedAt?: string;
 }

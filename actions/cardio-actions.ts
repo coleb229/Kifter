@@ -214,3 +214,38 @@ export async function getCardioHistory(
 
   return { success: true, data: Array.from(byDay.values()) };
 }
+
+// ── getCardioHrData ────────────────────────────────────────────────────────────
+
+export interface CardioHrDataPoint {
+  date: string;
+  avgHr: number;
+  activity: string;
+}
+
+export async function getCardioHrData(days = 30): Promise<ActionResult<CardioHrDataPoint[]>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+
+  const today = new Date();
+  const start = startOfDay(subDays(today, days - 1));
+
+  const col = await getCardioSessionsCollection();
+  const docs = await col
+    .find({
+      userId: session.user.id,
+      date: { $gte: start },
+      avgHeartRate: { $exists: true, $gt: 0 },
+    })
+    .sort({ date: 1 })
+    .toArray();
+
+  return {
+    success: true,
+    data: docs.map((d) => ({
+      date: format(d.date, "MMM d"),
+      avgHr: d.avgHeartRate!,
+      activity: d.activityType,
+    })),
+  };
+}
