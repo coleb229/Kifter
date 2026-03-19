@@ -69,7 +69,7 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, remove } = useFieldArray({
     control: form.control,
     name: "sets",
   });
@@ -362,39 +362,6 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
                 </Button>
               </div>
             ))}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground"
-              onClick={() => {
-                const currentSets = form.getValues("sets");
-                const last = currentSets[currentSets.length - 1];
-                append({ weight: last?.weight ?? 0, reps: last?.reps ?? 0 });
-              }}
-            >
-              <Plus className="size-3.5" />
-              Add Set
-            </Button>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-muted-foreground">Presets:</span>
-              {[3, 4, 5].map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => {
-                    const last = form.getValues("sets").at(-1) ?? { weight: 0, reps: 0 };
-                    form.setValue("sets", Array.from({ length: n }, () => ({ weight: last.weight, reps: last.reps })));
-                  }}
-                  className="rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                >
-                  {n}×
-                </button>
-              ))}
-            </div>
           </div>
 
           {form.formState.errors.root && (
