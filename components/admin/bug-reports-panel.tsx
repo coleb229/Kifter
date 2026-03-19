@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { format } from "date-fns";
 import { Bug, ChevronDown, ChevronRight, ExternalLink, Trash2, ChevronLeft, Pencil, Check, X } from "lucide-react";
 import { updateBugReportStatus, deleteBugReport, updateBugReport } from "@/actions/bug-report-actions";
+import { ImplementationLog } from "@/components/admin/implementation-log";
 import type { BugReport, BugSeverity, BugStatus } from "@/types";
 
 interface BugReportsPanelProps {
@@ -293,6 +294,8 @@ function BugReportCard({ report, onDelete }: { report: BugReport; onDelete: (id:
               </button>
             </div>
           </div>
+
+          <ImplementationLog notes={report.implementationNotes ?? []} />
         </div>
       )}
     </div>

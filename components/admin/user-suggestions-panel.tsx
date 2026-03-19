@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { format } from "date-fns";
 import { Lightbulb, ChevronDown, ChevronRight, Trash2, ChevronLeft, Pencil, Check, X } from "lucide-react";
 import { updateSuggestionStatus, deleteUserSuggestion, updateUserSuggestion } from "@/actions/suggestion-actions";
+import { ImplementationLog } from "@/components/admin/implementation-log";
 import type { UserSuggestion, SuggestionStatus } from "@/types";
 
 const STATUS_OPTIONS: { value: SuggestionStatus; label: string }[] = [
@@ -212,6 +213,8 @@ function SuggestionCard({ suggestion, onDelete }: { suggestion: UserSuggestion; 
               </button>
             </div>
           </div>
+
+          <ImplementationLog notes={suggestion.implementationNotes ?? []} />
         </div>
       )}
     </div>

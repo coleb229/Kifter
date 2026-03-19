@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Sparkles, ChevronDown, ChevronRight, Trash2, Check, X, Loader2, ChevronLeft } from "lucide-react";
 import { generateSiteIdeas, acceptClaudeIdea, deleteClaudeIdea, updateClaudeIdeaStatus, retryTooComplexIdeas } from "@/actions/claude-ideas-actions";
+import { ImplementationLog } from "@/components/admin/implementation-log";
 import type { ClaudeIdea, ClaudeIdeaStatus } from "@/types";
 
 const CATEGORIES = ["UI/UX", "Performance", "New Features", "Mobile", "Data & Analytics"];
@@ -169,6 +170,8 @@ function SavedIdeaCard({ idea, onDelete }: { idea: ClaudeIdea; onDelete: (id: st
               </div>
             </div>
           )}
+
+          <ImplementationLog notes={idea.implementationNotes ?? []} />
         </div>
       )}
     </div>

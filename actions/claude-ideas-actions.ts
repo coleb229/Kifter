@@ -5,7 +5,7 @@ import { ObjectId } from "mongodb";
 import { auth } from "@/auth";
 import { getClaudeIdeasCollection } from "@/lib/db";
 import { getIntegrationSettings } from "@/actions/settings-actions";
-import type { ActionResult, ClaudeIdea, ClaudeIdeaStatus } from "@/types";
+import type { ActionResult, ClaudeIdea, ClaudeIdeaStatus, ImplementationNote } from "@/types";
 
 function getClient(): Anthropic {
   if (!process.env.ANTHROPIC_API_KEY) throw new Error("AI features are not configured.");
@@ -164,6 +164,14 @@ export async function getClaudeIdeas(): Promise<ActionResult<ClaudeIdea[]>> {
       generatedAt: d.generatedAt.toISOString(),
       acceptedAt: d.acceptedAt?.toISOString(),
       complexityReason: d.complexityReason ?? undefined,
+      implementationNotes: (d.implementationNotes ?? []).map((n) => ({
+        timestamp: n.timestamp.toISOString(),
+        outcome: n.outcome,
+        summary: n.summary,
+        details: n.details,
+        filesChanged: n.filesChanged,
+        commandSource: n.commandSource,
+      })),
     })),
   };
 }
@@ -194,6 +202,33 @@ export async function updateClaudeIdeaStatus(
     update.complexityReason = null;
   }
   await col.updateOne({ _id: new ObjectId(id) }, { $set: update });
+
+  return { success: true, data: undefined };
+}
+
+export async function addClaudeIdeaImplementationNote(
+  id: string,
+  note: Omit<ImplementationNote, "timestamp">
+): Promise<ActionResult> {
+  const session = await auth();
+  if (session?.user?.role !== "admin") return { success: false, error: "Unauthorized" };
+
+  const col = await getClaudeIdeasCollection();
+  await col.updateOne(
+    { _id: new ObjectId(id) },
+    {
+      $push: {
+        implementationNotes: {
+          timestamp: new Date(),
+          outcome: note.outcome,
+          summary: note.summary,
+          details: note.details,
+          filesChanged: note.filesChanged,
+          commandSource: note.commandSource,
+        },
+      },
+    }
+  );
 
   return { success: true, data: undefined };
 }

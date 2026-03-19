@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { getBugReportsCollection } from "@/lib/db";
-import type { ActionResult, BugCategory, BugReport, BugSeverity, BugStatus } from "@/types";
+import type { ActionResult, BugCategory, BugReport, BugSeverity, BugStatus, ImplementationNote } from "@/types";
 import { ObjectId } from "mongodb";
 
 interface SubmitBugReportInput {
@@ -146,6 +146,14 @@ export async function getBugReports(): Promise<ActionResult<BugReport[]>> {
       screenshotUrls: d.screenshotUrls,
       relatedBugIds: d.relatedBugIds,
       createdAt: d.createdAt.toISOString(),
+      implementationNotes: (d.implementationNotes ?? []).map((n) => ({
+        timestamp: n.timestamp.toISOString(),
+        outcome: n.outcome,
+        summary: n.summary,
+        details: n.details,
+        filesChanged: n.filesChanged,
+        commandSource: n.commandSource,
+      })),
     })),
   };
 }
@@ -198,6 +206,33 @@ export async function updateBugReport(
 
   const col = await getBugReportsCollection();
   await col.updateOne({ _id: new ObjectId(id) }, { $set: patch });
+
+  return { success: true, data: undefined };
+}
+
+export async function addBugReportImplementationNote(
+  id: string,
+  note: Omit<ImplementationNote, "timestamp">
+): Promise<ActionResult> {
+  const session = await auth();
+  if (session?.user?.role !== "admin") return { success: false, error: "Unauthorized" };
+
+  const col = await getBugReportsCollection();
+  await col.updateOne(
+    { _id: new ObjectId(id) },
+    {
+      $push: {
+        implementationNotes: {
+          timestamp: new Date(),
+          outcome: note.outcome,
+          summary: note.summary,
+          details: note.details,
+          filesChanged: note.filesChanged,
+          commandSource: note.commandSource,
+        },
+      },
+    }
+  );
 
   return { success: true, data: undefined };
 }

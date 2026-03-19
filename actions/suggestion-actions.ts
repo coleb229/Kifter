@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { getUserSuggestionsCollection } from "@/lib/db";
-import type { ActionResult, UserSuggestion, UserSuggestionDoc, SuggestionStatus } from "@/types";
+import type { ActionResult, UserSuggestion, UserSuggestionDoc, SuggestionStatus, ImplementationNote } from "@/types";
 import { ObjectId } from "mongodb";
 
 interface SubmitSuggestionInput {
@@ -114,6 +114,14 @@ export async function getUserSuggestions(): Promise<ActionResult<UserSuggestion[
       status: d.status,
       imageUrls: d.imageUrls,
       createdAt: d.createdAt.toISOString(),
+      implementationNotes: (d.implementationNotes ?? []).map((n) => ({
+        timestamp: n.timestamp.toISOString(),
+        outcome: n.outcome,
+        summary: n.summary,
+        details: n.details,
+        filesChanged: n.filesChanged,
+        commandSource: n.commandSource,
+      })),
     })),
   };
 }
@@ -137,6 +145,33 @@ export async function updateSuggestionStatus(
 
   const col = await getUserSuggestionsCollection();
   await col.updateOne({ _id: new ObjectId(id) }, { $set: { status } });
+
+  return { success: true, data: undefined };
+}
+
+export async function addSuggestionImplementationNote(
+  id: string,
+  note: Omit<ImplementationNote, "timestamp">
+): Promise<ActionResult> {
+  const session = await auth();
+  if (session?.user?.role !== "admin") return { success: false, error: "Unauthorized" };
+
+  const col = await getUserSuggestionsCollection();
+  await col.updateOne(
+    { _id: new ObjectId(id) },
+    {
+      $push: {
+        implementationNotes: {
+          timestamp: new Date(),
+          outcome: note.outcome,
+          summary: note.summary,
+          details: note.details,
+          filesChanged: note.filesChanged,
+          commandSource: note.commandSource,
+        },
+      },
+    }
+  );
 
   return { success: true, data: undefined };
 }

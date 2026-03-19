@@ -462,7 +462,7 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
         </div>
         <button
           type="button"
-          onClick={onClose}
+          onClick={() => onClose()}
           className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <X className="size-4" />
@@ -708,7 +708,7 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
         )}
 
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={onClose}>
+          <Button type="button" variant="outline" size="sm" onClick={() => onClose()}>
             Cancel
           </Button>
           <Button type="submit" size="sm" disabled={isPending}>

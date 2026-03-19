@@ -902,6 +902,30 @@ export interface PostKudosDoc {
 
 // ── Bug reports ────────────────────────────────────────────────────────────────
 
+// ── Implementation Notes (shared across claudeIdeas, bugReports, userSuggestions) ──
+
+export type ImplementationOutcome = "success" | "partial" | "skipped" | "failed" | "too_complex";
+
+export interface ImplementationNoteDoc {
+  timestamp: Date;
+  outcome: ImplementationOutcome;
+  summary: string;
+  details: string;
+  filesChanged?: string[];
+  commandSource?: string;
+}
+
+export interface ImplementationNote {
+  timestamp: string;
+  outcome: ImplementationOutcome;
+  summary: string;
+  details: string;
+  filesChanged?: string[];
+  commandSource?: string;
+}
+
+// ── Bug Reports ────────────────────────────────────────────────────────────────
+
 export type BugCategory = "ui" | "feature" | "data" | "performance" | "other";
 export type BugSeverity = "low" | "medium" | "high" | "critical";
 export type BugStatus = "open" | "in_progress" | "testing" | "resolved";
@@ -924,6 +948,7 @@ export interface BugReportDoc {
   relatedBugIds?: string[];
   createdAt: Date;
   resolvedAt?: Date;
+  implementationNotes?: ImplementationNoteDoc[];
 }
 
 export interface BugReport {
@@ -943,6 +968,7 @@ export interface BugReport {
   screenshotUrls?: string[];
   relatedBugIds?: string[];
   createdAt: string;
+  implementationNotes?: ImplementationNote[];
 }
 
 // ── User Suggestions ──────────────────────────────────────────────────────────
@@ -958,6 +984,7 @@ export interface UserSuggestionDoc {
   status: SuggestionStatus;
   imageUrls?: string[];
   createdAt: Date;
+  implementationNotes?: ImplementationNoteDoc[];
 }
 
 export interface UserSuggestion {
@@ -969,6 +996,7 @@ export interface UserSuggestion {
   status: SuggestionStatus;
   imageUrls?: string[];
   createdAt: string;
+  implementationNotes?: ImplementationNote[];
 }
 
 // ── Daily Nutrition Summary (precomputed cache) ────────────────────────────────
@@ -998,6 +1026,7 @@ export interface ClaudeIdeaDoc {
   generatedAt: Date;
   acceptedAt?: Date;
   complexityReason?: string;
+  implementationNotes?: ImplementationNoteDoc[];
 }
 
 export interface ClaudeIdea {
@@ -1009,4 +1038,5 @@ export interface ClaudeIdea {
   generatedAt: string;
   acceptedAt?: string;
   complexityReason?: string;
+  implementationNotes?: ImplementationNote[];
 }
