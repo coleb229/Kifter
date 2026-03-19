@@ -253,6 +253,7 @@ function ExerciseGroupCard({
       createdAt: new Date().toISOString(),
     };
     setAddingSet(null);
+    window.dispatchEvent(new CustomEvent("rest-timer-start"));
     startTransition(async () => {
       dispatchOptimistic({ type: "add", set: tempSet });
       await addExerciseToSession(sessionId, {
@@ -743,6 +744,7 @@ function ExerciseGroupCard({
                     completed: false,
                     createdAt: new Date().toISOString(),
                   };
+                  window.dispatchEvent(new CustomEvent("rest-timer-start"));
                   startTransition(async () => {
                     dispatchOptimistic({ type: "add", set: tempSet });
                     await addExerciseToSession(sessionId, {

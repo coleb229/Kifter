@@ -50,6 +50,12 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
   useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
+    function handleRestTimerStart() { setRestTimer(90); }
+    window.addEventListener("rest-timer-start", handleRestTimerStart);
+    return () => window.removeEventListener("rest-timer-start", handleRestTimerStart);
+  }, []);
+
+  useEffect(() => {
     if (restTimer === null || restTimer <= 0) return;
     const id = setTimeout(() => setRestTimer((t) => (t !== null && t > 0 ? t - 1 : null)), 1000);
     return () => clearTimeout(id);
