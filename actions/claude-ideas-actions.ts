@@ -205,7 +205,7 @@ export async function retryTooComplexIdeas(): Promise<ActionResult<{ count: numb
   const col = await getClaudeIdeasCollection();
   const result = await col.updateMany(
     { status: "too_complex" },
-    { $set: { status: "accepted" as ClaudeIdeaStatus, complexityReason: null } }
+    { $set: { status: "accepted" as ClaudeIdeaStatus }, $unset: { complexityReason: "" } }
   );
 
   return { success: true, data: { count: result.modifiedCount } };
