@@ -154,8 +154,15 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
   const [showAdvanced, setShowAdvanced] = useState(!editingEntry);
   const [selectedFromSearch, setSelectedFromSearch] = useState(false);
   const [selectedFood, setSelectedFood] = useState<FoodSearchResult | null>(null);
+  // baseFood stores the 1× reference macros used by multiplier buttons.
+  // Initialized from editingEntry so multipliers work in edit mode too.
+  const [baseFood, setBaseFood] = useState<{ calories: number; protein: number; carbs: number; fat: number; servingSize: number; servingUnit: string } | null>(
+    editingEntry
+      ? { calories: editingEntry.calories, protein: editingEntry.protein, carbs: editingEntry.carbs, fat: editingEntry.fat, servingSize: editingEntry.servingSize ?? 1, servingUnit: editingEntry.servingUnit ?? "serving" }
+      : null
+  );
   const [activeMultiplier, setActiveMultiplier] = useState(1);
-  const [customAmount, setCustomAmount] = useState<string>("");
+  const [customAmount, setCustomAmount] = useState<string>(editingEntry ? String(editingEntry.servingSize ?? 1) : "");
   const [caloriesOnly, setCaloriesOnly] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("kifted-calories-only-mode") === "true";
@@ -221,6 +228,7 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
     setValue("servingSize", food.servingSize);
     setValue("servingUnit", food.servingUnit);
     setSelectedFood(food);
+    setBaseFood({ calories: food.calories, protein: food.protein, carbs: food.carbs, fat: food.fat, servingSize: food.servingSize, servingUnit: food.servingUnit });
     setActiveMultiplier(1);
     setCustomAmount(String(food.servingSize));
     setSelectedFromSearch(true);
@@ -229,42 +237,43 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
   function handleFoodNameChange(e: React.ChangeEvent<HTMLInputElement>) {
     setSelectedFromSearch(false);
     setSelectedFood(null);
+    setBaseFood(null);
     setActiveMultiplier(1);
     setValue("food", e.target.value, { shouldValidate: true });
   }
 
   function applyMultiplier(mult: number) {
-    if (!selectedFood) return;
+    if (!baseFood) return;
     setActiveMultiplier(mult);
-    setCustomAmount(String(Math.round(selectedFood.servingSize * mult * 10) / 10));
-    setValue("calories", Math.round(selectedFood.calories * mult));
-    setValue("protein", Math.round(selectedFood.protein * mult * 10) / 10);
-    setValue("carbs", Math.round(selectedFood.carbs * mult * 10) / 10);
-    setValue("fat", Math.round(selectedFood.fat * mult * 10) / 10);
+    setCustomAmount(String(Math.round(baseFood.servingSize * mult * 10) / 10));
+    setValue("calories", Math.round(baseFood.calories * mult));
+    setValue("protein", Math.round(baseFood.protein * mult * 10) / 10);
+    setValue("carbs", Math.round(baseFood.carbs * mult * 10) / 10);
+    setValue("fat", Math.round(baseFood.fat * mult * 10) / 10);
   }
 
   function applyCustomAmount(amountStr: string) {
     const amount = parseFloat(amountStr);
-    if (!selectedFood || isNaN(amount) || amount <= 0 || selectedFood.servingSize <= 0) return;
-    const factor = amount / selectedFood.servingSize;
+    if (!baseFood || isNaN(amount) || amount <= 0 || baseFood.servingSize <= 0) return;
+    const factor = amount / baseFood.servingSize;
     setActiveMultiplier(-1); // deselect preset buttons
     setValue("servingSize", amount);
-    setValue("calories", Math.round(selectedFood.calories * factor));
-    setValue("protein", Math.round(selectedFood.protein * factor * 10) / 10);
-    setValue("carbs", Math.round(selectedFood.carbs * factor * 10) / 10);
-    setValue("fat", Math.round(selectedFood.fat * factor * 10) / 10);
+    setValue("calories", Math.round(baseFood.calories * factor));
+    setValue("protein", Math.round(baseFood.protein * factor * 10) / 10);
+    setValue("carbs", Math.round(baseFood.carbs * factor * 10) / 10);
+    setValue("fat", Math.round(baseFood.fat * factor * 10) / 10);
   }
 
   function handleGramChip(grams: number) {
     setValue("servingSize", grams);
     setShowAdvanced(true);
     // Scale macros by grams relative to selected food's serving size
-    if (selectedFood && selectedFood.servingSize > 0) {
-      const factor = grams / selectedFood.servingSize;
-      setValue("calories", Math.round(selectedFood.calories * factor));
-      setValue("protein", Math.round(selectedFood.protein * factor * 10) / 10);
-      setValue("carbs", Math.round(selectedFood.carbs * factor * 10) / 10);
-      setValue("fat", Math.round(selectedFood.fat * factor * 10) / 10);
+    if (baseFood && baseFood.servingSize > 0) {
+      const factor = grams / baseFood.servingSize;
+      setValue("calories", Math.round(baseFood.calories * factor));
+      setValue("protein", Math.round(baseFood.protein * factor * 10) / 10);
+      setValue("carbs", Math.round(baseFood.carbs * factor * 10) / 10);
+      setValue("fat", Math.round(baseFood.fat * factor * 10) / 10);
     }
   }
 
@@ -548,10 +557,10 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
           </div>
         </div>
 
-        {/* Serving size controls (shown after food selected from search) */}
-        {selectedFood && (
+        {/* Serving size controls (shown when food selected from search OR editing an entry) */}
+        {baseFood && (
           <div className="flex flex-col gap-2">
-            <label className={labelClass}>Quantity ({selectedFood.servingUnit})</label>
+            <label className={labelClass}>Quantity ({baseFood.servingUnit})</label>
             <div className="flex items-center gap-2">
               <input
                 type="number"
@@ -564,7 +573,7 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
                 }}
                 className="h-10 w-28 rounded-lg border border-amber-500 bg-background px-3 text-sm font-medium outline-none focus:ring-2 focus:ring-amber-500/40 text-amber-600 dark:text-amber-400"
               />
-              <span className="text-xs text-muted-foreground">{selectedFood.servingUnit} per serving: {selectedFood.servingSize}</span>
+              <span className="text-xs text-muted-foreground">{baseFood.servingUnit} per serving: {baseFood.servingSize}</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {MULTIPLIERS.map((m) => (
