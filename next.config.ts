@@ -13,6 +13,7 @@ const withPWA = withPWAInit({
 
 const nextConfig: NextConfig = {
   compress: true,
+  serverExternalPackages: ["@distube/ytdl-core"],
   experimental: {
     serverActions: {
       bodySizeLimit: "200mb",

@@ -41,7 +41,51 @@ const INNERTUBE_BODY = { context: { client: { clientName: "ANDROID", clientVersi
 
 // One InnerTube call gives us both caption tracks AND shortDescription.
 // Try CC captions first; fall back to the creator's written description.
-async function fetchVideoContent(videoId: string): Promise<{ text: string; source: "captions" | "description" }> {
+async function transcribeYouTubeAudio(videoId: string): Promise<string> {
+  const groqKey = process.env.GROQ_API_KEY;
+  if (!groqKey) throw new Error("GROQ_API_KEY not configured");
+
+  // 1. Get audio format URL via ytdl (metadata only, no download yet)
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const ytdl = (await import("@distube/ytdl-core")).default;
+  const info = await ytdl.getInfo(`https://www.youtube.com/watch?v=${videoId}`);
+  const audioFormat = ytdl.chooseFormat(info.formats, {
+    quality: "lowestaudio",
+    filter: "audioonly",
+  });
+  if (!audioFormat?.url) throw new Error("No audio-only format available for this video");
+
+  // 2. Download audio into memory
+  const audioRes = await fetch(audioFormat.url, { headers: { "User-Agent": INNERTUBE_UA } });
+  if (!audioRes.ok) throw new Error(`Audio download failed (${audioRes.status})`);
+  const audioBuffer = await audioRes.arrayBuffer();
+
+  // 3. Guard: Groq limit is 25 MB
+  if (audioBuffer.byteLength > 24 * 1024 * 1024) {
+    throw new Error("Audio file is too large (>24 MB) for automatic transcription. Paste the transcript manually.");
+  }
+
+  // 4. Transcribe with Groq Whisper
+  const mimeType = audioFormat.mimeType?.split(";")[0] ?? "audio/webm";
+  const ext = mimeType.includes("mp4") ? "mp4" : mimeType.includes("ogg") ? "ogg" : "webm";
+  const formData = new FormData();
+  formData.append("file", new Blob([audioBuffer], { type: mimeType }), `audio.${ext}`);
+  formData.append("model", "whisper-large-v3-turbo");
+
+  const groqRes = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${groqKey}` },
+    body: formData,
+  });
+  if (!groqRes.ok) {
+    const errText = await groqRes.text().catch(() => groqRes.statusText);
+    throw new Error(`Groq Whisper transcription failed: ${errText}`);
+  }
+  const { text } = (await groqRes.json()) as { text: string };
+  return text;
+}
+
+async function fetchVideoContent(videoId: string): Promise<{ text: string; source: "captions" | "description" | "transcription" }> {
   const res = await fetch(INNERTUBE_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", "User-Agent": INNERTUBE_UA },
@@ -72,9 +116,23 @@ async function fetchVideoContent(videoId: string): Promise<{ text: string; sourc
     return { text: description.trim(), source: "description" };
   }
 
+  // 3. Audio transcription via Groq Whisper (if configured)
+  if (process.env.GROQ_API_KEY) {
+    try {
+      const text = await transcribeYouTubeAudio(videoId);
+      if (text.trim().length > 100) {
+        return { text: text.trim(), source: "transcription" };
+      }
+    } catch (err) {
+      console.error("[guide-actions] Audio transcription failed:", (err as Error).message);
+      // fall through to final error
+    }
+  }
+
   throw new Error(
-    "No captions or description content found. Ensure the video either has YouTube CC captions enabled, " +
-    "or has the transcript pasted into the video description."
+    "Could not obtain a transcript automatically (no CC captions, no description, " +
+    (process.env.GROQ_API_KEY ? "and audio transcription failed). " : "and GROQ_API_KEY is not set for audio transcription). ") +
+    "Paste the transcript or video description into the manual field above."
   );
 }
 
@@ -108,7 +166,7 @@ function serializeGuide(doc: {
   };
 }
 
-function buildExtractionPrompt(type: GuideType, exerciseName: string | undefined, transcript: string, source: "captions" | "description" | "manual"): string {
+function buildExtractionPrompt(type: GuideType, exerciseName: string | undefined, transcript: string, source: "captions" | "description" | "manual" | "transcription"): string {
   const jsonSchema = `{
   "title": "string (concise descriptive title for this content)",
   "summary": "string (2–3 sentence overview of what this routine/guide covers)",
@@ -122,9 +180,10 @@ function buildExtractionPrompt(type: GuideType, exerciseName: string | undefined
 }`;
 
   const sourceNote =
-    source === "manual"     ? "The input below is the transcript pasted directly by the admin." :
-    source === "description" ? "The input below is the video's written description/transcript posted by the creator." :
-                               "The input below is the auto-generated spoken transcript from the video.";
+    source === "manual"         ? "The input below is the transcript pasted directly by the admin." :
+    source === "description"    ? "The input below is the video's written description/transcript posted by the creator." :
+    source === "transcription"  ? "The input below is an AI-generated speech-to-text transcription of the video audio." :
+                                  "The input below is the auto-generated spoken transcript from the video.";
 
   const typeInstructions: Record<GuideType, string> = {
     stability: `Extract a complete stability and mobility routine from the content below.
@@ -166,7 +225,7 @@ export async function processYouTubeGuide(
 
   try {
     // 1. Resolve content: manual paste takes priority, then auto-fetch
-    let videoContent: { text: string; source: "captions" | "description" | "manual" };
+    let videoContent: { text: string; source: "captions" | "description" | "manual" | "transcription" };
     const pastedText = manualTranscript?.trim();
     if (pastedText && pastedText.length > 50) {
       videoContent = { text: pastedText, source: "manual" };
