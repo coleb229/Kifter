@@ -181,10 +181,12 @@ function PublishedGuideCard({
   const [isPublishing, startPublish] = useTransition();
   const [isDeleting, startDelete] = useTransition();
   const [isUpdatingImage, startUpdateImage] = useTransition();
+  const [localImageUrl, setLocalImageUrl] = useState(guide.imageUrl);
 
   const { startUpload, isUploading } = useUploadThing("guideImage", {
     onClientUploadComplete: (res) => {
       if (res[0]?.url) {
+        setLocalImageUrl(res[0].url);
         startUpdateImage(async () => {
           const result = await updatePublishedGuide(guide.id, { imageUrl: res[0].url });
           if (result.success) onChange({ ...guide, imageUrl: res[0].url });
@@ -193,7 +195,7 @@ function PublishedGuideCard({
     },
   });
 
-  const displayImage = guide.imageUrl
+  const displayImage = localImageUrl
     ?? (guide.sourceYoutubeIds[0]
       ? `https://img.youtube.com/vi/${guide.sourceYoutubeIds[0]}/mqdefault.jpg`
       : null);

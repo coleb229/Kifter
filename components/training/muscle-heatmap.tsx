@@ -126,19 +126,19 @@ function BodySVG({
       <svg viewBox="0 0 120 200" className="h-48 w-auto" aria-label={`${label} muscle view`}>
         {/* Body outline */}
         {/* Head */}
-        <ellipse cx="60" cy="21" rx="16" ry="18" fill="#d1d5db" className="dark:fill-zinc-700" />
+        <ellipse cx="60" cy="20" rx="14" ry="16" fill="#d1d5db" className="dark:fill-zinc-700" />
         {/* Neck */}
-        <path d="M54,37 Q60,39 66,37 L66,44 Q60,46 54,44 Z" fill="#d1d5db" className="dark:fill-zinc-700" />
-        {/* Torso — wide shoulders, tapered waist, hip flare */}
-        <path d="M28,44 Q60,40 92,44 Q98,50 96,68 Q100,80 96,95 Q92,110 86,118 Q82,128 82,140 L38,140 Q38,128 34,118 Q28,110 24,95 Q20,80 24,68 Q22,50 28,44 Z" fill="#d1d5db" className="dark:fill-zinc-700" />
-        {/* Left arm — angled outward, tapers toward forearm */}
-        <path d="M28,48 Q16,52 10,64 Q6,76 8,92 Q8,106 10,114 L16,112 Q14,104 14,92 Q13,78 16,68 Q20,56 30,52 Z" fill="#d1d5db" className="dark:fill-zinc-700" />
+        <rect x="54" y="34" width="12" height="10" rx="2" fill="#d1d5db" className="dark:fill-zinc-700" />
+        {/* Torso — shoulders to hips, clean taper */}
+        <path d="M16,46 Q18,42 60,40 Q102,42 104,46 L104,70 Q102,92 98,108 Q94,122 90,132 L86,140 L34,140 L30,132 Q26,122 22,108 Q18,92 16,70 Z" fill="#d1d5db" className="dark:fill-zinc-700" />
+        {/* Left arm — tapers from shoulder to forearm */}
+        <path d="M26,52 Q16,58 12,72 Q8,86 8,100 L10,114 L18,112 Q16,100 16,88 Q16,74 20,64 Q24,56 30,52 Z" fill="#d1d5db" className="dark:fill-zinc-700" />
         {/* Right arm — mirror */}
-        <path d="M92,48 Q104,52 110,64 Q114,76 112,92 Q112,106 110,114 L104,112 Q106,104 106,92 Q107,78 104,68 Q100,56 90,52 Z" fill="#d1d5db" className="dark:fill-zinc-700" />
-        {/* Left leg — wide enough to contain quad+calf overlays (x 36-60) */}
-        <path d="M36,138 Q28,144 32,165 Q34,180 36,196 L58,196 Q60,180 60,165 Q62,144 60,138 Z" fill="#d1d5db" className="dark:fill-zinc-700" />
-        {/* Right leg — mirror (x 60-84) */}
-        <path d="M84,138 Q92,144 88,165 Q86,180 84,196 L62,196 Q60,180 60,165 Q58,144 60,138 Z" fill="#d1d5db" className="dark:fill-zinc-700" />
+        <path d="M94,52 Q104,58 108,72 Q112,86 112,100 L110,114 L102,112 Q104,100 104,88 Q104,74 100,64 Q96,56 90,52 Z" fill="#d1d5db" className="dark:fill-zinc-700" />
+        {/* Left leg — clean parallel sides, slight calf curve */}
+        <path d="M34,140 L34,162 Q34,180 36,196 L58,196 Q60,180 60,162 L60,140 Z" fill="#d1d5db" className="dark:fill-zinc-700" />
+        {/* Right leg — mirror */}
+        <path d="M60,140 L60,162 Q60,180 62,196 L84,196 Q86,180 86,162 L86,140 Z" fill="#d1d5db" className="dark:fill-zinc-700" />
 
         {/* Muscle group overlays */}
         {muscles.map(({ group, path }) => {
