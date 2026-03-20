@@ -33,6 +33,53 @@ function extractYoutubeId(url: string): string | null {
   return null;
 }
 
+// Parses the inline ytInitialPlayerResponse JSON embedded in the YouTube page
+function parsePlayerResponse(html: string): Record<string, unknown> | null {
+  const marker = "var ytInitialPlayerResponse = ";
+  const start = html.indexOf(marker);
+  if (start === -1) return null;
+  let depth = 0;
+  let i = start + marker.length;
+  const begin = i;
+  for (; i < html.length; i++) {
+    if (html[i] === "{") depth++;
+    else if (html[i] === "}") { depth--; if (depth === 0) break; }
+  }
+  try { return JSON.parse(html.slice(begin, i + 1)); } catch { return null; }
+}
+
+// Try CC captions first, then fall back to the video description embedded in the page
+async function fetchVideoContent(videoId: string): Promise<{ text: string; source: "captions" | "description" }> {
+  // 1. Attempt caption-based transcript
+  try {
+    const segments = await YoutubeTranscript.fetchTranscript(videoId);
+    if (segments && segments.length > 0) {
+      return { text: segments.map((s) => s.text).join(" "), source: "captions" };
+    }
+  } catch {
+    // fall through to description
+  }
+
+  // 2. Fall back: fetch the YouTube watch page and extract the description
+  //    from ytInitialPlayerResponse.videoDetails.shortDescription
+  const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+  const html = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+    headers: { "User-Agent": UA, "Accept-Language": "en-US,en;q=0.9" },
+  }).then((r) => r.text());
+
+  const playerData = parsePlayerResponse(html);
+  const description = (playerData?.videoDetails as Record<string, unknown> | undefined)?.shortDescription as string | undefined;
+
+  if (description && description.trim().length > 80) {
+    return { text: description.trim(), source: "description" };
+  }
+
+  throw new Error(
+    "No captions found and the video description is too short to extract useful content. " +
+    "Try a video that has YouTube CC captions enabled, or whose description contains the full transcript."
+  );
+}
+
 function serializeGuide(doc: {
   _id: ObjectId;
   type: GuideType;
@@ -63,7 +110,7 @@ function serializeGuide(doc: {
   };
 }
 
-function buildExtractionPrompt(type: GuideType, exerciseName: string | undefined, transcript: string): string {
+function buildExtractionPrompt(type: GuideType, exerciseName: string | undefined, transcript: string, source: "captions" | "description"): string {
   const jsonSchema = `{
   "title": "string (concise descriptive title for this content)",
   "summary": "string (2–3 sentence overview of what this routine/guide covers)",
@@ -76,20 +123,25 @@ function buildExtractionPrompt(type: GuideType, exerciseName: string | undefined
   "duration": "string (e.g. '8–10 minutes' or omit if not mentioned)"
 }`;
 
+  const sourceNote = source === "description"
+    ? "The input below is the video's written description/transcript posted by the creator."
+    : "The input below is the auto-generated spoken transcript from the video.";
+
   const typeInstructions: Record<GuideType, string> = {
-    stability: `Extract a complete stability and mobility routine from the transcript below.
+    stability: `Extract a complete stability and mobility routine from the content below.
 Focus on: drill names and execution, coaching cues, muscles targeted, repetitions/holds, and sequencing.`,
-    warmup: `Extract a complete warmup routine from the transcript below.
+    warmup: `Extract a complete warmup routine from the content below.
 Focus on: exercise sequence, reps/duration per movement, purpose of each drill, and total time.`,
-    form_guide: `Extract a detailed form and technique guide for "${exerciseName}" from the transcript below.
+    form_guide: `Extract a detailed form and technique guide for "${exerciseName}" from the content below.
 Focus on: setup and positioning, movement cues, common mistakes, breathing, and progressions.`,
   };
 
   return `${typeInstructions[type]}
+${sourceNote}
 Return ONLY valid JSON — no markdown fences, no commentary — matching this schema exactly:
 ${jsonSchema}
 
-TRANSCRIPT:
+CONTENT:
 ${transcript.slice(0, 12000)}`; // cap at ~12k chars to stay within token budget
 }
 
@@ -113,25 +165,18 @@ export async function processYouTubeGuide(
   if (!videoId) return { success: false, error: "Could not parse a valid YouTube video ID from that URL" };
 
   try {
-    // 1. Fetch transcript
-    let transcriptSegments: { text: string }[];
+    // 1. Fetch content — captions first, description fallback
+    let videoContent: { text: string; source: "captions" | "description" };
     try {
-      transcriptSegments = await YoutubeTranscript.fetchTranscript(videoId);
+      videoContent = await fetchVideoContent(videoId);
     } catch (err) {
-      const msg = (err as Error).message ?? String(err);
-      return { success: false, error: `Could not fetch transcript: ${msg}. Make sure the video has captions enabled.` };
+      return { success: false, error: (err as Error).message };
     }
-
-    if (!transcriptSegments || transcriptSegments.length === 0) {
-      return { success: false, error: "No transcript available for this video. Try a video with closed captions." };
-    }
-
-    const transcript = transcriptSegments.map((s) => s.text).join(" ");
 
     // 2. Extract structured data via Claude
     const client = getClient();
     const model = await getDefaultAiModel();
-    const prompt = buildExtractionPrompt(type, exerciseName, transcript);
+    const prompt = buildExtractionPrompt(type, exerciseName, videoContent.text, videoContent.source);
 
     const message = await client.messages.create({
       model,
