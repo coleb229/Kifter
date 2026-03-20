@@ -63,12 +63,9 @@ export function PublishedGuideView({ guide, isDraft }: Props) {
       {primaryYtId && (
         <div className="mb-8 overflow-hidden rounded-2xl border border-border shadow-sm">
           <img
-            src={`https://img.youtube.com/vi/${primaryYtId}/maxresdefault.jpg`}
+            src={`https://img.youtube.com/vi/${primaryYtId}/mqdefault.jpg`}
             alt={guide.title}
             className="w-full object-cover aspect-video bg-muted"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = `https://img.youtube.com/vi/${primaryYtId}/mqdefault.jpg`;
-            }}
           />
         </div>
       )}
