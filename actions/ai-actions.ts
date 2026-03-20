@@ -409,14 +409,15 @@ export async function generateBugReportPrompts(input: {
       messages: [
         {
           role: "user",
-          content: `You are helping a user fill out a bug report for a fitness tracking app called Kifted.
+          content: `You are helping a user fill out a bug report for a fitness tracking app called Kifted (Next.js/React/MongoDB).
+IMPORTANT: This report will be read and acted on by Claude Code, an AI coding assistant. The text the user appends to each field will be fed directly into Claude Code as context when it goes to fix the bug. Write prompts that elicit technically precise, developer-useful information — specific component names, routes, data states, browser/device conditions, reproduction steps with exact actions, and observable vs expected behavior. Avoid vague filler; prefer concrete detail Claude Code can act on.
 Given the bug title and context below, generate exactly 4 helpful prompts the user can append to specific fields to better describe the bug.
 Respond ONLY with a JSON array — no markdown fences, no commentary.
-Each object: { "label": "2-4 word chip label", "text": "Suggested text to append (1-3 sentences, first-person)", "targetField": one of "description"|"steps"|"expectedBehavior"|"actualBehavior"|"impact"|"workaround" }
+Each object: { "label": "2-4 word chip label", "text": "Suggested text to append (1-3 sentences, first-person, technically specific)", "targetField": one of "description"|"steps"|"expectedBehavior"|"actualBehavior"|"impact"|"workaround" }
 
 Bug title: ${input.title}
 ${input.category ? `Category: ${input.category}` : ""}
-${input.page ? `Page: ${input.page}` : ""}
+${input.page ? `Page/route: ${input.page}` : ""}
 ${input.description ? `Description so far: ${input.description}` : ""}`,
         },
       ],
@@ -452,10 +453,11 @@ export async function generateSuggestionPrompts(input: {
       messages: [
         {
           role: "user",
-          content: `You are helping a user submit a feature suggestion for a fitness tracking app called Kifted.
+          content: `You are helping a user submit a feature suggestion for a fitness tracking app called Kifted (Next.js/React/MongoDB).
+IMPORTANT: This suggestion will be read and implemented by Claude Code, an AI coding assistant. The text the user appends will be fed directly into Claude Code as implementation context. Write prompts that elicit technically actionable detail — specific UI flows, data shapes, API behavior, edge cases, and measurable success criteria that Claude Code can use to build the feature correctly. Avoid abstract wishes; prefer concrete specs, interaction patterns, and "done" definitions.
 Given the suggestion title and context below, generate exactly 4 helpful prompts the user can append to specific fields to better articulate their idea.
 Respond ONLY with a JSON array — no markdown fences, no commentary.
-Each object: { "label": "2-4 word chip label", "text": "Suggested text to append (1-3 sentences, first-person)", "targetField": one of "description"|"currentPainPoint"|"proposedSolution"|"useCase"|"successCriteria" }
+Each object: { "label": "2-4 word chip label", "text": "Suggested text to append (1-3 sentences, first-person, technically specific)", "targetField": one of "description"|"currentPainPoint"|"proposedSolution"|"useCase"|"successCriteria" }
 
 Suggestion title: ${input.title}
 ${input.description ? `Description so far: ${input.description}` : ""}`,
