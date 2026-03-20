@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { getTrainingGuidesCollection, getPublishedGuidesCollection } from "@/lib/db";
 import { getIntegrationSettings } from "@/actions/settings-actions";
-import type { ActionResult, PublishedGuide, PublishedGuideContent, PublishedGuideDoc } from "@/types";
+import type { ActionResult, PublishedGuide, PublishedGuideContent, PublishedGuideDoc, GuideSource } from "@/types";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -50,6 +50,7 @@ function serializeGuide(doc: PublishedGuideDoc): PublishedGuide {
     exerciseName: doc.exerciseName,
     sourceGuideIds: doc.sourceGuideIds.map((id) => id.toHexString()),
     sourceYoutubeIds: doc.sourceYoutubeIds,
+    sources: doc.sources,
     content: doc.content,
     status: doc.status,
     publishedAt: doc.publishedAt?.toISOString(),
@@ -115,11 +116,11 @@ export async function generateGuideDraft(sourceGuideIds: string[]): Promise<Acti
   try {
     const trainingCol = await getTrainingGuidesCollection();
     const objectIds = sourceGuideIds.map((id) => new ObjectId(id));
-    const sources = await trainingCol.find({ _id: { $in: objectIds } }).toArray();
+    const sourceDocs = await trainingCol.find({ _id: { $in: objectIds } }).toArray();
 
-    if (!sources.length) return { success: false, error: "No matching source guides found" };
+    if (!sourceDocs.length) return { success: false, error: "No matching source guides found" };
 
-    const ready = sources.filter((s) => s.status === "ready" && s.content);
+    const ready = sourceDocs.filter((s) => s.status === "ready" && s.content);
     if (!ready.length) return { success: false, error: "Selected guides have no extracted content" };
 
     const client = getClient();
@@ -149,6 +150,13 @@ export async function generateGuideDraft(sourceGuideIds: string[]): Promise<Acti
     const slug = await uniqueSlug(baseSlug.includes("-") ? baseSlug : toSlug(title));
     delete (parsed as { slug?: string }).slug;
 
+    const sources: GuideSource[] = ready.map((s) => ({
+      youtubeId: s.youtubeId,
+      title: s.title,
+      channelName: s.channelName,
+      youtubeUrl: s.youtubeUrl,
+    }));
+
     const col = await getPublishedGuidesCollection();
     const now = new Date();
     const insertResult = await col.insertOne({
@@ -159,6 +167,7 @@ export async function generateGuideDraft(sourceGuideIds: string[]): Promise<Acti
       exerciseName: ready[0].exerciseName,
       sourceGuideIds: ready.map((s) => s._id),
       sourceYoutubeIds: ready.map((s) => s.youtubeId),
+      sources,
       content: parsed as PublishedGuideContent,
       status: "draft",
       createdBy: session.user.id,

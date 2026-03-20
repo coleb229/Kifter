@@ -68,7 +68,7 @@ async function transcribeAudioBuffer(audioBuffer: ArrayBuffer, mimeType: string)
   return text;
 }
 
-async function fetchVideoContent(videoId: string): Promise<{ text: string; source: "captions" | "description" | "transcription" }> {
+async function fetchVideoContent(videoId: string): Promise<{ text: string; source: "captions" | "description" | "transcription"; channelName?: string }> {
   const res = await fetch(INNERTUBE_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", "User-Agent": INNERTUBE_UA },
@@ -80,13 +80,15 @@ async function fetchVideoContent(videoId: string): Promise<{ text: string; sourc
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data: any = await res.json();
 
+  const channelName: string | undefined = data?.videoDetails?.author || undefined;
+
   // 1. Caption tracks available → use YoutubeTranscript to fetch formatted text
   const captionTracks = data?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
   if (Array.isArray(captionTracks) && captionTracks.length > 0) {
     try {
       const segments = await YoutubeTranscript.fetchTranscript(videoId);
       if (segments && segments.length > 0) {
-        return { text: segments.map((s) => s.text).join(" "), source: "captions" };
+        return { text: segments.map((s) => s.text).join(" "), source: "captions", channelName };
       }
     } catch {
       // caption tracks exist but failed to parse — fall through to description
@@ -96,7 +98,7 @@ async function fetchVideoContent(videoId: string): Promise<{ text: string; sourc
   // 2. No caption tracks → use the creator's written description (transcript in bio)
   const description: string | undefined = data?.videoDetails?.shortDescription;
   if (description && description.trim().length > 80) {
-    return { text: description.trim(), source: "description" };
+    return { text: description.trim(), source: "description", channelName };
   }
 
   // 3. Supadata transcript API — fetches the transcript from their infrastructure
@@ -112,7 +114,7 @@ async function fetchVideoContent(videoId: string): Promise<{ text: string; sourc
         const sdData = await sdRes.json() as any;
         const text: string = typeof sdData.content === "string" ? sdData.content : "";
         if (text.trim().length > 100) {
-          return { text: text.trim(), source: "transcription" };
+          return { text: text.trim(), source: "transcription", channelName };
         }
       } else {
         console.error("[guide-actions] Supadata returned", sdRes.status, await sdRes.text().catch(() => ""));
@@ -136,6 +138,7 @@ function serializeGuide(doc: {
   title: string;
   youtubeUrl: string;
   youtubeId: string;
+  channelName?: string;
   addedBy: string;
   status: "ready" | "failed";
   content?: ExtractedGuideContent;
@@ -150,6 +153,7 @@ function serializeGuide(doc: {
     title: doc.title,
     youtubeUrl: doc.youtubeUrl,
     youtubeId: doc.youtubeId,
+    channelName: doc.channelName,
     addedBy: doc.addedBy,
     status: doc.status,
     content: doc.content,
@@ -219,12 +223,15 @@ export async function processYouTubeGuide(
   try {
     // 1. Resolve content: manual paste takes priority, then auto-fetch
     let videoContent: { text: string; source: "captions" | "description" | "manual" | "transcription" };
+    let channelName: string | undefined;
     const pastedText = manualTranscript?.trim();
     if (pastedText && pastedText.length > 50) {
       videoContent = { text: pastedText, source: "manual" };
     } else {
       try {
-        videoContent = await fetchVideoContent(videoId);
+        const fetched = await fetchVideoContent(videoId);
+        videoContent = fetched;
+        channelName = fetched.channelName;
       } catch (err) {
         return { success: false, error: (err as Error).message };
       }
@@ -260,6 +267,7 @@ export async function processYouTubeGuide(
       title,
       youtubeUrl: url.trim(),
       youtubeId: videoId,
+      channelName,
       addedBy: session.user.id,
       status: "ready",
       content: parsed,

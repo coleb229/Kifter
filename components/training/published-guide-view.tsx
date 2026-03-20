@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Activity, Dumbbell, BookOpen, Target, Wrench, Clock, AlertTriangle, Lightbulb, ChevronRight } from "lucide-react";
+import { ArrowLeft, Activity, Dumbbell, BookOpen, Target, Wrench, Clock, AlertTriangle, Lightbulb, ChevronRight, Sparkles, ExternalLink, Youtube } from "lucide-react";
 import type { PublishedGuide, GuideType } from "@/types";
 
 const TYPE_META: Record<GuideType, { icon: React.ReactNode; label: string; bg: string; text: string; border: string }> = {
@@ -88,6 +88,10 @@ export function PublishedGuideView({ guide, isDraft }: Props) {
             {guide.content.duration}
           </span>
         )}
+        <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 dark:bg-violet-950/40 border border-violet-200 dark:border-violet-900/50 px-2.5 py-1 text-[11px] font-medium text-violet-700 dark:text-violet-300">
+          <Sparkles className="size-3" />
+          AI-Synthesised
+        </span>
       </div>
 
       {/* Title */}
@@ -227,27 +231,64 @@ export function PublishedGuideView({ guide, isDraft }: Props) {
         </div>
       )}
 
-      {/* Source videos */}
-      {guide.sourceYoutubeIds.length > 0 && (
+      {/* Sources & Credits */}
+      {(guide.sources?.length || guide.sourceYoutubeIds.length) > 0 && (
         <div className="rounded-2xl border border-border bg-muted/20 p-5">
-          <p className="mb-3 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Based on</p>
-          <div className="flex flex-wrap gap-3">
-            {guide.sourceYoutubeIds.map((ytId) => (
-              <a
-                key={ytId}
-                href={`https://www.youtube.com/watch?v=${ytId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group overflow-hidden rounded-xl border border-border transition-all hover:border-indigo-400 hover:shadow-md"
-              >
-                <img
-                  src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`}
-                  alt="Source video"
-                  className="h-16 w-28 object-cover transition-opacity group-hover:opacity-80"
-                />
-              </a>
-            ))}
+          <div className="mb-2 flex items-center gap-2">
+            <Youtube className="size-4 text-muted-foreground" />
+            <h2 className="text-sm font-bold tracking-tight">Video Sources &amp; Credits</h2>
           </div>
+          <p className="mb-4 text-xs text-muted-foreground leading-relaxed">
+            This guide was synthesised from audio transcriptions of the YouTube videos below.
+            All content is credited to the original creators — watch them for a video-based approach to learning these techniques.
+          </p>
+
+          {/* New guides: full attribution cards */}
+          {guide.sources && guide.sources.length > 0 ? (
+            <div className="space-y-3">
+              {guide.sources.map((src) => (
+                <a
+                  key={src.youtubeId}
+                  href={src.youtubeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-center gap-3 overflow-hidden rounded-xl border border-border bg-background p-2 transition-all hover:border-indigo-400 hover:shadow-sm"
+                >
+                  <img
+                    src={`https://img.youtube.com/vi/${src.youtubeId}/mqdefault.jpg`}
+                    alt={src.title}
+                    className="h-14 w-24 shrink-0 rounded-lg object-cover transition-opacity group-hover:opacity-80"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium leading-snug">{src.title}</p>
+                    {src.channelName && (
+                      <p className="mt-0.5 text-xs text-muted-foreground">{src.channelName}</p>
+                    )}
+                  </div>
+                  <ExternalLink className="mr-1 size-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-indigo-500" />
+                </a>
+              ))}
+            </div>
+          ) : (
+            /* Fallback for older guides without sources snapshot */
+            <div className="flex flex-wrap gap-3">
+              {guide.sourceYoutubeIds.map((ytId) => (
+                <a
+                  key={ytId}
+                  href={`https://www.youtube.com/watch?v=${ytId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group overflow-hidden rounded-xl border border-border transition-all hover:border-indigo-400 hover:shadow-md"
+                >
+                  <img
+                    src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`}
+                    alt="Source video"
+                    className="h-16 w-28 object-cover transition-opacity group-hover:opacity-80"
+                  />
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </article>

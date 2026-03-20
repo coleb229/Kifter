@@ -1036,6 +1036,7 @@ export interface TrainingGuideDoc {
   title: string;
   youtubeUrl: string;
   youtubeId: string;
+  channelName?: string;
   addedBy: string;
   status: GuideStatus;
   content?: ExtractedGuideContent;
@@ -1051,6 +1052,7 @@ export interface TrainingGuide {
   title: string;
   youtubeUrl: string;
   youtubeId: string;
+  channelName?: string;
   addedBy: string;
   status: GuideStatus;
   content?: ExtractedGuideContent;
@@ -1060,6 +1062,13 @@ export interface TrainingGuide {
 }
 
 // ── Published Guides (admin-authored, user-visible) ────────────────────────────
+
+export interface GuideSource {
+  youtubeId: string;
+  title: string;
+  channelName?: string;
+  youtubeUrl: string;
+}
 
 export interface PublishedGuideSection {
   heading: string;
@@ -1088,6 +1097,7 @@ export interface PublishedGuideDoc {
   exerciseName?: string;
   sourceGuideIds: ObjectId[];
   sourceYoutubeIds: string[];
+  sources?: GuideSource[];
   content: PublishedGuideContent;
   status: "draft" | "published";
   publishedAt?: Date;
@@ -1104,6 +1114,7 @@ export interface PublishedGuide {
   exerciseName?: string;
   sourceGuideIds: string[];
   sourceYoutubeIds: string[];
+  sources?: GuideSource[];
   content: PublishedGuideContent;
   status: "draft" | "published";
   publishedAt?: string;
