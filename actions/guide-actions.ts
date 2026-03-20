@@ -41,35 +41,18 @@ const INNERTUBE_BODY = { context: { client: { clientName: "ANDROID", clientVersi
 
 // One InnerTube call gives us both caption tracks AND shortDescription.
 // Try CC captions first; fall back to the creator's written description.
-async function transcribeYouTubeAudio(videoId: string): Promise<string> {
+async function transcribeAudioBuffer(audioBuffer: ArrayBuffer, mimeType: string): Promise<string> {
   const groqKey = process.env.GROQ_API_KEY;
   if (!groqKey) throw new Error("GROQ_API_KEY not configured");
 
-  // 1. Get audio format URL via ytdl (metadata only, no download yet)
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const ytdl = (await import("@distube/ytdl-core")).default;
-  const info = await ytdl.getInfo(`https://www.youtube.com/watch?v=${videoId}`);
-  const audioFormat = ytdl.chooseFormat(info.formats, {
-    quality: "lowestaudio",
-    filter: "audioonly",
-  });
-  if (!audioFormat?.url) throw new Error("No audio-only format available for this video");
-
-  // 2. Download audio into memory
-  const audioRes = await fetch(audioFormat.url, { headers: { "User-Agent": INNERTUBE_UA } });
-  if (!audioRes.ok) throw new Error(`Audio download failed (${audioRes.status})`);
-  const audioBuffer = await audioRes.arrayBuffer();
-
-  // 3. Guard: Groq limit is 25 MB
   if (audioBuffer.byteLength > 24 * 1024 * 1024) {
     throw new Error("Audio file is too large (>24 MB) for automatic transcription. Paste the transcript manually.");
   }
 
-  // 4. Transcribe with Groq Whisper
-  const mimeType = audioFormat.mimeType?.split(";")[0] ?? "audio/webm";
-  const ext = mimeType.includes("mp4") ? "mp4" : mimeType.includes("ogg") ? "ogg" : "webm";
+  const baseMime = mimeType.split(";")[0];
+  const ext = baseMime.includes("mp4") ? "mp4" : baseMime.includes("ogg") ? "ogg" : "webm";
   const formData = new FormData();
-  formData.append("file", new Blob([audioBuffer], { type: mimeType }), `audio.${ext}`);
+  formData.append("file", new Blob([audioBuffer], { type: baseMime }), `audio.${ext}`);
   formData.append("model", "whisper-large-v3-turbo");
 
   const groqRes = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
@@ -79,7 +62,7 @@ async function transcribeYouTubeAudio(videoId: string): Promise<string> {
   });
   if (!groqRes.ok) {
     const errText = await groqRes.text().catch(() => groqRes.statusText);
-    throw new Error(`Groq Whisper transcription failed: ${errText}`);
+    throw new Error(`Groq Whisper failed (${groqRes.status}): ${errText}`);
   }
   const { text } = (await groqRes.json()) as { text: string };
   return text;
@@ -116,22 +99,46 @@ async function fetchVideoContent(videoId: string): Promise<{ text: string; sourc
     return { text: description.trim(), source: "description" };
   }
 
-  // 3. Audio transcription via Groq Whisper (if configured)
+  // 3. Audio transcription via Groq Whisper using InnerTube streaming URL
   if (process.env.GROQ_API_KEY) {
+    let transcriptionError = "unknown error";
     try {
-      const text = await transcribeYouTubeAudio(videoId);
+      // The ANDROID InnerTube client returns direct audio URLs (no JS cipher needed).
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const adaptiveFormats: any[] = data?.streamingData?.adaptiveFormats ?? [];
+      const audioFormat = adaptiveFormats.find(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (f: any) => typeof f.url === "string" && f.mimeType?.startsWith("audio/")
+      );
+
+      if (!audioFormat?.url) {
+        throw new Error("No direct audio URL in InnerTube response (video may be age-restricted or private)");
+      }
+
+      const audioRes = await fetch(audioFormat.url as string, {
+        headers: { "User-Agent": INNERTUBE_UA },
+      });
+      if (!audioRes.ok) throw new Error(`Audio download failed (HTTP ${audioRes.status})`);
+      const audioBuffer = await audioRes.arrayBuffer();
+
+      const text = await transcribeAudioBuffer(audioBuffer, (audioFormat.mimeType as string) ?? "audio/webm");
       if (text.trim().length > 100) {
         return { text: text.trim(), source: "transcription" };
       }
+      throw new Error("Groq returned an empty transcript");
     } catch (err) {
-      console.error("[guide-actions] Audio transcription failed:", (err as Error).message);
-      // fall through to final error
+      transcriptionError = (err as Error).message;
+      console.error("[guide-actions] Audio transcription failed:", transcriptionError);
     }
+
+    throw new Error(
+      `Could not obtain a transcript automatically (no CC captions, no description, audio transcription failed: ${transcriptionError}). ` +
+      "Paste the transcript or video description into the manual field above."
+    );
   }
 
   throw new Error(
-    "Could not obtain a transcript automatically (no CC captions, no description, " +
-    (process.env.GROQ_API_KEY ? "and audio transcription failed). " : "and GROQ_API_KEY is not set for audio transcription). ") +
+    "Could not obtain a transcript automatically (no CC captions, no description, GROQ_API_KEY not configured). " +
     "Paste the transcript or video description into the manual field above."
   );
 }
