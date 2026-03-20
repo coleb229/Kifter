@@ -323,6 +323,8 @@ export interface DietEntryDoc {
   protein: number;
   carbs: number;
   fat: number;
+  servingSize?: number;
+  servingUnit?: string;
   notes?: string;
   createdAt: Date;
 }
@@ -337,6 +339,8 @@ export interface DietEntry {
   protein: number;
   carbs: number;
   fat: number;
+  servingSize?: number;
+  servingUnit?: string;
   notes?: string;
   createdAt: string;
 }
@@ -369,6 +373,8 @@ export interface CreateDietEntryInput {
   protein: number;
   carbs: number;
   fat: number;
+  servingSize?: number;
+  servingUnit?: string;
   notes?: string;
 }
 
@@ -379,6 +385,8 @@ export interface UpdateDietEntryInput {
   protein?: number;
   carbs?: number;
   fat?: number;
+  servingSize?: number;
+  servingUnit?: string;
   notes?: string;
 }
 

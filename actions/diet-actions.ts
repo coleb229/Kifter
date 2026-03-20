@@ -94,6 +94,8 @@ export async function getDietEntries(
     protein: d.protein,
     carbs: d.carbs,
     fat: d.fat,
+    servingSize: d.servingSize,
+    servingUnit: d.servingUnit,
     notes: d.notes,
     createdAt: d.createdAt.toISOString(),
   }));
@@ -123,6 +125,8 @@ export async function addDietEntry(
     protein: data.protein,
     carbs: data.carbs,
     fat: data.fat,
+    servingSize: data.servingSize,
+    servingUnit: data.servingUnit,
     notes: data.notes?.trim() || undefined,
     createdAt: new Date(),
   });
@@ -156,6 +160,8 @@ export async function updateDietEntry(
   if (data.protein !== undefined) update.protein = data.protein;
   if (data.carbs !== undefined) update.carbs = data.carbs;
   if (data.fat !== undefined) update.fat = data.fat;
+  if (data.servingSize !== undefined) update.servingSize = data.servingSize;
+  if (data.servingUnit !== undefined) update.servingUnit = data.servingUnit;
   if (data.notes !== undefined) update.notes = data.notes.trim() || undefined;
 
   const existing = await col.findOne({ _id: objectId, userId });

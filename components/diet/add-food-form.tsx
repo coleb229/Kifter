@@ -184,8 +184,8 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
           protein: editingEntry.protein,
           carbs: editingEntry.carbs,
           fat: editingEntry.fat,
-          servingSize: 1,
-          servingUnit: "serving",
+          servingSize: editingEntry.servingSize ?? 1,
+          servingUnit: editingEntry.servingUnit ?? "serving",
           notes: editingEntry.notes ?? "",
         }
       : {
@@ -398,6 +398,8 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
           protein: submitData.protein,
           carbs: submitData.carbs,
           fat: submitData.fat,
+          servingSize: submitData.servingSize,
+          servingUnit: submitData.servingUnit,
           notes: submitData.notes,
         });
       } else {
@@ -409,6 +411,8 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
           protein: submitData.protein,
           carbs: submitData.carbs,
           fat: submitData.fat,
+          servingSize: submitData.servingSize,
+          servingUnit: submitData.servingUnit,
           notes: submitData.notes,
         });
 
