@@ -33,50 +33,47 @@ function extractYoutubeId(url: string): string | null {
   return null;
 }
 
-// Parses the inline ytInitialPlayerResponse JSON embedded in the YouTube page
-function parsePlayerResponse(html: string): Record<string, unknown> | null {
-  const marker = "var ytInitialPlayerResponse = ";
-  const start = html.indexOf(marker);
-  if (start === -1) return null;
-  let depth = 0;
-  let i = start + marker.length;
-  const begin = i;
-  for (; i < html.length; i++) {
-    if (html[i] === "{") depth++;
-    else if (html[i] === "}") { depth--; if (depth === 0) break; }
-  }
-  try { return JSON.parse(html.slice(begin, i + 1)); } catch { return null; }
-}
+// youtube-transcript's InnerTube constants (same values the library uses)
+const INNERTUBE_URL = "https://www.youtube.com/youtubei/v1/player?prettyPrint=false";
+const INNERTUBE_UA = "com.google.android.youtube/20.10.38 (Linux; U; Android 14)";
+const INNERTUBE_BODY = { context: { client: { clientName: "ANDROID", clientVersion: "20.10.38" } } };
 
-// Try CC captions first, then fall back to the video description embedded in the page
+// One InnerTube call gives us both caption tracks AND shortDescription.
+// Try CC captions first; fall back to the creator's written description.
 async function fetchVideoContent(videoId: string): Promise<{ text: string; source: "captions" | "description" }> {
-  // 1. Attempt caption-based transcript
-  try {
-    const segments = await YoutubeTranscript.fetchTranscript(videoId);
-    if (segments && segments.length > 0) {
-      return { text: segments.map((s) => s.text).join(" "), source: "captions" };
+  const res = await fetch(INNERTUBE_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "User-Agent": INNERTUBE_UA },
+    body: JSON.stringify({ ...INNERTUBE_BODY, videoId }),
+  });
+
+  if (!res.ok) throw new Error(`YouTube API returned ${res.status}. Try again in a moment.`);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data: any = await res.json();
+
+  // 1. Caption tracks available → use YoutubeTranscript to fetch formatted text
+  const captionTracks = data?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+  if (Array.isArray(captionTracks) && captionTracks.length > 0) {
+    try {
+      const segments = await YoutubeTranscript.fetchTranscript(videoId);
+      if (segments && segments.length > 0) {
+        return { text: segments.map((s) => s.text).join(" "), source: "captions" };
+      }
+    } catch {
+      // caption tracks exist but failed to parse — fall through to description
     }
-  } catch {
-    // fall through to description
   }
 
-  // 2. Fall back: fetch the YouTube watch page and extract the description
-  //    from ytInitialPlayerResponse.videoDetails.shortDescription
-  const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
-  const html = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
-    headers: { "User-Agent": UA, "Accept-Language": "en-US,en;q=0.9" },
-  }).then((r) => r.text());
-
-  const playerData = parsePlayerResponse(html);
-  const description = (playerData?.videoDetails as Record<string, unknown> | undefined)?.shortDescription as string | undefined;
-
+  // 2. No caption tracks → use the creator's written description (transcript in bio)
+  const description: string | undefined = data?.videoDetails?.shortDescription;
   if (description && description.trim().length > 80) {
     return { text: description.trim(), source: "description" };
   }
 
   throw new Error(
-    "No captions found and the video description is too short to extract useful content. " +
-    "Try a video that has YouTube CC captions enabled, or whose description contains the full transcript."
+    "No captions or description content found. Ensure the video either has YouTube CC captions enabled, " +
+    "or has the transcript pasted into the video description."
   );
 }
 
