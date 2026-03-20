@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { notFound, redirect } from "next/navigation";
 import { getPublishedGuideBySlug } from "@/actions/published-guide-actions";
 import { PublishedGuideView } from "@/components/training/published-guide-view";
@@ -32,6 +34,3 @@ export default async function GuideDetailPage({ params }: Props) {
   );
 }
 
-export function generateStaticParams() {
-  return [];
-}

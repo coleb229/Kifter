@@ -85,11 +85,17 @@ function buildSynthesisPrompt(sources: { title: string; type: string; exerciseNa
     .map((s, i) => `--- Source ${i + 1}: ${s.title} (${s.type}${s.exerciseName ? `, ${s.exerciseName}` : ""}) ---\n${JSON.stringify(s.content, null, 2)}`)
     .join("\n\n");
 
-  return `You are a fitness content editor. Synthesise the source material below into a single, polished, editorial training guide.
+  return `You are a fitness coach writing for people who are completely new to the gym. Synthesise the source material below into a single, beginner-friendly training guide.
+
+TONE & LANGUAGE RULES:
+- Write like you are explaining to someone on their first week at the gym — clear, warm, encouraging, never condescending
+- Use everyday language. Avoid or briefly explain any jargon (e.g. "hip flexors (the muscles at the front of your hips)")
+- Keep sentences short. Aim for 8th-grade reading level
+- Sections should be 3–5 sentences — substantive but scannable
+- The steps section should feel like a coach standing next to the person, talking them through it
 
 Do NOT just concatenate the sources — produce a cohesive, well-written guide that integrates insights from all sources.
-Write in a clear, authoritative coaching voice. Sections should be substantive (3–5 sentences each).
-If multiple sources cover the same topic, merge them into the best unified advice.
+If multiple sources cover the same topic, merge them into the clearest, most beginner-friendly advice.
 
 Return ONLY valid JSON — no markdown fences, no commentary — matching this schema exactly:
 ${jsonSchema}
