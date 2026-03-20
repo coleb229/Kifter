@@ -1,10 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { updatePreferences } from "@/actions/user-actions";
 import type { UserSummary } from "@/types";
+
+const DRAFT_PREF_KEY = "kifted-draft-duration";
+type CacheDuration = "1h" | "24h" | "7d" | "off";
 
 interface Props {
   user: UserSummary | null;
@@ -38,6 +41,15 @@ export function PreferencesForm({ user }: Props) {
   const [showOnLeaderboard, setShowOnLeaderboard] = useState(
     user?.preferences?.showOnLeaderboard ?? false
   );
+  const [cacheDuration, setCacheDuration] = useState<CacheDuration>(
+    user?.preferences?.formCacheDuration ?? "24h"
+  );
+
+  // Sync stored localStorage cache duration with user preference on mount
+  useEffect(() => {
+    const stored = localStorage.getItem(DRAFT_PREF_KEY) as CacheDuration | null;
+    if (stored) setCacheDuration(stored);
+  }, []);
 
   const [saved, setSaved]   = useState(false);
   const [error, setError]   = useState<string | null>(null);
@@ -53,9 +65,16 @@ export function PreferencesForm({ user }: Props) {
         accentColor: accent,
         profileVisibility: visibility,
         showOnLeaderboard,
+        formCacheDuration: cacheDuration,
       });
       if (result.success) {
         setTheme(theme);
+        // Sync cache duration to localStorage so the hook can read it client-side
+        if (cacheDuration === "off") {
+          localStorage.removeItem(DRAFT_PREF_KEY);
+        } else {
+          localStorage.setItem(DRAFT_PREF_KEY, cacheDuration);
+        }
         setSaved(true);
         router.refresh();
       } else {
@@ -194,6 +213,37 @@ export function PreferencesForm({ user }: Props) {
             <span className={`block size-4 rounded-full bg-white shadow transition-transform ${showOnLeaderboard ? "translate-x-4" : "translate-x-0"}`} />
           </button>
         </label>
+      </div>
+
+      {/* Form draft cache duration */}
+      <div className="flex flex-col gap-3">
+        <div>
+          <p className="text-sm font-medium">Form draft caching</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            How long to keep unsaved form drafts if you navigate away or close the tab
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {([
+            { value: "1h",  label: "1 hour" },
+            { value: "24h", label: "24 hours" },
+            { value: "7d",  label: "7 days" },
+            { value: "off", label: "Off" },
+          ] as { value: CacheDuration; label: string }[]).map(({ value, label }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setCacheDuration(value)}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                cacheDuration === value
+                  ? "bg-primary text-primary-foreground shadow"
+                  : "border border-border bg-muted text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}

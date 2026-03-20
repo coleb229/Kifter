@@ -10,6 +10,7 @@ import { addCardioSession, updateCardioSession } from "@/actions/cardio-actions"
 import { Button } from "@/components/ui/button";
 import { CARDIO_ACTIVITIES, CARDIO_INTENSITIES } from "@/types";
 import type { CardioSession, CardioIntensity } from "@/types";
+import { useFormPersistence } from "@/hooks/use-form-persistence";
 
 const INTENSITY_STYLES: Record<CardioIntensity, { active: string; inactive: string }> = {
   easy:     { active: "bg-emerald-500 border-emerald-500 text-white",  inactive: "border-emerald-200 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/40" },
@@ -56,6 +57,7 @@ export function CardioSessionForm({ editingSession }: Props) {
     handleSubmit,
     watch,
     setValue,
+    reset,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -80,6 +82,15 @@ export function CardioSessionForm({ editingSession }: Props) {
         },
   });
 
+  const values = watch();
+  // Only cache for new sessions, not edits (edits already have a source of truth)
+  const { isDraftSaved, clearDraft } = useFormPersistence({
+    key: "cardio-session-form",
+    values: values as Record<string, unknown>,
+    reset: reset as (v: Partial<Record<string, unknown>>) => void,
+    exclude: ["date"],
+  });
+
   function onSubmit(data: FormData) {
     startTransition(async () => {
       if (isEditing && editingSession) {
@@ -96,6 +107,7 @@ export function CardioSessionForm({ editingSession }: Props) {
         });
         router.refresh();
       } else {
+        clearDraft();
         await addCardioSession({
           date: data.date,
           activityType: data.activityType,
@@ -248,18 +260,25 @@ export function CardioSessionForm({ editingSession }: Props) {
         />
       </div>
 
-      <div className="flex justify-end gap-2 pt-1">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => router.back()}
-        >
-          Cancel
-        </Button>
-        <Button type="submit" size="sm" disabled={isPending}>
-          {isPending ? "Saving…" : isEditing ? "Save Changes" : "Log Session"}
-        </Button>
+      <div className="flex items-center justify-between gap-2 pt-1">
+        {!isEditing && isDraftSaved ? (
+          <span className="text-xs text-muted-foreground animate-in fade-in">Draft saved</span>
+        ) : (
+          <span />
+        )}
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => router.back()}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" size="sm" disabled={isPending}>
+            {isPending ? "Saving…" : isEditing ? "Save Changes" : "Log Session"}
+          </Button>
+        </div>
       </div>
     </form>
   );

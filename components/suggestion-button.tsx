@@ -11,6 +11,7 @@ import { generateSuggestionPrompts } from "@/actions/ai-actions";
 import type { FormPrompt } from "@/actions/ai-actions";
 import { useUploadThing } from "@/lib/uploadthing-client";
 import type { SuggestionPriority } from "@/types";
+import { useFormPersistence } from "@/hooks/use-form-persistence";
 
 const schema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
@@ -66,6 +67,13 @@ export function SuggestionButton() {
 
   const selectedPriority = watch("priority");
   const titleValue = watch("title");
+  const allValues = watch();
+
+  const { isDraftSaved, clearDraft } = useFormPersistence({
+    key: "suggestion-form",
+    values: allValues as Record<string, unknown>,
+    reset: reset as (v: Partial<Record<string, unknown>>) => void,
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -118,6 +126,7 @@ export function SuggestionButton() {
         imageUrls: imageUrls.length ? imageUrls : undefined,
       });
       if (result.success) {
+        clearDraft();
         setSubmitted(true);
         reset();
       }
@@ -370,13 +379,18 @@ export function SuggestionButton() {
                   )}
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={isPending}
-                  className="mt-1 h-10 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60"
-                >
-                  {isPending ? "Submitting…" : "Submit Suggestion"}
-                </button>
+                <div className="mt-1 flex items-center gap-3">
+                  {isDraftSaved && (
+                    <span className="text-xs text-muted-foreground animate-in fade-in">Draft saved</span>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={isPending}
+                    className="h-10 flex-1 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60"
+                  >
+                    {isPending ? "Submitting…" : "Submit Suggestion"}
+                  </button>
+                </div>
               </form>
             )}
           </div>

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { BODY_TARGETS } from "@/types";
 import { createSession } from "@/actions/workout-actions";
 import { BODY_TARGET_STYLES } from "@/lib/label-colors";
+import { useFormPersistence } from "@/hooks/use-form-persistence";
 
 const sessionSchema = z.object({
   name: z.string().optional(),
@@ -32,7 +33,7 @@ export function SessionForm() {
   const [isPending, startTransition] = useTransition();
   const [showNotes, setShowNotes] = useState(false);
 
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<SessionFormValues>({
+  const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<SessionFormValues>({
     resolver: zodResolver(sessionSchema),
     defaultValues: {
       name: "",
@@ -48,6 +49,14 @@ export function SessionForm() {
     setValue("date", format(new Date(), "yyyy-MM-dd"));
   }, [setValue]);
 
+  const values = watch();
+  const { isDraftSaved, clearDraft } = useFormPersistence({
+    key: "session-form",
+    values,
+    reset,
+    exclude: ["date"], // don't restore stale dates
+  });
+
   const selectedTarget = watch("bodyTarget");
 
   const NAME_SUGGESTIONS: Partial<Record<string, string>> = {
@@ -62,10 +71,11 @@ export function SessionForm() {
     if (!currentName) setValue("name", NAME_SUGGESTIONS[target] ?? "");
   }
 
-  function onSubmit(values: SessionFormValues) {
+  function onSubmit(formValues: SessionFormValues) {
     startTransition(async () => {
-      const result = await createSession(values);
+      const result = await createSession(formValues);
       if (result.success) {
+        clearDraft();
         router.push(`/training/${result.data.sessionId}`);
       } else {
         // surface error — no root.setError available without full form object, use alert as fallback
@@ -148,9 +158,16 @@ export function SessionForm() {
         </div>
       </div>
 
-      <Button type="submit" disabled={isPending} className="w-full sm:w-auto sm:self-end sm:px-10">
-        {isPending ? "Creating..." : `Start ${selectedTarget} Session`}
-      </Button>
+      <div className="flex items-center justify-between gap-3">
+        {isDraftSaved ? (
+          <span className="text-xs text-muted-foreground animate-in fade-in">Draft saved</span>
+        ) : (
+          <span />
+        )}
+        <Button type="submit" disabled={isPending} className="w-full sm:w-auto sm:self-end sm:px-10">
+          {isPending ? "Creating..." : `Start ${selectedTarget} Session`}
+        </Button>
+      </div>
     </form>
   );
 }

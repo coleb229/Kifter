@@ -152,7 +152,6 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
   const [isPending, startTransition] = useTransition();
   const [saveToLibrary, setSaveToLibrary] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(!editingEntry);
-  const [selectedFromSearch, setSelectedFromSearch] = useState(false);
   const [selectedFood, setSelectedFood] = useState<FoodSearchResult | null>(null);
   // baseFood stores the 1× reference macros used by multiplier buttons.
   // Initialized from editingEntry so multipliers work in edit mode too.
@@ -207,10 +206,6 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
   });
 
   const foodName = watch("food");
-  const calories = watch("calories") ?? 0;
-  const protein = watch("protein") ?? 0;
-  const carbs = watch("carbs") ?? 0;
-  const fat = watch("fat") ?? 0;
 
   // Load favorites on mount
   useEffect(() => {
@@ -231,11 +226,9 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
     setBaseFood({ calories: food.calories, protein: food.protein, carbs: food.carbs, fat: food.fat, servingSize: food.servingSize, servingUnit: food.servingUnit });
     setActiveMultiplier(1);
     setCustomAmount(String(food.servingSize));
-    setSelectedFromSearch(true);
   }
 
   function handleFoodNameChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setSelectedFromSearch(false);
     setSelectedFood(null);
     setBaseFood(null);
     setActiveMultiplier(1);
@@ -566,7 +559,8 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
                 <button
                   type="button"
                   onClick={() => {
-                    const next = Math.max(0.1, Math.round((parseFloat(customAmount || "0") - baseFood.servingSize) * 10) / 10);
+                    const step = Math.round(baseFood.servingSize * 0.5 * 10) / 10 || 0.5;
+                    const next = Math.max(0.1, Math.round((parseFloat(customAmount || "0") - step) * 10) / 10);
                     setCustomAmount(String(next));
                     applyCustomAmount(String(next));
                   }}
@@ -588,7 +582,8 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
                 <button
                   type="button"
                   onClick={() => {
-                    const next = Math.round((parseFloat(customAmount || "0") + baseFood.servingSize) * 10) / 10;
+                    const step = Math.round(baseFood.servingSize * 0.5 * 10) / 10 || 0.5;
+                    const next = Math.round((parseFloat(customAmount || "0") + step) * 10) / 10;
                     setCustomAmount(String(next));
                     applyCustomAmount(String(next));
                   }}
@@ -597,7 +592,7 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
                   +
                 </button>
               </div>
-              <span className="text-xs text-muted-foreground">{baseFood.servingUnit} per serving: {baseFood.servingSize}</span>
+              <span className="text-xs text-muted-foreground">per serving: {baseFood.servingSize} {baseFood.servingUnit}</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {MULTIPLIERS.map((m) => (

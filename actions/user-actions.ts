@@ -96,6 +96,7 @@ export async function updatePreferences(data: {
   };
   showOnLeaderboard?: boolean;
   dashboardWidgets?: string[];
+  formCacheDuration?: "1h" | "24h" | "7d" | "off";
 }): Promise<ActionResult> {
   const session = await auth();
   if (!session?.user?.id) return { success: false, error: "Not authenticated" };
@@ -107,6 +108,7 @@ export async function updatePreferences(data: {
   if (data.profileVisibility !== undefined) update["preferences.profileVisibility"] = data.profileVisibility;
   if (data.showOnLeaderboard !== undefined) update["preferences.showOnLeaderboard"] = data.showOnLeaderboard;
   if (data.dashboardWidgets !== undefined) update["preferences.dashboardWidgets"] = data.dashboardWidgets;
+  if (data.formCacheDuration !== undefined) update["preferences.formCacheDuration"] = data.formCacheDuration;
 
   if (Object.keys(update).length === 0) return { success: true, data: undefined };
 

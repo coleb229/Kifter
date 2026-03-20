@@ -161,6 +161,7 @@ export interface UserDoc {
     };
     showOnLeaderboard?: boolean;
     dashboardWidgets?: string[];
+    formCacheDuration?: "1h" | "24h" | "7d" | "off";
   };
   restrictions?: {
     training?: boolean;
@@ -206,6 +207,7 @@ export interface UserSummary {
     };
     showOnLeaderboard?: boolean;
     dashboardWidgets?: string[];
+    formCacheDuration?: "1h" | "24h" | "7d" | "off";
   };
   restrictions?: {
     training?: boolean;

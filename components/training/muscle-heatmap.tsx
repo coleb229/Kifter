@@ -32,28 +32,39 @@ function getBucket(vol: number, max: number): ColorBucket {
   return 3;
 }
 
-// Simplified front/back body SVG paths per muscle group
-// Coordinates are in a 120×200 viewBox (front) and 120×200 (back)
+// Front/back body SVG muscle overlays.
+// ViewBox is 120×200. Body outline:
+//   Left arm:  M26,52 Q16,58 12,72 Q8,86 8,100 L10,114 L18,112 Q16,100 16,88 Q16,74 20,64 Q24,56 30,52 Z
+//   Right arm: M94,52 Q104,58 108,72 Q112,86 112,100 L110,114 L102,112 Q104,100 104,88 Q104,74 100,64 Q96,56 90,52 Z
+// Arm width at upper arm (y≈70-90): outer x≈9-12 (L), 108-112 (R); inner x≈16-19 (L), 101-104 (R).
+// All overlays are constrained to stay within these bounds.
 const FRONT_MUSCLES: { group: MuscleGroup; label: string; path: string }[] = [
   {
     group: "Chest",
     label: "Chest",
-    path: "M35,55 Q60,50 85,55 L82,80 Q60,90 38,80 Z",
+    path: "M36,56 Q60,51 84,56 L81,80 Q60,89 39,80 Z",
   },
   {
     group: "Shoulders",
     label: "Shoulders",
-    path: "M20,45 Q35,38 42,50 L38,65 Q25,68 18,58 Z M78,45 Q85,38 100,45 L102,58 Q95,68 82,65 L78,50 Z",
+    // Front deltoid — covers the cap of the shoulder at the arm/torso junction
+    path: "M21,46 Q33,39 41,50 L38,64 Q26,67 19,57 Z  M79,46 Q87,39 99,46 L101,57 Q94,67 82,64 L79,50 Z",
   },
   {
     group: "Biceps",
     label: "Biceps",
-    path: "M16,68 Q22,72 24,90 L18,92 Q12,88 12,70 Z M104,68 Q108,72 108,88 Q108,92 102,90 L96,70 Z",
+    // Anterior (front-facing) surface of upper arm — fits within arm silhouette
+    // Left: inner edge x≈16-20, outer edge x≈11-13, y=64-97
+    // Right: mirror around x=60 → inner x≈100-104, outer x≈107-109
+    path: "M19,64 Q20,69 18,83 Q16,94 13,97 Q10,91 10,77 Q11,66 15,62 Z  M101,64 Q100,69 102,83 Q104,94 107,97 Q110,91 110,77 Q109,66 105,62 Z",
   },
   {
     group: "Triceps",
     label: "Triceps",
-    path: "M10,90 Q14,95 16,110 L10,112 Q6,105 7,90 Z M110,90 Q113,95 113,112 L107,110 Q104,95 108,90 Z",
+    // Posterior surface — visible only as a thin lateral strip in front view
+    // Left: x=9-13 (outer/lateral edge of arm), y=82-112
+    // Right: x=107-111, y=82-112
+    path: "M12,82 Q13,88 13,106 L11,110 Q9,105 9,90 Q9,84 12,82 Z  M108,82 Q107,88 107,106 L109,110 Q111,105 111,90 Q111,84 108,82 Z",
   },
   {
     group: "Core",
@@ -63,17 +74,17 @@ const FRONT_MUSCLES: { group: MuscleGroup; label: string; path: string }[] = [
   {
     group: "Quads",
     label: "Quads",
-    path: "M38,122 Q50,120 58,124 L60,165 Q50,168 38,165 Z M62,124 Q70,120 82,122 L82,165 Q70,168 60,165 Z",
+    path: "M38,122 Q50,120 58,124 L60,165 Q50,168 38,165 Z  M62,124 Q70,120 82,122 L82,165 Q70,168 60,165 Z",
   },
   {
     group: "Hip Flexors",
     label: "Hip Flexors",
-    path: "M40,115 Q48,112 58,116 L58,126 Q48,128 38,126 Z M62,116 Q72,112 80,115 L82,126 Q72,128 62,126 Z",
+    path: "M40,115 Q48,112 58,116 L58,126 Q48,128 38,126 Z  M62,116 Q72,112 80,115 L82,126 Q72,128 62,126 Z",
   },
   {
     group: "Calves",
     label: "Calves",
-    path: "M38,168 Q48,165 58,168 L58,192 Q48,196 38,192 Z M62,168 Q72,165 82,168 L82,192 Q72,196 62,192 Z",
+    path: "M38,168 Q48,165 58,168 L58,192 Q48,196 38,192 Z  M62,168 Q72,165 82,168 L82,192 Q72,196 62,192 Z",
   },
 ];
 
@@ -86,7 +97,15 @@ const BACK_MUSCLES: { group: MuscleGroup; label: string; path: string }[] = [
   {
     group: "Shoulders",
     label: "Shoulders",
-    path: "M18,42 Q32,36 40,50 L38,62 Q25,65 17,55 Z M80,42 Q88,36 102,42 L103,55 Q95,65 82,62 L80,50 Z",
+    path: "M18,42 Q32,36 40,50 L38,62 Q25,65 17,55 Z  M80,42 Q88,36 102,42 L103,55 Q95,65 82,62 L80,50 Z",
+  },
+  {
+    group: "Triceps",
+    label: "Triceps",
+    // Posterior (back-facing) surface of upper arm — fills most of upper arm in back view
+    // Left: x=10-20, y=64-98 — wider coverage than front view since this is the visible side
+    // Right: mirror
+    path: "M19,64 Q21,70 19,84 Q17,96 13,98 Q10,92 10,77 Q11,66 16,62 Z  M101,64 Q99,70 101,84 Q103,96 107,98 Q110,92 110,77 Q109,66 104,62 Z",
   },
   {
     group: "Glutes",
@@ -96,12 +115,12 @@ const BACK_MUSCLES: { group: MuscleGroup; label: string; path: string }[] = [
   {
     group: "Hamstrings",
     label: "Hamstrings",
-    path: "M38,132 Q50,128 58,132 L58,170 Q48,174 38,170 Z M62,132 Q72,128 82,132 L82,170 Q72,174 62,170 Z",
+    path: "M38,132 Q50,128 58,132 L58,170 Q48,174 38,170 Z  M62,132 Q72,128 82,132 L82,170 Q72,174 62,170 Z",
   },
   {
     group: "Calves",
     label: "Calves",
-    path: "M40,172 Q48,170 56,172 L56,192 Q48,196 40,192 Z M64,172 Q72,170 80,172 L80,192 Q72,196 64,192 Z",
+    path: "M40,172 Q48,170 56,172 L56,192 Q48,196 40,192 Z  M64,172 Q72,170 80,172 L80,192 Q72,196 64,192 Z",
   },
 ];
 
