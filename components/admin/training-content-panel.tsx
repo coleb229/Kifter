@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Youtube, Loader2, Trash2, ChevronDown, ChevronRight, BookOpen, Dumbbell, Activity } from "lucide-react";
+import { useState, useTransition, useRef, useEffect } from "react";
+import { Youtube, Loader2, Trash2, ChevronDown, ChevronRight, BookOpen, Dumbbell, Activity, Search } from "lucide-react";
 import { processYouTubeGuide, deleteTrainingGuide } from "@/actions/guide-actions";
 import type { TrainingGuide, GuideType } from "@/types";
 
 interface Props {
   initialGuides: TrainingGuide[];
+  exercises: string[];
 }
 
 const TYPE_OPTIONS: { value: GuideType; label: string; description: string }[] = [
@@ -39,6 +40,91 @@ const DIFFICULTY_COLORS = {
   advanced: "text-rose-600 dark:text-rose-400",
 };
 
+// ── ExerciseCombobox ──────────────────────────────────────────────────────────
+
+function ExerciseCombobox({
+  value,
+  onChange,
+  exercises,
+  disabled,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  exercises: string[];
+  disabled: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const query = value.toLowerCase();
+  const filtered = query.length === 0
+    ? exercises.slice(0, 30)
+    : exercises.filter((e) => e.toLowerCase().includes(query)).slice(0, 30);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => { onChange(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          placeholder="Search or type an exercise name…"
+          required
+          disabled={disabled}
+          autoComplete="off"
+          className="w-full rounded-lg border border-border bg-background pl-8 pr-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+        />
+      </div>
+
+      {open && filtered.length > 0 && (
+        <div className="absolute z-50 mt-1 w-full rounded-lg border border-border bg-popover shadow-lg overflow-hidden">
+          <ul className="max-h-52 overflow-y-auto py-1">
+            {filtered.map((ex) => (
+              <li key={ex}>
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault(); // keep focus on input
+                    onChange(ex);
+                    setOpen(false);
+                  }}
+                  className={`w-full px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted/60 ${
+                    value === ex ? "text-indigo-600 dark:text-indigo-400 font-medium" : ""
+                  }`}
+                >
+                  {ex}
+                </button>
+              </li>
+            ))}
+          </ul>
+          {value.trim() && !exercises.some((e) => e.toLowerCase() === value.toLowerCase()) && (
+            <div className="border-t border-border px-3 py-1.5">
+              <p className="text-[10px] text-muted-foreground">
+                Press Enter to use "<span className="font-medium">{value.trim()}</span>" as a custom exercise
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── GuideCard ─────────────────────────────────────────────────────────────────
+
 function GuideCard({ guide, onDelete }: { guide: TrainingGuide; onDelete: (id: string) => void }) {
   const [expanded, setExpanded] = useState(false);
   const [isDeleting, startDelete] = useTransition();
@@ -55,12 +141,7 @@ function GuideCard({ guide, onDelete }: { guide: TrainingGuide; onDelete: (id: s
     <div className="rounded-xl border border-border bg-card overflow-hidden">
       {/* Thumbnail + header row */}
       <div className="flex gap-3 p-3">
-        <a
-          href={guide.youtubeUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="shrink-0"
-        >
+        <a href={guide.youtubeUrl} target="_blank" rel="noopener noreferrer" className="shrink-0">
           <img
             src={`https://img.youtube.com/vi/${guide.youtubeId}/mqdefault.jpg`}
             alt={guide.title}
@@ -119,10 +200,8 @@ function GuideCard({ guide, onDelete }: { guide: TrainingGuide; onDelete: (id: s
 
           {expanded && (
             <div className="border-t border-border bg-muted/20 px-4 py-3 space-y-4">
-              {/* Summary */}
               <p className="text-xs text-muted-foreground leading-relaxed">{guide.content.summary}</p>
 
-              {/* Key points */}
               {guide.content.keyPoints.length > 0 && (
                 <div>
                   <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Key Points</p>
@@ -137,7 +216,6 @@ function GuideCard({ guide, onDelete }: { guide: TrainingGuide; onDelete: (id: s
                 </div>
               )}
 
-              {/* Steps */}
               {guide.content.steps.length > 0 && (
                 <div>
                   <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Steps</p>
@@ -159,7 +237,6 @@ function GuideCard({ guide, onDelete }: { guide: TrainingGuide; onDelete: (id: s
                 </div>
               )}
 
-              {/* Common mistakes */}
               {guide.content.commonMistakes && guide.content.commonMistakes.length > 0 && (
                 <div>
                   <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Common Mistakes</p>
@@ -174,7 +251,6 @@ function GuideCard({ guide, onDelete }: { guide: TrainingGuide; onDelete: (id: s
                 </div>
               )}
 
-              {/* Meta row */}
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-muted-foreground">
                 {guide.content.targetMuscles.length > 0 && (
                   <span>Muscles: {guide.content.targetMuscles.join(", ")}</span>
@@ -197,7 +273,9 @@ function GuideCard({ guide, onDelete }: { guide: TrainingGuide; onDelete: (id: s
   );
 }
 
-export function TrainingContentPanel({ initialGuides }: Props) {
+// ── TrainingContentPanel ──────────────────────────────────────────────────────
+
+export function TrainingContentPanel({ initialGuides, exercises }: Props) {
   const [guides, setGuides] = useState<TrainingGuide[]>(initialGuides);
   const [url, setUrl] = useState("");
   const [type, setType] = useState<GuideType>("form_guide");
@@ -279,14 +357,11 @@ export function TrainingContentPanel({ initialGuides }: Props) {
         {type === "form_guide" && (
           <div>
             <label className="mb-1 block text-xs font-medium">Exercise Name</label>
-            <input
-              type="text"
+            <ExerciseCombobox
               value={exerciseName}
-              onChange={(e) => setExerciseName(e.target.value)}
-              placeholder="e.g. Romanian Deadlift"
-              required
+              onChange={setExerciseName}
+              exercises={exercises}
               disabled={isPending}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
             />
           </div>
         )}

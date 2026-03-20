@@ -4,6 +4,7 @@ import { getBugReports } from "@/actions/bug-report-actions";
 import { getUserSuggestions } from "@/actions/suggestion-actions";
 import { getClaudeIdeas } from "@/actions/claude-ideas-actions";
 import { getTrainingGuides } from "@/actions/guide-actions";
+import { getUserExercises } from "@/actions/workout-actions";
 import { UserTable } from "@/components/admin/user-table";
 import { AISiteInsights } from "@/components/admin/ai-site-insights";
 import { BugReportsPanel } from "@/components/admin/bug-reports-panel";
@@ -20,12 +21,13 @@ export default async function AdminPage() {
   const canViewBugReports = isAdmin || perms.viewBugReports;
   const canManageSuggestions = isAdmin || perms.manageSuggestions;
 
-  const [result, bugsResult, suggestionsResult, claudeIdeasResult, guidesResult] = await Promise.all([
+  const [result, bugsResult, suggestionsResult, claudeIdeasResult, guidesResult, exercisesResult] = await Promise.all([
     canManageUsers ? getAllUsers() : Promise.resolve({ success: true as const, data: [] }),
     canViewBugReports ? getBugReports() : Promise.resolve({ success: true as const, data: [] }),
     canManageSuggestions ? getUserSuggestions() : Promise.resolve({ success: true as const, data: [] }),
     isAdmin ? getClaudeIdeas() : Promise.resolve({ success: true as const, data: [] }),
     isAdmin ? getTrainingGuides() : Promise.resolve({ success: true as const, data: [] }),
+    isAdmin ? getUserExercises() : Promise.resolve({ success: true as const, data: [] }),
   ]);
   const users = result.success ? result.data : [];
 
@@ -80,7 +82,10 @@ export default async function AdminPage() {
 
       {isAdmin && (
         <div className="mt-8">
-          <TrainingContentPanel initialGuides={guidesResult.success ? guidesResult.data : []} />
+          <TrainingContentPanel
+            initialGuides={guidesResult.success ? guidesResult.data : []}
+            exercises={exercisesResult.success ? exercisesResult.data : []}
+          />
         </div>
       )}
     </div>
