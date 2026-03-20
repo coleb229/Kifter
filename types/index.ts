@@ -1059,6 +1059,59 @@ export interface TrainingGuide {
   updatedAt: string;
 }
 
+// ── Published Guides (admin-authored, user-visible) ────────────────────────────
+
+export interface PublishedGuideSection {
+  heading: string;
+  body: string;
+  tips?: string[];
+}
+
+export interface PublishedGuideContent {
+  intro: string;
+  sections: PublishedGuideSection[];
+  keyPoints: string[];
+  steps: { step: number; instruction: string; cues?: string[] }[];
+  targetMuscles: string[];
+  equipment: string[];
+  difficulty: "beginner" | "intermediate" | "advanced";
+  commonMistakes?: string[];
+  duration?: string;
+  tags: string[];
+}
+
+export interface PublishedGuideDoc {
+  _id: ObjectId;
+  slug: string;
+  title: string;
+  type: GuideType;
+  exerciseName?: string;
+  sourceGuideIds: ObjectId[];
+  sourceYoutubeIds: string[];
+  content: PublishedGuideContent;
+  status: "draft" | "published";
+  publishedAt?: Date;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface PublishedGuide {
+  id: string;
+  slug: string;
+  title: string;
+  type: GuideType;
+  exerciseName?: string;
+  sourceGuideIds: string[];
+  sourceYoutubeIds: string[];
+  content: PublishedGuideContent;
+  status: "draft" | "published";
+  publishedAt?: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ── Claude Ideas ───────────────────────────────────────────────────────────────
 
 export type ClaudeIdeaStatus = "accepted" | "declined" | "in_progress" | "done" | "too_complex";
