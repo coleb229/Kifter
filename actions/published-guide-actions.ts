@@ -51,6 +51,7 @@ function serializeGuide(doc: PublishedGuideDoc): PublishedGuide {
     sourceGuideIds: doc.sourceGuideIds.map((id) => id.toHexString()),
     sourceYoutubeIds: doc.sourceYoutubeIds,
     sources: doc.sources,
+    imageUrl: doc.imageUrl ?? undefined,
     content: doc.content,
     status: doc.status,
     publishedAt: doc.publishedAt?.toISOString(),
@@ -229,7 +230,7 @@ export async function getPublishedGuideBySlug(slug: string): Promise<ActionResul
 
 export async function updatePublishedGuide(
   id: string,
-  updates: { title?: string; content?: PublishedGuideContent }
+  updates: { title?: string; content?: PublishedGuideContent; imageUrl?: string }
 ): Promise<ActionResult<PublishedGuide>> {
   const session = await auth();
   if (!session?.user?.id) return { success: false, error: "Not authenticated" };
@@ -240,6 +241,7 @@ export async function updatePublishedGuide(
     const set: Record<string, unknown> = { updatedAt: new Date() };
     if (updates.title !== undefined) set.title = updates.title;
     if (updates.content !== undefined) set.content = updates.content;
+    if (updates.imageUrl !== undefined) set.imageUrl = updates.imageUrl;
 
     await col.updateOne({ _id: new ObjectId(id) }, { $set: set });
     const doc = await col.findOne({ _id: new ObjectId(id) });

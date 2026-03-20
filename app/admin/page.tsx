@@ -1,8 +1,10 @@
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, Settings2 } from "lucide-react";
 import { getAllUsers } from "@/actions/admin-actions";
-import { getUserExercises } from "@/actions/workout-actions";
+import { getSiteSettings } from "@/actions/settings-actions";
 import { UserTable } from "@/components/admin/user-table";
 import { AISiteInsights } from "@/components/admin/ai-site-insights";
+import { GlobalSettingsPanel } from "@/components/admin/global-settings-panel";
+import { SectionSubnav } from "@/components/ui/section-subnav";
 import { auth } from "@/auth";
 
 export default async function AdminPage() {
@@ -11,11 +13,14 @@ export default async function AdminPage() {
   const perms = session?.user?.adminPermissions ?? {};
   const canManageUsers = isAdmin || perms.manageUsers;
 
-  const [result, exercisesResult] = await Promise.all([
+  const [result, settingsResult] = await Promise.all([
     canManageUsers ? getAllUsers() : Promise.resolve({ success: true as const, data: [] }),
-    isAdmin ? getUserExercises() : Promise.resolve({ success: true as const, data: [] }),
+    getSiteSettings(),
   ]);
   const users = result.success ? result.data : [];
+  const settings = settingsResult.success
+    ? settingsResult.data
+    : { _id: "global", maintenanceMode: false, features: { training: true, nutrition: true, cardio: true, community: true } };
 
   return (
     <div>
@@ -31,22 +36,44 @@ export default async function AdminPage() {
         </div>
       </div>
 
-      {canManageUsers && (
-        !result.success ? (
-          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-sm text-destructive">
-            Failed to load users: {result.error}
+      <SectionSubnav items={[
+        { label: "Users", id: "users" },
+        { label: "Settings", id: "settings" },
+      ]} />
+
+      <section id="users" className="scroll-mt-14">
+        {canManageUsers && (
+          !result.success ? (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-sm text-destructive">
+              Failed to load users: {result.error}
+            </div>
+          ) : (
+            <>
+              <UserTable users={users} currentUserId={session!.user.id} />
+              {isAdmin && (
+                <div className="mt-8">
+                  <AISiteInsights />
+                </div>
+              )}
+            </>
+          )
+        )}
+      </section>
+
+      <div className="my-12 border-t border-border" />
+
+      <section id="settings" className="scroll-mt-14">
+        <div className="mb-4 flex items-center gap-3">
+          <div className="flex size-8 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-950/40">
+            <Settings2 className="size-4 text-indigo-600 dark:text-indigo-400" />
           </div>
-        ) : (
-          <>
-            <UserTable users={users} currentUserId={session!.user.id} />
-            {isAdmin && (
-              <div className="mt-8">
-                <AISiteInsights />
-              </div>
-            )}
-          </>
-        )
-      )}
+          <div>
+            <h2 className="text-lg font-semibold">Global Settings</h2>
+            <p className="text-xs text-muted-foreground">Site-wide feature flags and maintenance mode</p>
+          </div>
+        </div>
+        <GlobalSettingsPanel settings={settings} />
+      </section>
     </div>
   );
 }

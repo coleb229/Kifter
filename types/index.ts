@@ -1102,6 +1102,7 @@ export interface PublishedGuideDoc {
   sourceGuideIds: ObjectId[];
   sourceYoutubeIds: string[];
   sources?: GuideSource[];
+  imageUrl?: string;
   content: PublishedGuideContent;
   status: "draft" | "published";
   publishedAt?: Date;
@@ -1119,6 +1120,7 @@ export interface PublishedGuide {
   sourceGuideIds: string[];
   sourceYoutubeIds: string[];
   sources?: GuideSource[];
+  imageUrl?: string;
   content: PublishedGuideContent;
   status: "draft" | "published";
   publishedAt?: string;

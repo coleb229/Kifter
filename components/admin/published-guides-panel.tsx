@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import {
   BookOpen, Loader2, Trash2, ChevronDown, ChevronRight,
-  Sparkles, Eye, EyeOff, Activity, Dumbbell, Check,
+  Sparkles, Eye, EyeOff, Activity, Dumbbell, Check, ImagePlus,
 } from "lucide-react";
 import {
   generateGuideDraft,
@@ -12,6 +12,7 @@ import {
   deletePublishedGuide,
   updatePublishedGuide,
 } from "@/actions/published-guide-actions";
+import { useUploadThing } from "@/lib/uploadthing-client";
 import type { PublishedGuide, TrainingGuide, GuideType, PublishedGuideContent } from "@/types";
 
 const TYPE_ICONS: Record<GuideType, React.ReactNode> = {
@@ -179,10 +180,23 @@ function PublishedGuideCard({
   const [editing, setEditing] = useState(false);
   const [isPublishing, startPublish] = useTransition();
   const [isDeleting, startDelete] = useTransition();
+  const [isUpdatingImage, startUpdateImage] = useTransition();
 
-  const thumbnail = guide.sourceYoutubeIds[0]
-    ? `https://img.youtube.com/vi/${guide.sourceYoutubeIds[0]}/mqdefault.jpg`
-    : null;
+  const { startUpload, isUploading } = useUploadThing("guideImage", {
+    onClientUploadComplete: (res) => {
+      if (res[0]?.url) {
+        startUpdateImage(async () => {
+          const result = await updatePublishedGuide(guide.id, { imageUrl: res[0].url });
+          if (result.success) onChange({ ...guide, imageUrl: res[0].url });
+        });
+      }
+    },
+  });
+
+  const displayImage = guide.imageUrl
+    ?? (guide.sourceYoutubeIds[0]
+      ? `https://img.youtube.com/vi/${guide.sourceYoutubeIds[0]}/mqdefault.jpg`
+      : null);
 
   function handlePublishToggle() {
     startPublish(async () => {
@@ -205,9 +219,33 @@ function PublishedGuideCard({
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
       <div className="flex gap-3 p-3">
-        {thumbnail && (
-          <img src={thumbnail} alt="" className="h-14 w-24 shrink-0 rounded-lg object-cover" />
-        )}
+        {/* Thumbnail with image upload overlay */}
+        <label className="relative h-14 w-24 shrink-0 cursor-pointer group">
+          <input
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) startUpload([file]);
+              e.target.value = "";
+            }}
+          />
+          {displayImage ? (
+            <img src={displayImage} alt="" className="h-full w-full rounded-lg object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center rounded-lg bg-muted">
+              <ImagePlus className="size-5 text-muted-foreground/40" />
+            </div>
+          )}
+          <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+            {isUploading || isUpdatingImage ? (
+              <Loader2 className="size-4 animate-spin text-white" />
+            ) : (
+              <ImagePlus className="size-4 text-white" />
+            )}
+          </div>
+        </label>
         <div className="flex flex-1 flex-col gap-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">

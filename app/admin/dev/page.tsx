@@ -1,4 +1,4 @@
-import { Code2, Settings2, Plug, BookOpen, Bug, Lightbulb } from "lucide-react";
+import { Code2, Plug, BookOpen, Bug } from "lucide-react";
 import { auth } from "@/auth";
 import { getSiteSettings } from "@/actions/settings-actions";
 import { getBugReports } from "@/actions/bug-report-actions";
@@ -7,7 +7,6 @@ import { getClaudeIdeas } from "@/actions/claude-ideas-actions";
 import { getTrainingGuides } from "@/actions/guide-actions";
 import { getPublishedGuides } from "@/actions/published-guide-actions";
 import { getUserExercises } from "@/actions/workout-actions";
-import { GlobalSettingsPanel } from "@/components/admin/global-settings-panel";
 import { ApiDocs } from "@/components/admin/api-docs";
 import { IntegrationsPanel } from "@/components/admin/integrations-panel";
 import { BugReportsPanel } from "@/components/admin/bug-reports-panel";
@@ -15,15 +14,17 @@ import { UserSuggestionsPanel } from "@/components/admin/user-suggestions-panel"
 import { ClaudeIdeasPanel } from "@/components/admin/claude-ideas-panel";
 import { TrainingContentPanel } from "@/components/admin/training-content-panel";
 import { PublishedGuidesPanel } from "@/components/admin/published-guides-panel";
+import { SectionSubnav } from "@/components/ui/section-subnav";
 
-function Section({ icon: Icon, title, description, children }: {
+function Section({ icon: Icon, title, description, children, id }: {
   icon: React.ElementType;
   title: string;
   description: string;
   children: React.ReactNode;
+  id?: string;
 }) {
   return (
-    <section className="flex flex-col gap-4">
+    <section id={id} className="flex scroll-mt-14 flex-col gap-4">
       <div className="flex items-center gap-3">
         <div className="flex size-8 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-950/40">
           <Icon className="size-4 text-indigo-600 dark:text-indigo-400" />
@@ -101,17 +102,18 @@ export default async function DevPanelPage() {
       <div className="animate-fade-up">
         <h1 className="text-2xl font-bold tracking-tight">Development Panel</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Global settings, feedback tracking, AI workflows, and API reference
+          Integrations, feedback tracking, AI workflows, and API reference
         </p>
       </div>
 
-      <Section icon={Settings2} title="Global Settings" description="Site-wide feature flags and maintenance mode">
-        <GlobalSettingsPanel settings={settings} />
-      </Section>
+      <SectionSubnav items={[
+        { label: "Integrations", id: "integrations" },
+        ...(canManageSuggestions || canViewBugReports || isAdmin ? [{ label: "Feedback & Ideas", id: "feedback" }] : []),
+        ...(isAdmin ? [{ label: "Course Content", id: "content" }] : []),
+        { label: "API Reference", id: "api" },
+      ]} />
 
-      <div className="border-t border-border" />
-
-      <Section icon={Plug} title="External Integrations" description="Status of all connected third-party services">
+      <Section id="integrations" icon={Plug} title="External Integrations" description="Status of all connected third-party services">
         <IntegrationsPanel integrations={integrations} settings={settings.integrations ?? {}} />
       </Section>
 
@@ -120,7 +122,7 @@ export default async function DevPanelPage() {
       {/* Feedback & Ideas — Bug reports, user suggestions, Claude's good ideas */}
       {(canManageSuggestions || canViewBugReports || isAdmin) && (
         <>
-          <Section icon={Bug} title="Feedback & Ideas" description="Bug reports, user suggestions, and AI-generated improvement ideas">
+          <Section id="feedback" icon={Bug} title="Feedback & Ideas" description="Bug reports, user suggestions, and AI-generated improvement ideas">
             <div className="flex flex-col gap-8">
               {canManageSuggestions && (
                 <UserSuggestionsPanel initialSuggestions={suggestionsResult.success ? suggestionsResult.data : []} />
@@ -141,7 +143,7 @@ export default async function DevPanelPage() {
       {/* Training Content — AI guide generation workflow */}
       {isAdmin && (
         <>
-          <Section icon={BookOpen} title="Training Content" description="AI-powered guide transcription and publishing workflow">
+          <Section id="content" icon={BookOpen} title="Course Content" description="AI-powered guide transcription and publishing workflow">
             <div className="flex flex-col gap-8">
               <TrainingContentPanel
                 initialGuides={guidesResult.success ? guidesResult.data : []}
@@ -158,7 +160,7 @@ export default async function DevPanelPage() {
         </>
       )}
 
-      <Section icon={Code2} title="API Reference" description="All server actions grouped by domain">
+      <Section id="api" icon={Code2} title="API Reference" description="All server actions grouped by domain">
         <ApiDocs />
       </Section>
     </div>
