@@ -99,47 +99,33 @@ async function fetchVideoContent(videoId: string): Promise<{ text: string; sourc
     return { text: description.trim(), source: "description" };
   }
 
-  // 3. Audio transcription via Groq Whisper using InnerTube streaming URL
-  if (process.env.GROQ_API_KEY) {
-    let transcriptionError = "unknown error";
+  // 3. Supadata transcript API — fetches the transcript from their infrastructure
+  //    (handles videos where our server-side InnerTube calls can't get audio URLs)
+  if (process.env.SUPADATA_API_KEY) {
     try {
-      // The ANDROID InnerTube client returns direct audio URLs (no JS cipher needed).
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const adaptiveFormats: any[] = data?.streamingData?.adaptiveFormats ?? [];
-      const audioFormat = adaptiveFormats.find(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (f: any) => typeof f.url === "string" && f.mimeType?.startsWith("audio/")
+      const sdRes = await fetch(
+        `https://api.supadata.ai/v1/youtube/transcript?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`)}&text=true`,
+        { headers: { "x-api-key": process.env.SUPADATA_API_KEY } }
       );
-
-      if (!audioFormat?.url) {
-        throw new Error("No direct audio URL in InnerTube response (video may be age-restricted or private)");
+      if (sdRes.ok) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const sdData = await sdRes.json() as any;
+        const text: string = typeof sdData.content === "string" ? sdData.content : "";
+        if (text.trim().length > 100) {
+          return { text: text.trim(), source: "transcription" };
+        }
+      } else {
+        console.error("[guide-actions] Supadata returned", sdRes.status, await sdRes.text().catch(() => ""));
       }
-
-      const audioRes = await fetch(audioFormat.url as string, {
-        headers: { "User-Agent": INNERTUBE_UA },
-      });
-      if (!audioRes.ok) throw new Error(`Audio download failed (HTTP ${audioRes.status})`);
-      const audioBuffer = await audioRes.arrayBuffer();
-
-      const text = await transcribeAudioBuffer(audioBuffer, (audioFormat.mimeType as string) ?? "audio/webm");
-      if (text.trim().length > 100) {
-        return { text: text.trim(), source: "transcription" };
-      }
-      throw new Error("Groq returned an empty transcript");
     } catch (err) {
-      transcriptionError = (err as Error).message;
-      console.error("[guide-actions] Audio transcription failed:", transcriptionError);
+      console.error("[guide-actions] Supadata fetch failed:", (err as Error).message);
     }
-
-    throw new Error(
-      `Could not obtain a transcript automatically (no CC captions, no description, audio transcription failed: ${transcriptionError}). ` +
-      "Paste the transcript or video description into the manual field above."
-    );
   }
 
   throw new Error(
-    "Could not obtain a transcript automatically (no CC captions, no description, GROQ_API_KEY not configured). " +
-    "Paste the transcript or video description into the manual field above."
+    "Could not obtain a transcript automatically (no CC captions or description found" +
+    (process.env.SUPADATA_API_KEY ? ", and Supadata transcript lookup failed" : "; set SUPADATA_API_KEY to enable automatic transcription") +
+    "). Paste the transcript or video description into the manual field above."
   );
 }
 
