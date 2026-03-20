@@ -499,6 +499,8 @@ export interface CardioSessionDoc {
   intensity: CardioIntensity;
   caloriesBurned?: number;
   avgHeartRate?: number;
+  minHeartRate?: number;
+  maxHeartRate?: number;
   notes?: string;
   createdAt: Date;
 }
@@ -514,6 +516,8 @@ export interface CardioSession {
   intensity: CardioIntensity;
   caloriesBurned?: number;
   avgHeartRate?: number;
+  minHeartRate?: number;
+  maxHeartRate?: number;
   notes?: string;
   createdAt: string;
 }

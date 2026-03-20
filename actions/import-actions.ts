@@ -367,6 +367,8 @@ export async function importAppleHealthXML(
         distanceUnit = norm.distanceUnit;
       }
 
+      const cardioHr = blockContent ? getWorkoutStatHR(blockContent) : undefined;
+
       cardioCandidates.push({
         _id: new ObjectId(),
         userId,
@@ -377,6 +379,9 @@ export async function importAppleHealthXML(
         distanceUnit,
         intensity: "moderate",
         caloriesBurned,
+        avgHeartRate: cardioHr?.avg,
+        minHeartRate: cardioHr?.min,
+        maxHeartRate: cardioHr?.max,
         notes: "Imported from Apple Health",
         createdAt: new Date(),
       });
@@ -498,6 +503,9 @@ export async function importAppleHealthParsed(
         distanceUnit,
         intensity: "moderate",
         caloriesBurned: w.caloriesBurned,
+        avgHeartRate: w.heartRateAvg,
+        minHeartRate: w.heartRateMin,
+        maxHeartRate: w.heartRateMax,
         notes: "Imported from Apple Health",
         createdAt: new Date(),
       });

@@ -105,7 +105,15 @@ export function CardioSessionDetail({ session }: Props) {
             ? { label: "Calories", value: `${session.caloriesBurned} kcal` }
             : null,
           session.avgHeartRate != null
-            ? { label: "Avg HR", value: `${session.avgHeartRate} bpm` }
+            ? {
+                label: "Heart Rate",
+                value: session.minHeartRate != null && session.maxHeartRate != null
+                  ? `${session.avgHeartRate} bpm avg`
+                  : `${session.avgHeartRate} bpm`,
+                sub: session.minHeartRate != null && session.maxHeartRate != null
+                  ? `${session.minHeartRate}–${session.maxHeartRate} bpm range`
+                  : undefined,
+              }
             : null,
         ]
           .filter(Boolean)
@@ -118,6 +126,9 @@ export function CardioSessionDetail({ session }: Props) {
               <p className={`text-lg font-bold leading-tight ${stat!.extraClass ?? ""}`}>
                 {stat!.value}
               </p>
+              {"sub" in stat! && stat!.sub && (
+                <p className="text-[11px] text-muted-foreground">{stat!.sub}</p>
+              )}
             </div>
           ))}
       </div>

@@ -1,8 +1,20 @@
-import { Code2, Settings2, Plug } from "lucide-react";
+import { Code2, Settings2, Plug, BookOpen, Bug, Lightbulb } from "lucide-react";
+import { auth } from "@/auth";
 import { getSiteSettings } from "@/actions/settings-actions";
+import { getBugReports } from "@/actions/bug-report-actions";
+import { getUserSuggestions } from "@/actions/suggestion-actions";
+import { getClaudeIdeas } from "@/actions/claude-ideas-actions";
+import { getTrainingGuides } from "@/actions/guide-actions";
+import { getPublishedGuides } from "@/actions/published-guide-actions";
+import { getUserExercises } from "@/actions/workout-actions";
 import { GlobalSettingsPanel } from "@/components/admin/global-settings-panel";
 import { ApiDocs } from "@/components/admin/api-docs";
 import { IntegrationsPanel } from "@/components/admin/integrations-panel";
+import { BugReportsPanel } from "@/components/admin/bug-reports-panel";
+import { UserSuggestionsPanel } from "@/components/admin/user-suggestions-panel";
+import { ClaudeIdeasPanel } from "@/components/admin/claude-ideas-panel";
+import { TrainingContentPanel } from "@/components/admin/training-content-panel";
+import { PublishedGuidesPanel } from "@/components/admin/published-guides-panel";
 
 function Section({ icon: Icon, title, description, children }: {
   icon: React.ElementType;
@@ -27,10 +39,25 @@ function Section({ icon: Icon, title, description, children }: {
 }
 
 export default async function DevPanelPage() {
+  const session = await auth();
+  const isAdmin = session?.user?.role === "admin";
+  const perms = session?.user?.adminPermissions ?? {};
+  const canViewBugReports = isAdmin || perms.viewBugReports;
+  const canManageSuggestions = isAdmin || perms.manageSuggestions;
+
   const settingsResult = await getSiteSettings();
   const settings = settingsResult.success
     ? settingsResult.data
     : { _id: "global", maintenanceMode: false, features: { training: true, nutrition: true, cardio: true, community: true } };
+
+  const [bugsResult, suggestionsResult, claudeIdeasResult, guidesResult, exercisesResult, publishedGuidesResult] = await Promise.all([
+    canViewBugReports ? getBugReports() : Promise.resolve({ success: true as const, data: [] }),
+    canManageSuggestions ? getUserSuggestions() : Promise.resolve({ success: true as const, data: [] }),
+    isAdmin ? getClaudeIdeas() : Promise.resolve({ success: true as const, data: [] }),
+    isAdmin ? getTrainingGuides() : Promise.resolve({ success: true as const, data: [] }),
+    isAdmin ? getUserExercises() : Promise.resolve({ success: true as const, data: [] }),
+    isAdmin ? getPublishedGuides(true) : Promise.resolve({ success: true as const, data: [] }),
+  ]);
 
   const integrations = [
     {
@@ -74,7 +101,7 @@ export default async function DevPanelPage() {
       <div className="animate-fade-up">
         <h1 className="text-2xl font-bold tracking-tight">Development Panel</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Global settings, API reference, and integration status
+          Global settings, feedback tracking, AI workflows, and API reference
         </p>
       </div>
 
@@ -89,6 +116,47 @@ export default async function DevPanelPage() {
       </Section>
 
       <div className="border-t border-border" />
+
+      {/* Feedback & Ideas — Bug reports, user suggestions, Claude's good ideas */}
+      {(canManageSuggestions || canViewBugReports || isAdmin) && (
+        <>
+          <Section icon={Bug} title="Feedback & Ideas" description="Bug reports, user suggestions, and AI-generated improvement ideas">
+            <div className="flex flex-col gap-8">
+              {canManageSuggestions && (
+                <UserSuggestionsPanel initialSuggestions={suggestionsResult.success ? suggestionsResult.data : []} />
+              )}
+              {canViewBugReports && (
+                <BugReportsPanel initialReports={bugsResult.success ? bugsResult.data : []} />
+              )}
+              {isAdmin && (
+                <ClaudeIdeasPanel initialIdeas={claudeIdeasResult.success ? claudeIdeasResult.data : []} />
+              )}
+            </div>
+          </Section>
+
+          <div className="border-t border-border" />
+        </>
+      )}
+
+      {/* Training Content — AI guide generation workflow */}
+      {isAdmin && (
+        <>
+          <Section icon={BookOpen} title="Training Content" description="AI-powered guide transcription and publishing workflow">
+            <div className="flex flex-col gap-8">
+              <TrainingContentPanel
+                initialGuides={guidesResult.success ? guidesResult.data : []}
+                exercises={exercisesResult.success ? exercisesResult.data : []}
+              />
+              <PublishedGuidesPanel
+                initialGuides={publishedGuidesResult.success ? publishedGuidesResult.data : []}
+                sourceGuides={guidesResult.success ? guidesResult.data : []}
+              />
+            </div>
+          </Section>
+
+          <div className="border-t border-border" />
+        </>
+      )}
 
       <Section icon={Code2} title="API Reference" description="All server actions grouped by domain">
         <ApiDocs />

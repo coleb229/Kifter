@@ -23,6 +23,8 @@ function serializeSession(doc: {
   intensity: import("@/types").CardioIntensity;
   caloriesBurned?: number;
   avgHeartRate?: number;
+  minHeartRate?: number;
+  maxHeartRate?: number;
   notes?: string;
   createdAt: Date;
 }): CardioSession {
@@ -37,6 +39,8 @@ function serializeSession(doc: {
     intensity: doc.intensity,
     caloriesBurned: doc.caloriesBurned ?? undefined,
     avgHeartRate: doc.avgHeartRate ?? undefined,
+    minHeartRate: doc.minHeartRate ?? undefined,
+    maxHeartRate: doc.maxHeartRate ?? undefined,
     notes: doc.notes ?? undefined,
     createdAt: doc.createdAt.toISOString(),
   };
