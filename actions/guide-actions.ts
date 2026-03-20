@@ -1,6 +1,7 @@
 "use server";
 
 import Anthropic from "@anthropic-ai/sdk";
+import { jsonrepair } from "jsonrepair";
 import { ObjectId } from "mongodb";
 import { revalidatePath } from "next/cache";
 import { YoutubeTranscript } from "youtube-transcript";
@@ -184,13 +185,15 @@ export async function processYouTubeGuide(
 
     const message = await client.messages.create({
       model,
-      max_tokens: 2048,
+      max_tokens: 4096,
       messages: [{ role: "user", content: prompt }],
     });
 
     const raw = message.content[0].type === "text" ? message.content[0].text : "";
-    const cleaned = raw.replace(/^```(?:json)?\n?/m, "").replace(/\n?```$/m, "").trim();
-    const parsed = JSON.parse(cleaned) as ExtractedGuideContent & { title?: string };
+    // Strip any markdown fences, extract the outermost {...} block, then repair
+    // common LLM JSON mistakes (unquoted keys, trailing commas, JS comments).
+    const block = raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1) || raw;
+    const parsed = JSON.parse(jsonrepair(block)) as ExtractedGuideContent & { title?: string };
 
     const title = parsed.title ?? (type === "form_guide" ? `${exerciseName} Form Guide` : `${type.replace("_", " ")} Routine`);
     delete (parsed as { title?: string }).title; // store title separately on the doc
