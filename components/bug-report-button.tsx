@@ -6,18 +6,25 @@ import { usePathname } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Bug, X, ExternalLink, ImagePlus, Loader2, Link2 } from "lucide-react";
+import { Bug, X, ExternalLink, ImagePlus, Loader2, Link2, Sparkles } from "lucide-react";
 import { submitBugReport, getOpenBugReportsForLinking } from "@/actions/bug-report-actions";
+import { generateBugReportPrompts } from "@/actions/ai-actions";
+import type { FormPrompt } from "@/actions/ai-actions";
 import { useUploadThing } from "@/lib/uploadthing-client";
-import type { BugCategory, BugSeverity } from "@/types";
+import type { BugCategory, BugFrequency, BugSeverity } from "@/types";
 
 const schema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
-  page: z.string().min(1, "Page is required"),
-  category: z.enum(["ui", "feature", "data", "performance", "other"] as const),
-  severity: z.enum(["low", "medium", "high", "critical"] as const),
-  description: z.string().min(10, "Description must be at least 10 characters"),
+  page: z.string().optional(),
+  category: z.enum(["ui", "feature", "data", "performance", "other"] as const).optional(),
+  severity: z.enum(["low", "medium", "high", "critical"] as const).optional(),
+  description: z.string().optional(),
   steps: z.string().optional(),
+  expectedBehavior: z.string().optional(),
+  actualBehavior: z.string().optional(),
+  frequency: z.enum(["always", "sometimes", "rarely"] as const).optional(),
+  impact: z.string().optional(),
+  workaround: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -40,6 +47,12 @@ const SEVERITIES: { value: BugSeverity; label: string; active: string; inactive:
   { value: "medium", label: "Medium", active: "bg-yellow-100 dark:bg-yellow-950/50 border-yellow-400 text-yellow-700 dark:text-yellow-300", inactive: "border-border text-muted-foreground hover:bg-muted" },
   { value: "high", label: "High", active: "bg-orange-100 dark:bg-orange-950/50 border-orange-400 text-orange-700 dark:text-orange-300", inactive: "border-border text-muted-foreground hover:bg-muted" },
   { value: "critical", label: "Critical", active: "bg-red-100 dark:bg-red-950/50 border-red-400 text-red-700 dark:text-red-300", inactive: "border-border text-muted-foreground hover:bg-muted" },
+];
+
+const FREQUENCIES: { value: BugFrequency; label: string }[] = [
+  { value: "always", label: "Always" },
+  { value: "sometimes", label: "Sometimes" },
+  { value: "rarely", label: "Rarely" },
 ];
 
 function getDeviceInfo(): string {
@@ -75,6 +88,9 @@ export function BugReportButton() {
   const [relatedBugIds, setRelatedBugIds] = useState<string[]>([]);
   const [openBugs, setOpenBugs] = useState<{ id: string; title: string }[]>([]);
   const [showRelated, setShowRelated] = useState(false);
+  const [aiPrompts, setAiPrompts] = useState<FormPrompt[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
+
   const { startUpload, isUploading } = useUploadThing("bugScreenshot", {
     onClientUploadComplete: (res) => {
       setScreenshotUrls((prev) => [...prev, ...res.map((f) => f.url)]);
@@ -86,17 +102,20 @@ export function BugReportButton() {
     defaultValues: {
       title: "",
       page: pathname,
-      category: "ui",
-      severity: "medium",
       description: "",
       steps: "",
+      expectedBehavior: "",
+      actualBehavior: "",
+      impact: "",
+      workaround: "",
     },
   });
 
   const selectedCategory = watch("category");
   const selectedSeverity = watch("severity");
+  const selectedFrequency = watch("frequency");
+  const titleValue = watch("title");
 
-  // Update page field and load open bugs when modal opens
   useEffect(() => {
     if (open) {
       setValue("page", pathname);
@@ -106,7 +125,6 @@ export function BugReportButton() {
     }
   }, [open, pathname, setValue]);
 
-  // Close on Escape
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") handleClose(); };
@@ -122,7 +140,30 @@ export function BugReportButton() {
     setScreenshotUrls([]);
     setRelatedBugIds([]);
     setShowRelated(false);
+    setAiPrompts([]);
     reset();
+  }
+
+  async function handleGetInsights() {
+    setAiLoading(true);
+    setAiPrompts([]);
+    const res = await generateBugReportPrompts({
+      title: watch("title"),
+      category: watch("category"),
+      page: watch("page"),
+      description: watch("description"),
+    });
+    if (res.success) setAiPrompts(res.data);
+    setAiLoading(false);
+  }
+
+  function appendToField(field: keyof FormValues, text: string) {
+    const current = (watch(field) as string) || "";
+    setValue(field, current ? `${current}\n${text}` : text);
+  }
+
+  function dismissPrompt(index: number) {
+    setAiPrompts((prev) => prev.filter((_, i) => i !== index));
   }
 
   function onSubmit(values: FormValues) {
@@ -131,9 +172,14 @@ export function BugReportButton() {
         title: values.title,
         category: values.category,
         severity: values.severity,
-        page: values.page,
-        description: values.description,
+        page: values.page || undefined,
+        description: values.description || undefined,
         steps: values.steps || undefined,
+        expectedBehavior: values.expectedBehavior || undefined,
+        actualBehavior: values.actualBehavior || undefined,
+        frequency: values.frequency,
+        impact: values.impact || undefined,
+        workaround: values.workaround || undefined,
         deviceInfo: getDeviceInfo(),
         screenshotUrls: screenshotUrls.length ? screenshotUrls : undefined,
         relatedBugIds: relatedBugIds.length ? relatedBugIds : undefined,
@@ -147,7 +193,7 @@ export function BugReportButton() {
 
   return (
     <>
-      {/* Floating button — bottom-left, above mobile nav */}
+      {/* Floating button */}
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -160,15 +206,12 @@ export function BugReportButton() {
           "rounded-full border",
           "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400",
           "shadow-md transition-all duration-200 ease-out",
-          // Mobile: icon-only, small
           "size-9",
-          // Desktop: icon-only, expands on hover
           "sm:size-10 sm:hover:w-32 sm:hover:rounded-xl sm:hover:bg-amber-500/20 sm:hover:border-amber-400 sm:hover:-translate-y-0.5 sm:hover:shadow-amber-500/20 sm:hover:shadow-lg",
           "active:scale-95",
         ].join(" ")}
       >
         <Bug className="size-4 shrink-0 mx-auto sm:ml-3" />
-        {/* Hidden on mobile, visible on hover on desktop */}
         <span className="hidden whitespace-nowrap text-xs font-semibold sm:block sm:opacity-0 sm:-translate-x-1 sm:transition-all sm:duration-150 sm:group-hover:opacity-100 sm:group-hover:translate-x-0 sm:pr-3">
           Report Bug
         </span>
@@ -177,13 +220,8 @@ export function BugReportButton() {
       {/* Modal */}
       {open && (
         <>
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
-            onClick={handleClose}
-          />
+          <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm" onClick={handleClose} />
 
-          {/* Panel */}
           <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 mx-auto max-w-lg rounded-2xl border border-border bg-card shadow-xl overflow-y-auto max-h-[90dvh]">
             <div className="flex items-center justify-between border-b border-border px-5 py-4">
               <div className="flex items-center gap-2">
@@ -222,19 +260,16 @@ export function BugReportButton() {
                     View GitHub Issue
                   </a>
                 )}
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
+                <button type="button" onClick={handleClose} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                   Close
                 </button>
               </div>
             ) : (
               <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 p-5">
+
                 {/* Title */}
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium">Title</label>
+                  <label className="text-sm font-medium">Title <span className="text-destructive">*</span></label>
                   <input
                     {...register("title")}
                     placeholder="Brief summary of the issue"
@@ -243,26 +278,73 @@ export function BugReportButton() {
                   {errors.title && <p className="text-xs text-destructive">{errors.title.message}</p>}
                 </div>
 
+                {/* AI Insights */}
+                {titleValue.length >= 3 && (
+                  <div className="flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={handleGetInsights}
+                      disabled={aiLoading}
+                      className="flex items-center gap-1.5 self-start rounded-full border border-violet-300 dark:border-violet-700 bg-violet-50 dark:bg-violet-950/30 px-3 py-1.5 text-xs font-medium text-violet-700 dark:text-violet-300 transition-colors hover:bg-violet-100 dark:hover:bg-violet-950/50 disabled:opacity-60"
+                    >
+                      {aiLoading ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
+                      {aiLoading ? "Thinking…" : "AI Insights"}
+                    </button>
+
+                    {aiPrompts.length > 0 && (
+                      <div className="rounded-xl border border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-950/20 p-3 flex flex-col gap-2">
+                        <p className="text-[10px] uppercase tracking-wide font-medium text-violet-600 dark:text-violet-400">AI suggestions — click to append</p>
+                        <div className="flex flex-col gap-2">
+                          {aiPrompts.map((prompt, i) => (
+                            <div key={i} className="flex items-start gap-2 rounded-lg border border-violet-200 dark:border-violet-800 bg-white dark:bg-violet-950/30 px-3 py-2">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[10px] font-semibold text-violet-600 dark:text-violet-400 mb-0.5">{prompt.label}</p>
+                                <p className="text-xs text-muted-foreground line-clamp-2">{prompt.text}</p>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => appendToField(prompt.targetField as keyof FormValues, prompt.text)}
+                                  className="rounded-md bg-violet-100 dark:bg-violet-900/40 px-2 py-1 text-[10px] font-medium text-violet-700 dark:text-violet-300 hover:bg-violet-200 dark:hover:bg-violet-900/60 transition-colors"
+                                >
+                                  Append
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => dismissPrompt(i)}
+                                  className="text-muted-foreground hover:text-foreground transition-colors"
+                                  aria-label="Dismiss"
+                                >
+                                  <X className="size-3" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Page */}
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium">Page / Area</label>
+                  <label className="text-sm font-medium">Page / Area <span className="text-muted-foreground">(optional)</span></label>
                   <input
                     {...register("page")}
                     placeholder="/training/session-id"
                     className={inputClass}
                   />
-                  {errors.page && <p className="text-xs text-destructive">{errors.page.message}</p>}
                 </div>
 
                 {/* Category */}
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium">Category</label>
+                  <label className="text-sm font-medium">Category <span className="text-muted-foreground">(optional)</span></label>
                   <div className="flex flex-wrap gap-2">
                     {CATEGORIES.map(({ value, label }) => (
                       <button
                         key={value}
                         type="button"
-                        onClick={() => setValue("category", value)}
+                        onClick={() => setValue("category", selectedCategory === value ? undefined : value)}
                         className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                           selectedCategory === value
                             ? "bg-primary text-primary-foreground border-primary"
@@ -277,13 +359,13 @@ export function BugReportButton() {
 
                 {/* Severity */}
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium">Severity</label>
+                  <label className="text-sm font-medium">Severity <span className="text-muted-foreground">(optional)</span></label>
                   <div className="flex flex-wrap gap-2">
                     {SEVERITIES.map(({ value, label, active, inactive }) => (
                       <button
                         key={value}
                         type="button"
-                        onClick={() => setValue("severity", value)}
+                        onClick={() => setValue("severity", selectedSeverity === value ? undefined : value)}
                         className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                           selectedSeverity === value ? active : inactive
                         }`}
@@ -296,23 +378,81 @@ export function BugReportButton() {
 
                 {/* Description */}
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium">Description</label>
+                  <label className="text-sm font-medium">Description <span className="text-muted-foreground">(optional)</span></label>
                   <textarea
                     {...register("description")}
                     placeholder="What went wrong? What did you expect to happen?"
                     className={textareaClass}
                   />
-                  {errors.description && <p className="text-xs text-destructive">{errors.description.message}</p>}
+                </div>
+
+                {/* Expected behavior */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium">Expected Behavior <span className="text-muted-foreground">(optional)</span></label>
+                  <textarea
+                    {...register("expectedBehavior")}
+                    placeholder="What did you expect to happen?"
+                    className={textareaClass}
+                  />
+                </div>
+
+                {/* Actual behavior */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium">Actual Behavior <span className="text-muted-foreground">(optional)</span></label>
+                  <textarea
+                    {...register("actualBehavior")}
+                    placeholder="What actually happened instead?"
+                    className={textareaClass}
+                  />
                 </div>
 
                 {/* Steps */}
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium">
-                    Steps to Reproduce <span className="text-muted-foreground">(optional)</span>
-                  </label>
+                  <label className="text-sm font-medium">Steps to Reproduce <span className="text-muted-foreground">(optional)</span></label>
                   <textarea
                     {...register("steps")}
                     placeholder="1. Go to...&#10;2. Tap...&#10;3. See error"
+                    className={textareaClass}
+                  />
+                </div>
+
+                {/* Frequency */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium">How often does this happen? <span className="text-muted-foreground">(optional)</span></label>
+                  <div className="flex flex-wrap gap-2">
+                    {FREQUENCIES.map(({ value, label }) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setValue("frequency", selectedFrequency === value ? undefined : value)}
+                        className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                          selectedFrequency === value
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Impact */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium">Who is affected? <span className="text-muted-foreground">(optional)</span></label>
+                  <input
+                    {...register("impact")}
+                    placeholder="e.g. All users on mobile, only me, admin users…"
+                    className={inputClass}
+                  />
+                </div>
+
+                {/* Workaround */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium">Workaround <span className="text-muted-foreground">(optional)</span></label>
+                  <textarea
+                    {...register("workaround")}
+                    placeholder="Is there a way to work around this issue?"
                     className={textareaClass}
                   />
                 </div>
@@ -393,7 +533,7 @@ export function BugReportButton() {
                   </div>
                 )}
 
-                {/* Device Info — read-only */}
+                {/* Device Info */}
                 <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
                   <span className="font-medium">Device:</span> {getDeviceInfo()}
                 </div>

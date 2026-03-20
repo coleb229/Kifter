@@ -3,12 +3,18 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { getUserSuggestionsCollection } from "@/lib/db";
-import type { ActionResult, UserSuggestion, UserSuggestionDoc, SuggestionStatus, ImplementationNote } from "@/types";
+import type { ActionResult, UserSuggestion, UserSuggestionDoc, SuggestionStatus, SuggestionPriority, ImplementationNote } from "@/types";
 import { ObjectId } from "mongodb";
 
 interface SubmitSuggestionInput {
   title: string;
-  description: string;
+  description?: string;
+  currentPainPoint?: string;
+  proposedSolution?: string;
+  useCase?: string;
+  priority?: SuggestionPriority;
+  inspiration?: string;
+  successCriteria?: string;
   imageUrls?: string[];
 }
 
@@ -25,8 +31,14 @@ export async function submitSuggestion(
     userId: session.user.id,
     userEmail: session.user.email ?? undefined,
     title: data.title,
-    description: data.description,
+    description: data.description || undefined,
     status: "new" as SuggestionStatus,
+    currentPainPoint: data.currentPainPoint || undefined,
+    proposedSolution: data.proposedSolution || undefined,
+    useCase: data.useCase || undefined,
+    priority: data.priority || undefined,
+    inspiration: data.inspiration || undefined,
+    successCriteria: data.successCriteria || undefined,
     imageUrls: data.imageUrls?.length ? data.imageUrls : undefined,
     createdAt: new Date(),
   });
@@ -43,7 +55,19 @@ export async function submitSuggestion(
           addProjectV2DraftIssue(input: {
             projectId: "PVT_kwHOAV__us4BRx8S"
             title: ${JSON.stringify(data.title)}
-            body: ${JSON.stringify(`## User Suggestion\n\n${data.description}\n\n---\n*Submitted by ${session.user.email ?? session.user.id}*`)}
+            body: ${JSON.stringify([
+              "## User Suggestion",
+              "",
+              data.description ? `### Description\n${data.description}` : null,
+              data.currentPainPoint ? `### Current Pain Point\n${data.currentPainPoint}` : null,
+              data.proposedSolution ? `### Proposed Solution\n${data.proposedSolution}` : null,
+              data.useCase ? `### Who Would Benefit\n${data.useCase}` : null,
+              data.priority ? `**Priority:** ${data.priority.replace(/_/g, " ")}` : null,
+              data.inspiration ? `**Inspiration:** ${data.inspiration}` : null,
+              data.successCriteria ? `### Success Criteria\n${data.successCriteria}` : null,
+              "---",
+              `*Submitted by ${session.user.email ?? session.user.id}*`,
+            ].filter(Boolean).join("\n\n"))}
           }) {
             projectItem {
               id
@@ -112,6 +136,12 @@ export async function getUserSuggestions(): Promise<ActionResult<UserSuggestion[
       title: d.title,
       description: d.description,
       status: d.status,
+      currentPainPoint: d.currentPainPoint,
+      proposedSolution: d.proposedSolution,
+      useCase: d.useCase,
+      priority: d.priority,
+      inspiration: d.inspiration,
+      successCriteria: d.successCriteria,
       imageUrls: d.imageUrls,
       createdAt: d.createdAt.toISOString(),
       implementationNotes: (d.implementationNotes ?? []).map((n) => ({

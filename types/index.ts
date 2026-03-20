@@ -942,17 +942,24 @@ export type BugCategory = "ui" | "feature" | "data" | "performance" | "other";
 export type BugSeverity = "low" | "medium" | "high" | "critical";
 export type BugStatus = "open" | "in_progress" | "testing" | "resolved";
 
+export type BugFrequency = "always" | "sometimes" | "rarely";
+
 export interface BugReportDoc {
   _id: ObjectId;
   userId: string;
   userEmail?: string;
   title: string;
-  category: BugCategory;
-  severity: BugSeverity;
+  category?: BugCategory;
+  severity?: BugSeverity;
   status: BugStatus;
-  page: string;
-  description: string;
+  page?: string;
+  description?: string;
   steps?: string;
+  expectedBehavior?: string;
+  actualBehavior?: string;
+  frequency?: BugFrequency;
+  impact?: string;
+  workaround?: string;
   deviceInfo: string;
   githubIssueUrl?: string;
   githubIssueNumber?: number;
@@ -968,12 +975,17 @@ export interface BugReport {
   userId: string;
   userEmail?: string;
   title: string;
-  category: BugCategory;
-  severity: BugSeverity;
+  category?: BugCategory;
+  severity?: BugSeverity;
   status: BugStatus;
-  page: string;
-  description: string;
+  page?: string;
+  description?: string;
   steps?: string;
+  expectedBehavior?: string;
+  actualBehavior?: string;
+  frequency?: BugFrequency;
+  impact?: string;
+  workaround?: string;
   deviceInfo: string;
   githubIssueUrl?: string;
   githubIssueNumber?: number;
@@ -987,13 +999,21 @@ export interface BugReport {
 
 export type SuggestionStatus = "new" | "under_review" | "planned" | "testing" | "done" | "declined";
 
+export type SuggestionPriority = "nice_to_have" | "saves_time" | "essential";
+
 export interface UserSuggestionDoc {
   _id: ObjectId;
   userId: string;
   userEmail?: string;
   title: string;
-  description: string;
+  description?: string;
   status: SuggestionStatus;
+  currentPainPoint?: string;
+  proposedSolution?: string;
+  useCase?: string;
+  priority?: SuggestionPriority;
+  inspiration?: string;
+  successCriteria?: string;
   imageUrls?: string[];
   createdAt: Date;
   implementationNotes?: ImplementationNoteDoc[];
@@ -1004,8 +1024,14 @@ export interface UserSuggestion {
   userId: string;
   userEmail?: string;
   title: string;
-  description: string;
+  description?: string;
   status: SuggestionStatus;
+  currentPainPoint?: string;
+  proposedSolution?: string;
+  useCase?: string;
+  priority?: SuggestionPriority;
+  inspiration?: string;
+  successCriteria?: string;
   imageUrls?: string[];
   createdAt: string;
   implementationNotes?: ImplementationNote[];

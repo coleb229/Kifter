@@ -378,6 +378,100 @@ Be concise. No extra commentary.`,
   }
 }
 
+// ── FormPrompt (shared) ───────────────────────────────────────────────────────
+
+export interface FormPrompt {
+  label: string;       // Short chip label shown in the UI
+  text: string;        // Suggested text the user can append to the field
+  targetField: string; // Form field key to append to
+}
+
+// ── generateBugReportPrompts ──────────────────────────────────────────────────
+
+export async function generateBugReportPrompts(input: {
+  title: string;
+  category?: string;
+  page?: string;
+  description?: string;
+}): Promise<ActionResult<FormPrompt[]>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+
+  const rateCheck = await checkAndIncrementAiUsage(session.user.id);
+  if (!rateCheck.allowed) return { success: false, error: rateCheck.error ?? "AI request blocked." };
+
+  try {
+    const client = getClient();
+    const model = await getDefaultAiModel();
+    const message = await client.messages.create({
+      model,
+      max_tokens: 512,
+      messages: [
+        {
+          role: "user",
+          content: `You are helping a user fill out a bug report for a fitness tracking app called Kifted.
+Given the bug title and context below, generate exactly 4 helpful prompts the user can append to specific fields to better describe the bug.
+Respond ONLY with a JSON array — no markdown fences, no commentary.
+Each object: { "label": "2-4 word chip label", "text": "Suggested text to append (1-3 sentences, first-person)", "targetField": one of "description"|"steps"|"expectedBehavior"|"actualBehavior"|"impact"|"workaround" }
+
+Bug title: ${input.title}
+${input.category ? `Category: ${input.category}` : ""}
+${input.page ? `Page: ${input.page}` : ""}
+${input.description ? `Description so far: ${input.description}` : ""}`,
+        },
+      ],
+    });
+    const text = message.content[0].type === "text" ? message.content[0].text : "";
+    const cleaned = text.replace(/^```(?:json)?\n?/m, "").replace(/\n?```$/m, "").trim();
+    const parsed = JSON.parse(cleaned);
+    if (!Array.isArray(parsed) || parsed.length === 0) throw new Error("No prompts returned");
+    return { success: true, data: parsed as FormPrompt[] };
+  } catch (e) {
+    return { success: false, error: (e as Error).message ?? "Failed to generate prompts" };
+  }
+}
+
+// ── generateSuggestionPrompts ─────────────────────────────────────────────────
+
+export async function generateSuggestionPrompts(input: {
+  title: string;
+  description?: string;
+}): Promise<ActionResult<FormPrompt[]>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+
+  const rateCheck = await checkAndIncrementAiUsage(session.user.id);
+  if (!rateCheck.allowed) return { success: false, error: rateCheck.error ?? "AI request blocked." };
+
+  try {
+    const client = getClient();
+    const model = await getDefaultAiModel();
+    const message = await client.messages.create({
+      model,
+      max_tokens: 512,
+      messages: [
+        {
+          role: "user",
+          content: `You are helping a user submit a feature suggestion for a fitness tracking app called Kifted.
+Given the suggestion title and context below, generate exactly 4 helpful prompts the user can append to specific fields to better articulate their idea.
+Respond ONLY with a JSON array — no markdown fences, no commentary.
+Each object: { "label": "2-4 word chip label", "text": "Suggested text to append (1-3 sentences, first-person)", "targetField": one of "description"|"currentPainPoint"|"proposedSolution"|"useCase"|"successCriteria" }
+
+Suggestion title: ${input.title}
+${input.description ? `Description so far: ${input.description}` : ""}`,
+        },
+      ],
+    });
+    const text = message.content[0].type === "text" ? message.content[0].text : "";
+    const cleaned = text.replace(/^```(?:json)?\n?/m, "").replace(/\n?```$/m, "").trim();
+    const parsed = JSON.parse(cleaned);
+    if (!Array.isArray(parsed) || parsed.length === 0) throw new Error("No prompts returned");
+    return { success: true, data: parsed as FormPrompt[] };
+  } catch (e) {
+    return { success: false, error: (e as Error).message ?? "Failed to generate prompts" };
+  }
+}
+
 // ── generateGroceryList ───────────────────────────────────────────────────────
 
 export interface GroceryCategory {

@@ -45,12 +45,12 @@ function SuggestionCard({ suggestion, onDelete }: { suggestion: UserSuggestion; 
   // Edit state
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(suggestion.title);
-  const [editDescription, setEditDescription] = useState(suggestion.description);
+  const [editDescription, setEditDescription] = useState(suggestion.description ?? "");
   const [editImages, setEditImages] = useState<string[]>(suggestion.imageUrls ?? []);
 
   // Displayed values
   const [displayTitle, setDisplayTitle] = useState(suggestion.title);
-  const [displayDescription, setDisplayDescription] = useState(suggestion.description);
+  const [displayDescription, setDisplayDescription] = useState(suggestion.description ?? "");
   const [displayImages, setDisplayImages] = useState<string[]>(suggestion.imageUrls ?? []);
 
   function handleStatusChange(newStatus: SuggestionStatus) {

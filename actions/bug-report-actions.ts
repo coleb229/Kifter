@@ -3,16 +3,21 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { getBugReportsCollection } from "@/lib/db";
-import type { ActionResult, BugCategory, BugReport, BugSeverity, BugStatus, ImplementationNote } from "@/types";
+import type { ActionResult, BugCategory, BugFrequency, BugReport, BugSeverity, BugStatus, ImplementationNote } from "@/types";
 import { ObjectId } from "mongodb";
 
 interface SubmitBugReportInput {
   title: string;
-  category: BugCategory;
-  severity: BugSeverity;
-  page: string;
-  description: string;
+  category?: BugCategory;
+  severity?: BugSeverity;
+  page?: string;
+  description?: string;
   steps?: string;
+  expectedBehavior?: string;
+  actualBehavior?: string;
+  frequency?: BugFrequency;
+  impact?: string;
+  workaround?: string;
   deviceInfo: string;
   screenshotUrls?: string[];
   relatedBugIds?: string[];
@@ -32,12 +37,17 @@ export async function submitBugReport(
     userId: session.user.id,
     userEmail: session.user.email ?? undefined,
     title: data.title,
-    category: data.category,
-    severity: data.severity,
+    category: data.category || undefined,
+    severity: data.severity || undefined,
     status: "open" as BugStatus,
-    page: data.page,
-    description: data.description,
+    page: data.page || undefined,
+    description: data.description || undefined,
     steps: data.steps || undefined,
+    expectedBehavior: data.expectedBehavior || undefined,
+    actualBehavior: data.actualBehavior || undefined,
+    frequency: data.frequency || undefined,
+    impact: data.impact || undefined,
+    workaround: data.workaround || undefined,
     deviceInfo: data.deviceInfo,
     screenshotUrls: data.screenshotUrls?.length ? data.screenshotUrls : undefined,
     relatedBugIds: data.relatedBugIds?.length ? data.relatedBugIds : undefined,
@@ -64,27 +74,39 @@ export async function submitBugReport(
         high: "High",
         critical: "Critical",
       };
+      const frequencyLabels = { always: "Always", sometimes: "Sometimes", rarely: "Rarely" };
 
       const body = [
         "## Bug Report",
         "",
-        `**Category:** ${categoryLabels[data.category]}`,
-        `**Severity:** ${severityLabels[data.severity]}`,
-        `**Page:** ${data.page}`,
+        data.category ? `**Category:** ${categoryLabels[data.category]}` : null,
+        data.severity ? `**Severity:** ${severityLabels[data.severity]}` : null,
+        data.page ? `**Page:** ${data.page}` : null,
+        data.frequency ? `**Frequency:** ${frequencyLabels[data.frequency]}` : null,
+        data.impact ? `**Impact:** ${data.impact}` : null,
         `**Submitted:** ${now.toISOString().replace("T", " ").slice(0, 16)} by ${session.user.email ?? session.user.id}`,
         "",
-        "### Description",
-        data.description,
+        data.description ? "### Description" : null,
+        data.description || null,
         "",
+        data.expectedBehavior ? "### Expected Behavior" : null,
+        data.expectedBehavior || null,
+        data.expectedBehavior ? "" : null,
+        data.actualBehavior ? "### Actual Behavior" : null,
+        data.actualBehavior || null,
+        data.actualBehavior ? "" : null,
         "### Steps to Reproduce",
         data.steps || "Not provided",
         "",
+        data.workaround ? "### Workaround" : null,
+        data.workaround || null,
+        data.workaround ? "" : null,
         "### Device Info",
         data.deviceInfo,
         "",
         `---`,
         `*Kifted bug report ID: ${id}*`,
-      ].join("\n");
+      ].filter((line) => line !== null).join("\n");
 
       const ghRes = await fetch("https://api.github.com/repos/coleb229/Kifter/issues", {
         method: "POST",
@@ -140,6 +162,11 @@ export async function getBugReports(): Promise<ActionResult<BugReport[]>> {
       page: d.page,
       description: d.description,
       steps: d.steps,
+      expectedBehavior: d.expectedBehavior,
+      actualBehavior: d.actualBehavior,
+      frequency: d.frequency,
+      impact: d.impact,
+      workaround: d.workaround,
       deviceInfo: d.deviceInfo,
       githubIssueUrl: d.githubIssueUrl,
       githubIssueNumber: d.githubIssueNumber,

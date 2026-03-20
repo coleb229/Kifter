@@ -59,16 +59,16 @@ function BugReportCard({ report, onDelete }: { report: BugReport; onDelete: (id:
   // Edit state
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(report.title);
-  const [editDescription, setEditDescription] = useState(report.description);
+  const [editDescription, setEditDescription] = useState(report.description ?? "");
   const [editSteps, setEditSteps] = useState(report.steps ?? "");
-  const [editSeverity, setEditSeverity] = useState<BugSeverity>(report.severity);
+  const [editSeverity, setEditSeverity] = useState<BugSeverity>(report.severity ?? "medium");
   const [editScreenshots, setEditScreenshots] = useState<string[]>(report.screenshotUrls ?? []);
 
   // Displayed values (updated optimistically after save)
   const [displayTitle, setDisplayTitle] = useState(report.title);
-  const [displayDescription, setDisplayDescription] = useState(report.description);
+  const [displayDescription, setDisplayDescription] = useState(report.description ?? "");
   const [displaySteps, setDisplaySteps] = useState(report.steps);
-  const [displaySeverity, setDisplaySeverity] = useState<BugSeverity>(report.severity);
+  const [displaySeverity, setDisplaySeverity] = useState<BugSeverity>(report.severity ?? "medium");
   const [displayScreenshots, setDisplayScreenshots] = useState<string[]>(report.screenshotUrls ?? []);
 
   function handleStatusChange(newStatus: BugStatus) {
@@ -131,9 +131,11 @@ function BugReportCard({ report, onDelete }: { report: BugReport; onDelete: (id:
             <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${SEVERITY_STYLES[displaySeverity]}`}>
               {displaySeverity}
             </span>
-            <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
-              {CATEGORY_LABELS[report.category]}
-            </span>
+            {report.category && (
+              <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                {CATEGORY_LABELS[report.category]}
+              </span>
+            )}
             <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[status]}`}>
               {status.replace("_", " ")}
             </span>
