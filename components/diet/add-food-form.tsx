@@ -562,17 +562,41 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
           <div className="flex flex-col gap-2">
             <label className={labelClass}>Quantity ({baseFood.servingUnit})</label>
             <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min={0.1}
-                step={0.1}
-                value={customAmount}
-                onChange={(e) => {
-                  setCustomAmount(e.target.value);
-                  applyCustomAmount(e.target.value);
-                }}
-                className="h-10 w-28 rounded-lg border border-amber-500 bg-background px-3 text-sm font-medium outline-none focus:ring-2 focus:ring-amber-500/40 text-amber-600 dark:text-amber-400"
-              />
+              <div className="flex items-center rounded-lg border border-amber-500 overflow-hidden w-36">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = Math.max(0.1, Math.round((parseFloat(customAmount || "0") - baseFood.servingSize) * 10) / 10);
+                    setCustomAmount(String(next));
+                    applyCustomAmount(String(next));
+                  }}
+                  className="flex h-10 w-9 shrink-0 items-center justify-center text-amber-600 dark:text-amber-400 transition-colors hover:bg-amber-500/10 active:bg-amber-500/20 select-none touch-none"
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  min={0.1}
+                  step={0.1}
+                  value={customAmount}
+                  onChange={(e) => {
+                    setCustomAmount(e.target.value);
+                    applyCustomAmount(e.target.value);
+                  }}
+                  className="h-10 w-full min-w-0 bg-background text-center text-sm font-medium text-amber-600 dark:text-amber-400 outline-none focus:ring-1 focus:ring-inset focus:ring-amber-500/40"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = Math.round((parseFloat(customAmount || "0") + baseFood.servingSize) * 10) / 10;
+                    setCustomAmount(String(next));
+                    applyCustomAmount(String(next));
+                  }}
+                  className="flex h-10 w-9 shrink-0 items-center justify-center text-amber-600 dark:text-amber-400 transition-colors hover:bg-amber-500/10 active:bg-amber-500/20 select-none touch-none"
+                >
+                  +
+                </button>
+              </div>
               <span className="text-xs text-muted-foreground">{baseFood.servingUnit} per serving: {baseFood.servingSize}</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
