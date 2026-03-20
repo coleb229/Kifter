@@ -1013,6 +1013,52 @@ export interface DailyNutritionSummaryDoc {
   updatedAt: Date;
 }
 
+// ── Training Guides (YouTube → Claude extraction) ─────────────────────────────
+
+export type GuideType = "stability" | "warmup" | "form_guide";
+export type GuideStatus = "ready" | "failed";
+
+export interface ExtractedGuideContent {
+  summary: string;
+  keyPoints: string[];
+  steps: { step: number; instruction: string; cues?: string[] }[];
+  targetMuscles: string[];
+  equipment: string[];
+  difficulty: "beginner" | "intermediate" | "advanced";
+  commonMistakes?: string[];
+  duration?: string;
+}
+
+export interface TrainingGuideDoc {
+  _id: ObjectId;
+  type: GuideType;
+  exerciseName?: string;
+  title: string;
+  youtubeUrl: string;
+  youtubeId: string;
+  addedBy: string;
+  status: GuideStatus;
+  content?: ExtractedGuideContent;
+  errorMessage?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface TrainingGuide {
+  id: string;
+  type: GuideType;
+  exerciseName?: string;
+  title: string;
+  youtubeUrl: string;
+  youtubeId: string;
+  addedBy: string;
+  status: GuideStatus;
+  content?: ExtractedGuideContent;
+  errorMessage?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ── Claude Ideas ───────────────────────────────────────────────────────────────
 
 export type ClaudeIdeaStatus = "accepted" | "declined" | "in_progress" | "done" | "too_complex";
