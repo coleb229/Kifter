@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useRef, useEffect } from "react";
-import { Youtube, Loader2, Trash2, ChevronDown, ChevronRight, BookOpen, Dumbbell, Activity, Search } from "lucide-react";
+import { Youtube, Loader2, Trash2, ChevronDown, ChevronRight, BookOpen, Dumbbell, Activity, Search, ClipboardPaste } from "lucide-react";
 import { processYouTubeGuide, deleteTrainingGuide } from "@/actions/guide-actions";
 import type { TrainingGuide, GuideType } from "@/types";
 
@@ -280,6 +280,7 @@ export function TrainingContentPanel({ initialGuides, exercises }: Props) {
   const [url, setUrl] = useState("");
   const [type, setType] = useState<GuideType>("form_guide");
   const [exerciseName, setExerciseName] = useState("");
+  const [manualTranscript, setManualTranscript] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [filterType, setFilterType] = useState<GuideType | "all">("all");
@@ -288,7 +289,12 @@ export function TrainingContentPanel({ initialGuides, exercises }: Props) {
     e.preventDefault();
     setError(null);
     startTransition(async () => {
-      const result = await processYouTubeGuide(url.trim(), type, exerciseName.trim() || undefined);
+      const result = await processYouTubeGuide(
+        url.trim(),
+        type,
+        exerciseName.trim() || undefined,
+        manualTranscript.trim() || undefined
+      );
       if (!result.success) {
         setError(result.error);
         return;
@@ -296,6 +302,7 @@ export function TrainingContentPanel({ initialGuides, exercises }: Props) {
       setGuides((prev) => [result.data, ...prev]);
       setUrl("");
       setExerciseName("");
+      setManualTranscript("");
     });
   }
 
@@ -365,6 +372,38 @@ export function TrainingContentPanel({ initialGuides, exercises }: Props) {
             />
           </div>
         )}
+
+        <div>
+          <div className="mb-1 flex items-center justify-between">
+            <label className="text-xs font-medium flex items-center gap-1.5">
+              <ClipboardPaste className="size-3.5 text-muted-foreground" />
+              Transcript / Description
+              <span className="font-normal text-muted-foreground">(paste from video bio — optional if auto-fetch works)</span>
+            </label>
+            {manualTranscript && (
+              <button
+                type="button"
+                onClick={() => setManualTranscript("")}
+                className="text-[10px] text-muted-foreground hover:text-foreground"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          <textarea
+            value={manualTranscript}
+            onChange={(e) => setManualTranscript(e.target.value)}
+            placeholder="Paste the transcript or video description here. This is used instead of auto-fetching if provided."
+            disabled={isPending}
+            rows={5}
+            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 resize-y"
+          />
+          {manualTranscript.trim().length > 0 && (
+            <p className="mt-1 text-[10px] text-emerald-600 dark:text-emerald-400">
+              Manual transcript provided — auto-fetch will be skipped.
+            </p>
+          )}
+        </div>
 
         {error && (
           <p className="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">

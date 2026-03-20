@@ -107,7 +107,7 @@ function serializeGuide(doc: {
   };
 }
 
-function buildExtractionPrompt(type: GuideType, exerciseName: string | undefined, transcript: string, source: "captions" | "description"): string {
+function buildExtractionPrompt(type: GuideType, exerciseName: string | undefined, transcript: string, source: "captions" | "description" | "manual"): string {
   const jsonSchema = `{
   "title": "string (concise descriptive title for this content)",
   "summary": "string (2–3 sentence overview of what this routine/guide covers)",
@@ -120,9 +120,10 @@ function buildExtractionPrompt(type: GuideType, exerciseName: string | undefined
   "duration": "string (e.g. '8–10 minutes' or omit if not mentioned)"
 }`;
 
-  const sourceNote = source === "description"
-    ? "The input below is the video's written description/transcript posted by the creator."
-    : "The input below is the auto-generated spoken transcript from the video.";
+  const sourceNote =
+    source === "manual"     ? "The input below is the transcript pasted directly by the admin." :
+    source === "description" ? "The input below is the video's written description/transcript posted by the creator." :
+                               "The input below is the auto-generated spoken transcript from the video.";
 
   const typeInstructions: Record<GuideType, string> = {
     stability: `Extract a complete stability and mobility routine from the content below.
@@ -147,7 +148,8 @@ ${transcript.slice(0, 12000)}`; // cap at ~12k chars to stay within token budget
 export async function processYouTubeGuide(
   url: string,
   type: GuideType,
-  exerciseName?: string
+  exerciseName?: string,
+  manualTranscript?: string
 ): Promise<ActionResult<TrainingGuide>> {
   const session = await auth();
   if (!session?.user?.id) return { success: false, error: "Not authenticated" };
@@ -162,12 +164,17 @@ export async function processYouTubeGuide(
   if (!videoId) return { success: false, error: "Could not parse a valid YouTube video ID from that URL" };
 
   try {
-    // 1. Fetch content — captions first, description fallback
-    let videoContent: { text: string; source: "captions" | "description" };
-    try {
-      videoContent = await fetchVideoContent(videoId);
-    } catch (err) {
-      return { success: false, error: (err as Error).message };
+    // 1. Resolve content: manual paste takes priority, then auto-fetch
+    let videoContent: { text: string; source: "captions" | "description" | "manual" };
+    const pastedText = manualTranscript?.trim();
+    if (pastedText && pastedText.length > 50) {
+      videoContent = { text: pastedText, source: "manual" };
+    } else {
+      try {
+        videoContent = await fetchVideoContent(videoId);
+      } catch (err) {
+        return { success: false, error: (err as Error).message };
+      }
     }
 
     // 2. Extract structured data via Claude
