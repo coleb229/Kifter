@@ -151,7 +151,7 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [saveToLibrary, setSaveToLibrary] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(!editingEntry);
   const [selectedFromSearch, setSelectedFromSearch] = useState(false);
   const [selectedFood, setSelectedFood] = useState<FoodSearchResult | null>(null);
   const [activeMultiplier, setActiveMultiplier] = useState(1);
@@ -224,7 +224,6 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
     setActiveMultiplier(1);
     setCustomAmount(String(food.servingSize));
     setSelectedFromSearch(true);
-    setSaveToLibrary(false);
   }
 
   function handleFoodNameChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -690,7 +689,7 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
         )}
 
         {/* Save to community library */}
-        {!isEditing && !selectedFromSearch && (
+        {!isEditing && (
           <label className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-border bg-muted/30 px-3 py-2.5 transition-colors hover:bg-muted/50">
             <input
               type="checkbox"
