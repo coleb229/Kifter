@@ -128,7 +128,9 @@ function MacroStepper({
         min={0}
         max={max}
         step={0.1}
+        onFocus={(e) => e.target.select()}
         onChange={(e) => {
+          if (e.target.value === "") { onChange(0); return; }
           const n = parseFloat(e.target.value);
           if (!isNaN(n)) onChange(Math.max(0, Math.min(max, n)));
         }}
@@ -573,6 +575,7 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
                   min={0.1}
                   step={0.1}
                   value={customAmount}
+                  onFocus={(e) => e.target.select()}
                   onChange={(e) => {
                     setCustomAmount(e.target.value);
                     applyCustomAmount(e.target.value);

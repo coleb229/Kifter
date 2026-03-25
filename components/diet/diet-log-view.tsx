@@ -420,7 +420,7 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
 
           {/* Today's macros summary bar — sticky */}
           {targets && entries.length > 0 && (
-            <div className="sticky top-0 z-10 -mx-4 flex items-center gap-4 border-b border-border bg-background/95 px-4 py-2 text-xs backdrop-blur animate-fade-up">
+            <div className="sticky top-14 z-10 -mx-4 flex items-center gap-4 border-b border-border bg-background/95 px-4 py-2 text-xs backdrop-blur animate-fade-up">
               {([
                 { label: "P", value: totals.protein, target: targets.protein, color: "text-emerald-500" },
                 { label: "C", value: totals.carbs,   target: targets.carbs,   color: "text-amber-500" },
@@ -524,6 +524,7 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
                     max={300}
                     step={0.1}
                     value={weightInput}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) => setWeightInput(e.target.value)}
                     className="h-7 w-16 rounded border border-input bg-background px-1.5 text-sm focus-visible:outline-none"
                   />
@@ -625,8 +626,8 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
             </div>
           )}
 
-          {/* Add food + Templates + Camera buttons */}
-          <div id="add-food-section" className="flex flex-wrap items-center gap-2 animate-fade-up" style={{ animationDelay: "100ms" }}>
+          {/* Add food + Templates + Camera buttons — hidden while inline form is open */}
+          {!showAddForm && <div id="add-food-section" className="flex flex-wrap items-center gap-2 animate-fade-up" style={{ animationDelay: "100ms" }}>
             <Button size="sm" onClick={() => openAddForm(getMealTypeForTime())} className="gap-1.5">
               <Plus className="size-3.5" />
               Add Food
@@ -644,7 +645,7 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
               <BookTemplate className="size-3.5" />
               Templates
             </Button>
-          </div>
+          </div>}
 
           {/* Inline barcode scanner shortcut */}
           {showBarcode && (

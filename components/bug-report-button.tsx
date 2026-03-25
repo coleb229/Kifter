@@ -91,6 +91,7 @@ export function BugReportButton() {
   const [showRelated, setShowRelated] = useState(false);
   const [aiPrompts, setAiPrompts] = useState<FormPrompt[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
+  const [appendedIdx, setAppendedIdx] = useState<number | null>(null);
 
   const { startUpload, isUploading } = useUploadThing("bugScreenshot", {
     onClientUploadComplete: (res) => {
@@ -313,10 +314,15 @@ export function BugReportButton() {
                               <div className="flex items-center gap-1 shrink-0">
                                 <button
                                   type="button"
-                                  onClick={() => appendToField(prompt.targetField as keyof FormValues, prompt.text)}
-                                  className="rounded-md bg-violet-100 dark:bg-violet-900/40 px-2 py-1 text-[10px] font-medium text-violet-700 dark:text-violet-300 hover:bg-violet-200 dark:hover:bg-violet-900/60 transition-colors"
+                                  disabled={appendedIdx === i}
+                                  onClick={() => {
+                                    appendToField(prompt.targetField as keyof FormValues, prompt.text);
+                                    setAppendedIdx(i);
+                                    setTimeout(() => setAppendedIdx(null), 1500);
+                                  }}
+                                  className="rounded-md bg-violet-100 dark:bg-violet-900/40 px-2 py-1 text-[10px] font-medium text-violet-700 dark:text-violet-300 hover:bg-violet-200 dark:hover:bg-violet-900/60 transition-colors disabled:opacity-60"
                                 >
-                                  Append
+                                  {appendedIdx === i ? "✓ Added" : "Append"}
                                 </button>
                                 <button
                                   type="button"

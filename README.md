@@ -164,7 +164,17 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Changelog
 
-### 2026-03-19 (latest)
+### 2026-03-24 (latest)
+
+**Bug Fixes**
+- Diet numeric inputs (macros, serving size, body weight) now select all text on focus so values can be replaced immediately without fighting a leading zero on mobile
+- "Add Food / Scan / Templates" action bar is now hidden while the inline food log form is open, eliminating confusion between the "Add Food" toggle and the form's submit button
+- AI Insights "Append" button in bug report and suggestion forms now shows a "✓ Added" confirmation state for 1.5 s and becomes disabled after tapping, preventing duplicate appends on mobile
+
+**Improvements**
+- All sticky subnavs now offset correctly below the 56 px main header (`top-14`) so section navigation remains accessible at any scroll depth — fixes `SectionSubnav` mobile strip, admin layout tab bar, and diet macro totals header
+
+### 2026-03-19
 
 **Bug Fixes**
 - Dashboard nutrition chart bars now show calories consumed (was stacking protein/carbs/fat grams, mismatching the calorie y-axis)

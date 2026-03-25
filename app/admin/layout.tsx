@@ -18,8 +18,9 @@ export default async function AdminLayout({
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
-      <div className="mx-auto w-full max-w-5xl px-4 pt-6 sm:px-6 lg:px-8">
-        <nav className="flex gap-1 border-b border-border pb-4">
+      <div className="sticky top-14 z-40 w-full border-b border-border bg-background/90 backdrop-blur-sm">
+        <div className="mx-auto w-full max-w-5xl px-4 pt-4 sm:px-6 lg:px-8">
+        <nav className="flex gap-1 pb-4">
           <Link href="/admin" className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground">
             Administration
           </Link>
@@ -27,6 +28,7 @@ export default async function AdminLayout({
             Development
           </Link>
         </nav>
+        </div>
       </div>
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 pb-40 sm:px-6 sm:pb-8 lg:px-8">
         {children}
