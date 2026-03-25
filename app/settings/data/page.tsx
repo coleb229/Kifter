@@ -183,27 +183,6 @@ export default function DataPage() {
         <p className="mt-1 text-sm text-muted-foreground">Export your history or import from a CSV file.</p>
       </div>
       <div className="flex flex-col gap-4 animate-fade-up" style={{ animationDelay: "60ms" }}>
-        <Section
-          title="Workouts"
-          description="Columns: date, sessionName, bodyTarget, exercise, setNumber, weight, weightUnit, reps"
-          onExport={handleExportWorkouts}
-          onImport={handleImportWorkouts}
-          exportLabel="Export CSV"
-          importLabel="Import CSV"
-          isPending={isPendingW}
-          message={msgW}
-        />
-        <Section
-          title="Diet"
-          description="Columns: date, mealType, food, calories, protein, carbs, fat, notes"
-          onExport={handleExportDiet}
-          onImport={handleImportDiet}
-          exportLabel="Export CSV"
-          importLabel="Import CSV"
-          isPending={isPendingD}
-          message={msgD}
-        />
-
         {/* Apple Health Import */}
         <div className="rounded-xl border border-border bg-card p-5 flex flex-col gap-4">
           <div className="flex items-start gap-3">
@@ -255,6 +234,27 @@ export default function DataPage() {
             </div>
           )}
         </div>
+
+        <Section
+          title="Workouts"
+          description="Columns: date, sessionName, bodyTarget, exercise, setNumber, weight, weightUnit, reps"
+          onExport={handleExportWorkouts}
+          onImport={handleImportWorkouts}
+          exportLabel="Export CSV"
+          importLabel="Import CSV"
+          isPending={isPendingW}
+          message={msgW}
+        />
+        <Section
+          title="Diet"
+          description="Columns: date, mealType, food, calories, protein, carbs, fat, notes"
+          onExport={handleExportDiet}
+          onImport={handleImportDiet}
+          exportLabel="Export CSV"
+          importLabel="Import CSV"
+          isPending={isPendingD}
+          message={msgD}
+        />
       </div>
     </div>
   );
