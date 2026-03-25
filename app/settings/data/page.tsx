@@ -90,6 +90,7 @@ export default function DataPage() {
   const [msgW, setMsgW] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [msgD, setMsgD] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [msgAH, setMsgAH] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [isDraggingAH, setIsDraggingAH] = useState(false);
   function handleExportWorkouts() {
     startW(async () => {
       const result = await exportWorkoutsCSV();
@@ -220,22 +221,32 @@ export default function DataPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-3">
-            <label
-              className={`flex cursor-pointer items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors ${isPendingAH ? "pointer-events-none opacity-50" : ""}`}
-            >
-              <Upload className="size-3.5" />
-              {isPendingAH ? "Importing…" : "Import .zip or export.xml"}
-              <input
-                type="file"
-                className="sr-only"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) { handleImportAppleHealth(file); e.target.value = ""; }
-                }}
-              />
-            </label>
-          </div>
+          <label
+            onDragOver={(e) => { e.preventDefault(); if (!isPendingAH) setIsDraggingAH(true); }}
+            onDragLeave={() => setIsDraggingAH(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setIsDraggingAH(false);
+              if (isPendingAH) return;
+              const file = e.dataTransfer.files?.[0];
+              if (file) handleImportAppleHealth(file);
+            }}
+            className={`flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed p-6 text-center transition-colors ${isPendingAH ? "pointer-events-none opacity-50" : isDraggingAH ? "border-primary bg-primary/5" : "border-border hover:border-primary/50 hover:bg-muted/50"}`}
+          >
+            <Upload className={`size-5 ${isDraggingAH ? "text-primary" : "text-muted-foreground"}`} />
+            <div>
+              <p className="text-sm font-medium">{isPendingAH ? "Importing…" : isDraggingAH ? "Drop to import" : "Drag & drop here"}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">or <span className="underline underline-offset-2">click to browse</span></p>
+            </div>
+            <input
+              type="file"
+              className="sr-only"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) { handleImportAppleHealth(file); e.target.value = ""; }
+              }}
+            />
+          </label>
 
           {msgAH && (
             <div className={`flex items-center gap-1.5 text-sm ${msgAH.type === "success" ? "text-emerald-600" : "text-destructive"}`}>
