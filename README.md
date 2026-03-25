@@ -177,6 +177,8 @@ Open [http://localhost:3000](http://localhost:3000).
 - Removed the top-level "Add Food" button from the diet log action bar — per-meal "Add" buttons inside each meal section (Breakfast / Lunch / Dinner / Snack) are now the sole entry point for logging food, eliminating the confusion where the button appeared to be a form submit action
 - AI Insights button in bug report and suggestion forms now shows an inline error message when the request fails (e.g. rate limit hit) instead of silently stopping the spinner
 - `/admin/dev` section subnav now uses `sticky top-28` (accounting for both the main navbar and the admin layout tab bar) so the strip no longer overlaps the admin header on scroll; bottom margin reduced from `mb-10` to `mb-2` to remove the large empty gap below the strip; section anchor scroll offset updated to `scroll-mt-28`
+- `/admin` section subnav was missing `stickyTop="top-28"`, causing it to default to `top-14` (same as the admin tab bar) and cover it entirely when scrolled — fixed to match `/admin/dev`; section `scroll-mt` values updated to `scroll-mt-28`
+- User menu dropdown now renders above all sticky nav bars — `z-60` moved to `Menu.Positioner` (previously misplaced on `Menu.Popup`); the positioner's `auto` z-index caused it to paint behind `z-40` sticky headers
 
 ### 2026-03-19
 

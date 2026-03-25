@@ -36,12 +36,12 @@ export default async function AdminPage() {
         </div>
       </div>
 
-      <SectionSubnav items={[
+      <SectionSubnav stickyTop="top-28" items={[
         { label: "Users", id: "users" },
         { label: "Settings", id: "settings" },
       ]} />
 
-      <section id="users" className="scroll-mt-14">
+      <section id="users" className="scroll-mt-28">
         {canManageUsers && (
           !result.success ? (
             <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-sm text-destructive">
@@ -62,7 +62,7 @@ export default async function AdminPage() {
 
       <div className="my-12 border-t border-border" />
 
-      <section id="settings" className="scroll-mt-14">
+      <section id="settings" className="scroll-mt-28">
         <div className="mb-4 flex items-center gap-3">
           <div className="flex size-8 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-950/40">
             <Settings2 className="size-4 text-indigo-600 dark:text-indigo-400" />

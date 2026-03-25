@@ -50,8 +50,8 @@ export function UserMenu({ name, email, image, role }: UserMenuProps) {
       </Menu.Trigger>
 
       <Menu.Portal>
-        <Menu.Positioner side="bottom" align="end" sideOffset={8}>
-          <Menu.Popup className="z-50 min-w-48 rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-md outline-none">
+        <Menu.Positioner className="z-60" side="bottom" align="end" sideOffset={8}>
+          <Menu.Popup className="min-w-48 rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-md outline-none">
             {/* Header */}
             <div className="px-3 py-2">
               <p className="text-sm font-medium">{name}</p>
