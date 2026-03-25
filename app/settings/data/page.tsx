@@ -90,7 +90,6 @@ export default function DataPage() {
   const [msgW, setMsgW] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [msgD, setMsgD] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [msgAH, setMsgAH] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const ahFileRef = useRef<HTMLInputElement>(null);
   function handleExportWorkouts() {
     startW(async () => {
       const result = await exportWorkoutsCSV();
@@ -222,24 +221,20 @@ export default function DataPage() {
           </div>
 
           <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={() => ahFileRef.current?.click()}
-              disabled={isPendingAH}
-              className="flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50 transition-colors"
+            <label
+              className={`flex cursor-pointer items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors ${isPendingAH ? "pointer-events-none opacity-50" : ""}`}
             >
               <Upload className="size-3.5" />
               {isPendingAH ? "Importing…" : "Import .zip or export.xml"}
-            </button>
-            <input
-              ref={ahFileRef}
-              type="file"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) { handleImportAppleHealth(file); e.target.value = ""; }
-              }}
-            />
+              <input
+                type="file"
+                className="sr-only"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) { handleImportAppleHealth(file); e.target.value = ""; }
+                }}
+              />
+            </label>
           </div>
 
           {msgAH && (
