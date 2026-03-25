@@ -519,13 +519,15 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
               {editingWeight ? (
                 <div className="flex items-center gap-1.5 shrink-0">
                   <input
-                    type="number"
-                    min={20}
-                    max={300}
-                    step={0.1}
+                    type="text"
+                    inputMode="decimal"
                     value={weightInput}
                     onFocus={(e) => e.target.select()}
                     onChange={(e) => setWeightInput(e.target.value)}
+                    onBlur={(e) => {
+                      const v = parseFloat(e.target.value);
+                      if (isNaN(v) || v <= 0) setWeightInput(String(Math.round(bodyWeightKg)));
+                    }}
                     className="h-7 w-16 rounded border border-input bg-background px-1.5 text-sm focus-visible:outline-none"
                   />
                   <span className="text-xs text-muted-foreground">kg</span>
@@ -626,12 +628,8 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
             </div>
           )}
 
-          {/* Add food + Templates + Camera buttons — hidden while inline form is open */}
-          {!showAddForm && <div id="add-food-section" className="flex flex-wrap items-center gap-2 animate-fade-up" style={{ animationDelay: "100ms" }}>
-            <Button size="sm" onClick={() => openAddForm(getMealTypeForTime())} className="gap-1.5">
-              <Plus className="size-3.5" />
-              Add Food
-            </Button>
+          {/* Scan + Templates buttons — hidden while inline form is open */}
+          {!showAddForm && !editingEntry && <div id="add-food-section" className="flex flex-wrap items-center gap-2 animate-fade-up" style={{ animationDelay: "100ms" }}>
             <Button
               size="sm"
               variant="outline"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useRef, useEffect, useCallback } from "react";
+import { useState, useTransition, useRef, useEffect, useCallback, useLayoutEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -91,6 +91,15 @@ function MacroStepper({
   colorClass: string;
 }) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [localValue, setLocalValue] = useState(String(value));
+  const [isFocused, setIsFocused] = useState(false);
+
+  // Sync display when value changes from outside (stepper buttons) but not while typing
+  useLayoutEffect(() => {
+    if (!isFocused) {
+      setLocalValue(String(value));
+    }
+  }, [value, isFocused]);
 
   function startRepeat(delta: number) {
     let current = value;
@@ -123,16 +132,26 @@ function MacroStepper({
         −
       </button>
       <input
-        type="number"
-        value={value}
-        min={0}
-        max={max}
-        step={0.1}
-        onFocus={(e) => e.target.select()}
+        type="text"
+        inputMode="decimal"
+        value={localValue}
+        onFocus={(e) => {
+          setIsFocused(true);
+          e.target.select();
+        }}
         onChange={(e) => {
-          if (e.target.value === "") { onChange(0); return; }
-          const n = parseFloat(e.target.value);
+          const raw = e.target.value;
+          setLocalValue(raw);
+          if (raw === "" || raw === ".") return;
+          const n = parseFloat(raw);
           if (!isNaN(n)) onChange(Math.max(0, Math.min(max, n)));
+        }}
+        onBlur={() => {
+          setIsFocused(false);
+          const n = parseFloat(localValue);
+          const normalized = isNaN(n) ? 0 : Math.max(0, Math.min(max, n));
+          setLocalValue(String(normalized));
+          onChange(normalized);
         }}
         className={`h-10 w-full min-w-0 bg-background text-center text-sm font-medium outline-none focus:ring-1 focus:ring-inset focus:ring-amber-500/40 ${colorClass}`}
       />
@@ -571,14 +590,20 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
                   −
                 </button>
                 <input
-                  type="number"
-                  min={0.1}
-                  step={0.1}
+                  type="text"
+                  inputMode="decimal"
                   value={customAmount}
                   onFocus={(e) => e.target.select()}
                   onChange={(e) => {
                     setCustomAmount(e.target.value);
                     applyCustomAmount(e.target.value);
+                  }}
+                  onBlur={(e) => {
+                    const n = parseFloat(e.target.value);
+                    if (isNaN(n) || n <= 0) {
+                      setCustomAmount(String(baseFood?.servingSize ?? 1));
+                      applyCustomAmount(String(baseFood?.servingSize ?? 1));
+                    }
                   }}
                   className="h-10 w-full min-w-0 bg-background text-center text-sm font-medium text-amber-600 dark:text-amber-400 outline-none focus:ring-1 focus:ring-inset focus:ring-amber-500/40"
                 />

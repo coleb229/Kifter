@@ -24,7 +24,7 @@ function Section({ icon: Icon, title, description, children, id }: {
   id?: string;
 }) {
   return (
-    <section id={id} className="flex scroll-mt-14 flex-col gap-4">
+    <section id={id} className="flex scroll-mt-28 flex-col gap-4">
       <div className="flex items-center gap-3">
         <div className="flex size-8 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-950/40">
           <Icon className="size-4 text-indigo-600 dark:text-indigo-400" />
@@ -106,7 +106,7 @@ export default async function DevPanelPage() {
         </p>
       </div>
 
-      <SectionSubnav items={[
+      <SectionSubnav stickyTop="top-28" items={[
         { label: "Integrations", id: "integrations" },
         ...(canManageSuggestions || canViewBugReports || isAdmin ? [{ label: "Feedback & Ideas", id: "feedback" }] : []),
         ...(isAdmin ? [{ label: "Course Content", id: "content" }] : []),

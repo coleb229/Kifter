@@ -91,6 +91,7 @@ export function BugReportButton() {
   const [showRelated, setShowRelated] = useState(false);
   const [aiPrompts, setAiPrompts] = useState<FormPrompt[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   const [appendedIdx, setAppendedIdx] = useState<number | null>(null);
 
   const { startUpload, isUploading } = useUploadThing("bugScreenshot", {
@@ -156,13 +157,18 @@ export function BugReportButton() {
   async function handleGetInsights() {
     setAiLoading(true);
     setAiPrompts([]);
+    setAiError(null);
     const res = await generateBugReportPrompts({
       title: watch("title"),
       category: watch("category"),
       page: watch("page"),
       description: watch("description"),
     });
-    if (res.success) setAiPrompts(res.data);
+    if (res.success) {
+      setAiPrompts(res.data);
+    } else {
+      setAiError(res.error ?? "Failed to generate insights. Try again.");
+    }
     setAiLoading(false);
   }
 
@@ -300,6 +306,10 @@ export function BugReportButton() {
                       {aiLoading ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
                       {aiLoading ? "Thinking…" : "AI Insights"}
                     </button>
+
+                    {aiError && (
+                      <p className="text-xs text-destructive">{aiError}</p>
+                    )}
 
                     {aiPrompts.length > 0 && (
                       <div className="rounded-xl border border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-950/20 p-3 flex flex-col gap-2">

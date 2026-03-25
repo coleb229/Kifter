@@ -170,12 +170,10 @@ Open [http://localhost:3000](http://localhost:3000).
 - Admin inline edit forms for bug reports and suggestions now use UploadThing file pickers (thumbnail grid + dashed-border upload button) instead of URL-paste textareas — matches the UX of the initial submission forms
 
 **Bug Fixes**
-- Diet numeric inputs (macros, serving size, body weight) now select all text on focus so values can be replaced immediately without fighting a leading zero on mobile
-- "Add Food / Scan / Templates" action bar is now hidden while the inline food log form is open, eliminating confusion between the "Add Food" toggle and the form's submit button
-- AI Insights "Append" button in bug report and suggestion forms now shows a "✓ Added" confirmation state for 1.5 s and becomes disabled after tapping, preventing duplicate appends on mobile
-
-**Improvements**
-- All sticky subnavs now offset correctly below the 56 px main header (`top-14`) so section navigation remains accessible at any scroll depth — fixes `SectionSubnav` mobile strip, admin layout tab bar, and diet macro totals header
+- Diet numeric inputs (macros, serving size, body weight) converted from `type="number"` to `type="text" inputMode="decimal"` with local string state — eliminates iOS leading-zero persistence and backspace-blocking; field can now be fully cleared and re-typed without fighting browser number-input constraints
+- Removed the top-level "Add Food" button from the diet log action bar — per-meal "Add" buttons inside each meal section (Breakfast / Lunch / Dinner / Snack) are now the sole entry point for logging food, eliminating the confusion where the button appeared to be a form submit action
+- AI Insights button in bug report and suggestion forms now shows an inline error message when the request fails (e.g. rate limit hit) instead of silently stopping the spinner
+- `/admin/dev` section subnav now uses `sticky top-28` (accounting for both the main navbar and the admin layout tab bar) so the strip no longer overlaps the admin header on scroll; bottom margin reduced from `mb-10` to `mb-2` to remove the large empty gap below the strip; section anchor scroll offset updated to `scroll-mt-28`
 
 ### 2026-03-19
 
