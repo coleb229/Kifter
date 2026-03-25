@@ -234,7 +234,7 @@ export default function DataPage() {
             <input
               ref={ahFileRef}
               type="file"
-              accept=".zip,.xml,application/zip,application/xml,text/xml"
+              accept=".zip,.xml,application/zip,application/x-zip-compressed,application/octet-stream,application/xml,text/xml"
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
