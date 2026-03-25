@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { format } from "date-fns";
-import { Lightbulb, ChevronDown, ChevronRight, Trash2, ChevronLeft, Pencil, Check, X } from "lucide-react";
+import { Lightbulb, ChevronDown, ChevronRight, Trash2, ChevronLeft, Pencil, Check, X, ImagePlus, Loader2 } from "lucide-react";
 import { updateSuggestionStatus, deleteUserSuggestion, updateUserSuggestion } from "@/actions/suggestion-actions";
+import { useUploadThing } from "@/lib/uploadthing-client";
 import { ImplementationLog } from "@/components/admin/implementation-log";
 import type { UserSuggestion, SuggestionStatus } from "@/types";
 
@@ -47,6 +48,12 @@ function SuggestionCard({ suggestion, onDelete }: { suggestion: UserSuggestion; 
   const [editTitle, setEditTitle] = useState(suggestion.title);
   const [editDescription, setEditDescription] = useState(suggestion.description ?? "");
   const [editImages, setEditImages] = useState<string[]>(suggestion.imageUrls ?? []);
+
+  const { startUpload: startImageUpload, isUploading: isUploadingImage } = useUploadThing("suggestionImage", {
+    onClientUploadComplete: (res) => {
+      setEditImages((prev) => [...prev, ...res.map((f) => f.url)]);
+    },
+  });
 
   // Displayed values
   const [displayTitle, setDisplayTitle] = useState(suggestion.title);
@@ -129,14 +136,41 @@ function SuggestionCard({ suggestion, onDelete }: { suggestion: UserSuggestion; 
                 <textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} rows={4} className={`${inputClass} resize-y`} />
               </div>
               <div>
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1 block">Image URLs (one per line)</label>
-                <textarea
-                  value={editImages.join("\n")}
-                  onChange={(e) => setEditImages(e.target.value.split("\n"))}
-                  rows={3}
-                  placeholder="https://..."
-                  className={`${inputClass} resize-y font-mono text-xs`}
-                />
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1 block">Images</label>
+                {editImages.length > 0 && (
+                  <div className="mb-2 flex flex-wrap gap-2">
+                    {editImages.map((url, i) => (
+                      <div key={url} className="relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt={`Image ${i + 1}`} className="size-16 rounded-lg border border-border object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => setEditImages((prev) => prev.filter((_, j) => j !== i))}
+                          className="absolute -right-1.5 -top-1.5 flex size-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
+                        >
+                          <X className="size-2.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {editImages.length < 3 && (
+                  <label className={`flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2 text-xs text-muted-foreground transition-colors hover:border-ring hover:text-foreground ${isUploadingImage ? "pointer-events-none opacity-60" : ""}`}>
+                    {isUploadingImage ? <Loader2 className="size-3.5 animate-spin" /> : <ImagePlus className="size-3.5" />}
+                    {isUploadingImage ? "Uploading…" : "Add image"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="sr-only"
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files ?? []).slice(0, 3 - editImages.length);
+                        if (files.length) startImageUpload(files);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                )}
               </div>
               <div className="flex gap-2">
                 <button type="button" onClick={handleEditSave} disabled={isSaving}

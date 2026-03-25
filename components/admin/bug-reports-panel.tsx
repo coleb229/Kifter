@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { format } from "date-fns";
-import { Bug, ChevronDown, ChevronRight, ExternalLink, Trash2, ChevronLeft, Pencil, Check, X } from "lucide-react";
+import { Bug, ChevronDown, ChevronRight, ExternalLink, Trash2, ChevronLeft, Pencil, Check, X, ImagePlus, Loader2 } from "lucide-react";
 import { updateBugReportStatus, deleteBugReport, updateBugReport } from "@/actions/bug-report-actions";
+import { useUploadThing } from "@/lib/uploadthing-client";
 import { ImplementationLog } from "@/components/admin/implementation-log";
 import type { BugReport, BugSeverity, BugStatus } from "@/types";
 
@@ -63,6 +64,12 @@ function BugReportCard({ report, onDelete }: { report: BugReport; onDelete: (id:
   const [editSteps, setEditSteps] = useState(report.steps ?? "");
   const [editSeverity, setEditSeverity] = useState<BugSeverity>(report.severity ?? "medium");
   const [editScreenshots, setEditScreenshots] = useState<string[]>(report.screenshotUrls ?? []);
+
+  const { startUpload: startScreenshotUpload, isUploading: isUploadingScreenshot } = useUploadThing("bugScreenshot", {
+    onClientUploadComplete: (res) => {
+      setEditScreenshots((prev) => [...prev, ...res.map((f) => f.url)]);
+    },
+  });
 
   // Displayed values (updated optimistically after save)
   const [displayTitle, setDisplayTitle] = useState(report.title);
@@ -176,14 +183,41 @@ function BugReportCard({ report, onDelete }: { report: BugReport; onDelete: (id:
                 <textarea value={editSteps} onChange={(e) => setEditSteps(e.target.value)} rows={3} className={`${inputClass} resize-y`} />
               </div>
               <div>
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1 block">Screenshot URLs (one per line)</label>
-                <textarea
-                  value={editScreenshots.join("\n")}
-                  onChange={(e) => setEditScreenshots(e.target.value.split("\n"))}
-                  rows={3}
-                  placeholder="https://..."
-                  className={`${inputClass} resize-y font-mono text-xs`}
-                />
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1 block">Screenshots</label>
+                {editScreenshots.length > 0 && (
+                  <div className="mb-2 flex flex-wrap gap-2">
+                    {editScreenshots.map((url, i) => (
+                      <div key={url} className="relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt={`Screenshot ${i + 1}`} className="size-16 rounded-lg border border-border object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => setEditScreenshots((prev) => prev.filter((_, j) => j !== i))}
+                          className="absolute -right-1.5 -top-1.5 flex size-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
+                        >
+                          <X className="size-2.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {editScreenshots.length < 3 && (
+                  <label className={`flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2 text-xs text-muted-foreground transition-colors hover:border-ring hover:text-foreground ${isUploadingScreenshot ? "pointer-events-none opacity-60" : ""}`}>
+                    {isUploadingScreenshot ? <Loader2 className="size-3.5 animate-spin" /> : <ImagePlus className="size-3.5" />}
+                    {isUploadingScreenshot ? "Uploading…" : "Add screenshot"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="sr-only"
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files ?? []).slice(0, 3 - editScreenshots.length);
+                        if (files.length) startScreenshotUpload(files);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                )}
               </div>
               <div className="flex gap-2">
                 <button type="button" onClick={handleEditSave} disabled={isSaving}

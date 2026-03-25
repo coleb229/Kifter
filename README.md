@@ -166,6 +166,9 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ### 2026-03-24 (latest)
 
+**Improvements**
+- Admin inline edit forms for bug reports and suggestions now use UploadThing file pickers (thumbnail grid + dashed-border upload button) instead of URL-paste textareas — matches the UX of the initial submission forms
+
 **Bug Fixes**
 - Diet numeric inputs (macros, serving size, body weight) now select all text on focus so values can be replaced immediately without fighting a leading zero on mobile
 - "Add Food / Scan / Templates" action bar is now hidden while the inline food log form is open, eliminating confusion between the "Add Food" toggle and the form's submit button
