@@ -8,11 +8,14 @@ import {
 import { format, parseISO } from "date-fns";
 import Image from "next/image";
 import type { BodyWeightEntry, PhysiqueMeasurement, ProgressPhoto } from "@/types";
+import { convertWeight } from "@/lib/weight";
+import type { WeightUnit } from "@/lib/weight";
 
 interface Props {
   bodyWeights: BodyWeightEntry[];
   measurements: PhysiqueMeasurement[];
   photos: ProgressPhoto[];
+  displayUnit: WeightUnit;
 }
 
 interface TimelinePoint {
@@ -26,10 +29,11 @@ interface TimelinePoint {
   isRecomp?: boolean; // weight stable but waist decreased
 }
 
-const CustomTooltip = ({ active, payload, label }: {
+const CustomTooltip = ({ active, payload, label, weightUnit }: {
   active?: boolean;
   payload?: { name: string; value: number; color: string }[];
   label?: string;
+  weightUnit?: WeightUnit;
 }) => {
   if (!active || !payload?.length) return null;
   return (
@@ -37,7 +41,7 @@ const CustomTooltip = ({ active, payload, label }: {
       <p className="font-medium mb-1">{label}</p>
       {payload.filter((p) => p.value != null).map((p) => (
         <p key={p.name} style={{ color: p.color }}>
-          {p.name}: {p.value.toFixed(1)}{p.name === "Weight" ? " lb" : " in/cm"}
+          {p.name}: {p.value.toFixed(1)}{p.name === "Weight" ? ` ${weightUnit ?? "lb"}` : " in/cm"}
         </p>
       ))}
     </div>
@@ -60,16 +64,14 @@ function PhotoDot({ cx, cy, payload }: PhotoDotProps) {
   );
 }
 
-export function CompositionTimeline({ bodyWeights, measurements, photos }: Props) {
+export function CompositionTimeline({ bodyWeights, measurements, photos, displayUnit }: Props) {
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
 
   const timelineData = useMemo((): TimelinePoint[] => {
     // Build date-keyed maps
     const weightMap = new Map<string, number>();
     for (const w of bodyWeights) {
-      // Normalize to lb for consistent axis
-      const weightLb = w.weightUnit === "kg" ? w.weight * 2.20462 : w.weight;
-      weightMap.set(w.date, weightLb);
+      weightMap.set(w.date, convertWeight(w.weight, w.weightUnit, displayUnit));
     }
 
     const measureMap = new Map<string, { waist?: number; hips?: number }>();
@@ -112,7 +114,7 @@ export function CompositionTimeline({ bodyWeights, measurements, photos }: Props
       if (
         refPoint &&
         curr.weight != null && refPoint.weight != null &&
-        Math.abs(curr.weight - refPoint.weight) <= 2 &&
+        Math.abs(curr.weight - refPoint.weight) <= (displayUnit === "kg" ? 0.9 : 2) &&
         curr.waist != null && refPoint.waist != null &&
         curr.waist < refPoint.waist - 0.3
       ) {
@@ -121,7 +123,7 @@ export function CompositionTimeline({ bodyWeights, measurements, photos }: Props
     }
 
     return points;
-  }, [bodyWeights, measurements, photos]);
+  }, [bodyWeights, measurements, photos, displayUnit]);
 
   const hasWeight = timelineData.some((d) => d.weight != null);
   const hasWaist = timelineData.some((d) => d.waist != null);
@@ -176,7 +178,7 @@ export function CompositionTimeline({ bodyWeights, measurements, photos }: Props
               label={{ value: "in/cm", angle: 90, position: "insideRight", fontSize: 9, fill: "var(--muted-foreground)" }}
             />
           )}
-          <Tooltip content={<CustomTooltip />} />
+          <Tooltip content={<CustomTooltip weightUnit={displayUnit} />} />
           <Legend wrapperStyle={{ fontSize: 11 }} />
 
           {/* Recomp markers */}

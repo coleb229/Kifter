@@ -13,9 +13,12 @@ import {
 } from "recharts";
 import { format, parseISO } from "date-fns";
 import type { MacroCorrelationPoint } from "@/actions/diet-actions";
+import { convertWeight } from "@/lib/weight";
+import type { WeightUnit } from "@/lib/weight";
 
 interface Props {
   data: MacroCorrelationPoint[];
+  displayUnit: WeightUnit;
 }
 
 const CustomTooltip = ({
@@ -42,21 +45,23 @@ const CustomTooltip = ({
   );
 };
 
-export function MacroCorrelationChart({ data }: Props) {
+export function MacroCorrelationChart({ data, displayUnit }: Props) {
   const chartData = useMemo(
     () =>
       data.map((d) => ({
         date: format(parseISO(d.date), "MMM d"),
         adherence: d.calorieAdherence !== null ? Math.round(d.calorieAdherence) : null,
-        weight: d.bodyWeight,
-        weightUnit: d.weightUnit,
+        weight: d.bodyWeight !== null
+          ? convertWeight(d.bodyWeight, (d.weightUnit as WeightUnit) || "lb", displayUnit)
+          : null,
       })),
-    [data]
+    [data, displayUnit]
   );
+
+  const weightUnit = displayUnit;
 
   const hasAdherence = chartData.some((d) => d.adherence !== null);
   const hasWeight = chartData.some((d) => d.weight !== null);
-  const weightUnit = data.find((d) => d.weightUnit)?.weightUnit ?? "lb";
 
   if (!hasAdherence && !hasWeight) {
     return (

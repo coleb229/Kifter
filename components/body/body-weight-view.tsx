@@ -15,10 +15,12 @@ import {
 import { format } from "date-fns";
 import { addBodyWeight, deleteBodyWeight } from "@/actions/body-weight-actions";
 import type { BodyWeightEntry } from "@/types";
+import { convertWeight } from "@/lib/weight";
 import type { WeightUnit } from "@/lib/weight";
 
 interface Props {
   initialEntries: BodyWeightEntry[];
+  displayUnit: WeightUnit;
 }
 
 function todayStr() {
@@ -52,22 +54,27 @@ function CustomTooltip({
   );
 }
 
-export function BodyWeightView({ initialEntries }: Props) {
+export function BodyWeightView({ initialEntries, displayUnit }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [date, setDate] = useState(todayStr());
   const [weight, setWeight] = useState("");
-  const [unit, setUnit] = useState<WeightUnit>("lb");
+  const [unit, setUnit] = useState<WeightUnit>(displayUnit);
   const [notes, setNotes] = useState("");
   const [error, setError] = useState("");
 
-  const entries = initialEntries;
+  // Normalize all entries to the display unit
+  const entries = initialEntries.map((e) => ({
+    ...e,
+    weight: convertWeight(e.weight, e.weightUnit, displayUnit),
+    weightUnit: displayUnit,
+  }));
 
   // Stats
   const current = entries.at(-1);
   const weights = entries.map((e) => e.weight);
-  const lowest = weights.length ? Math.min(...weights) : null;
-  const highest = weights.length ? Math.max(...weights) : null;
+  const lowestVal = weights.length ? Math.min(...weights) : null;
+  const highestVal = weights.length ? Math.max(...weights) : null;
   const last30 = entries.filter((e) => {
     const d = new Date(e.date + "T00:00:00");
     const cutoff = new Date();
@@ -110,10 +117,10 @@ export function BodyWeightView({ initialEntries }: Props) {
       {/* Stat cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { label: "Current", value: current ? `${current.weight} ${current.weightUnit}` : "—" },
-          { label: "Lowest", value: lowest !== null ? `${lowest} ${entries.find(e => e.weight === lowest)?.weightUnit ?? ""}` : "—" },
-          { label: "Highest", value: highest !== null ? `${highest} ${entries.find(e => e.weight === highest)?.weightUnit ?? ""}` : "—" },
-          { label: "30-day avg", value: avg30 !== null ? `${avg30} ${current?.weightUnit ?? ""}` : "—" },
+          { label: "Current", value: current ? `${current.weight} ${displayUnit}` : "—" },
+          { label: "Lowest", value: lowestVal !== null ? `${lowestVal} ${displayUnit}` : "—" },
+          { label: "Highest", value: highestVal !== null ? `${highestVal} ${displayUnit}` : "—" },
+          { label: "30-day avg", value: avg30 !== null ? `${avg30} ${displayUnit}` : "—" },
         ].map(({ label, value }) => (
           <div key={label} className="rounded-xl border border-border bg-card px-4 py-3">
             <p className="text-xs text-muted-foreground">{label}</p>
