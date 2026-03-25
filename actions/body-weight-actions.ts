@@ -46,6 +46,7 @@ export async function getBodyWeightHistory(): Promise<ActionResult<BodyWeightEnt
       date: d.date,
       weight: d.weight,
       weightUnit: d.weightUnit,
+      bmi: d.bmi,
       notes: d.notes,
       createdAt: d.createdAt.toISOString(),
     })),

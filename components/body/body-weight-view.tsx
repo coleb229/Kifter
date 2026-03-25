@@ -45,6 +45,9 @@ function CustomTooltip({
           {p.payload.weightUnit}
         </span>
       </p>
+      {p.payload.bmi != null && (
+        <p className="text-xs text-muted-foreground">BMI {p.payload.bmi}</p>
+      )}
     </div>
   );
 }
@@ -228,6 +231,9 @@ export function BodyWeightView({ initialEntries }: Props) {
                 <div>
                   <p className="text-sm font-medium">
                     {entry.weight} {entry.weightUnit}
+                    {entry.bmi != null && (
+                      <span className="ml-2 text-xs font-normal text-muted-foreground">BMI {entry.bmi}</span>
+                    )}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {format(new Date(entry.date + "T00:00:00"), "MMMM d, yyyy")}

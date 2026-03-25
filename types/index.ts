@@ -41,6 +41,12 @@ export interface ParsedAppleHealthWorkout {
   heartRateMax?: number;
 }
 
+export interface ParsedAppleHealthBodyRecord {
+  date: string;      // "YYYY-MM-DD"
+  weightKg?: number; // body mass converted to kg
+  bmi?: number;
+}
+
 export interface WorkoutSessionDoc {
   _id: ObjectId;
   userId: string;
@@ -590,6 +596,7 @@ export interface BodyWeightDoc {
   date: string; // "YYYY-MM-DD"
   weight: number;
   weightUnit: WeightUnit;
+  bmi?: number;
   notes?: string;
   createdAt: Date;
 }
@@ -599,6 +606,7 @@ export interface BodyWeightEntry {
   date: string;
   weight: number;
   weightUnit: WeightUnit;
+  bmi?: number;
   notes?: string;
   createdAt: string;
 }

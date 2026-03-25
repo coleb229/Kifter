@@ -4,9 +4,9 @@ import { gunzipSync } from "node:zlib";
 import AdmZip from "adm-zip";
 import { ObjectId } from "mongodb";
 import { auth } from "@/auth";
-import { getSessionsCollection, getSetsCollection, getDietEntriesCollection, getCardioSessionsCollection } from "@/lib/db";
+import { getSessionsCollection, getSetsCollection, getDietEntriesCollection, getCardioSessionsCollection, getBodyWeightCollection } from "@/lib/db";
 import { getIntegrationSettings } from "@/actions/settings-actions";
-import type { ActionResult, BodyTarget, CardioActivity, CardioSessionDoc, MealType, ParsedAppleHealthWorkout, WorkoutSessionAppleHealth, WorkoutSessionDoc, WorkoutSetDoc, DietEntryDoc } from "@/types";
+import type { ActionResult, BodyTarget, CardioActivity, CardioSessionDoc, MealType, ParsedAppleHealthBodyRecord, ParsedAppleHealthWorkout, WorkoutSessionAppleHealth, WorkoutSessionDoc, WorkoutSetDoc, DietEntryDoc } from "@/types";
 import { BODY_TARGETS, MEAL_TYPES } from "@/types";
 
 // ── Apple Health training activity map ────────────────────────────────────────
@@ -278,11 +278,75 @@ function decompressAppleHealthXMLFromBuffer(
   }
 }
 
+// ── Body weight record helper ─────────────────────────────────────────────────
+
+function parseBodyRecordsFromXML(xmlText: string): ParsedAppleHealthBodyRecord[] {
+  const byDate = new Map<string, ParsedAppleHealthBodyRecord>();
+  const recordRe = /<Record\s((?:"[^"]*"|[^>])*)\/?>/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = recordRe.exec(xmlText)) !== null) {
+    const attrs = match[1];
+    const type = getAttr(attrs, "type");
+    if (type !== "HKQuantityTypeIdentifierBodyMass" && type !== "HKQuantityTypeIdentifierBodyMassIndex") continue;
+
+    const startDateStr = getAttr(attrs, "startDate");
+    if (!startDateStr) continue;
+    const dateStr = startDateStr.slice(0, 10); // "YYYY-MM-DD"
+
+    const value = parseFloat(getAttr(attrs, "value"));
+    if (isNaN(value) || value <= 0) continue;
+
+    const existing = byDate.get(dateStr) ?? { date: dateStr };
+
+    if (type === "HKQuantityTypeIdentifierBodyMass") {
+      const unit = getAttr(attrs, "unit");
+      existing.weightKg = unit === "lb" ? value * 0.453592 : value;
+    } else {
+      existing.bmi = Math.round(value * 10) / 10;
+    }
+
+    byDate.set(dateStr, existing);
+  }
+
+  return Array.from(byDate.values());
+}
+
+async function importBodyRecordsFromXML(xmlText: string, userId: string, dedupe: boolean): Promise<number> {
+  const records = parseBodyRecordsFromXML(xmlText);
+  if (!records.length) return 0;
+
+  const bodyWeightCol = await getBodyWeightCollection();
+
+  const dates = records.map((r) => r.date);
+  const existingDates = dedupe
+    ? new Set(
+        (await bodyWeightCol.find({ userId, date: { $in: dates } }).project<{ date: string }>({ date: 1 }).toArray()).map((d) => d.date)
+      )
+    : new Set<string>();
+
+  const toInsert = records
+    .filter((r) => r.weightKg != null && !existingDates.has(r.date))
+    .map((r) => ({
+      _id: new ObjectId(),
+      userId,
+      date: r.date,
+      weight: Math.round(r.weightKg! * 100) / 100,
+      weightUnit: "kg" as const,
+      bmi: r.bmi,
+      notes: "Imported from Apple Health",
+      createdAt: new Date(),
+    }));
+
+  if (toInsert.length) await bodyWeightCol.insertMany(toInsert);
+  return toInsert.length;
+}
+
 // ── importAppleHealthXML ──────────────────────────────────────────────────────
 
 export async function importAppleHealthXML(
   formData: FormData
-): Promise<ActionResult<{ cardio: number; training: number; skipped: number }>> {
+): Promise<ActionResult<{ cardio: number; training: number; bodyWeight: number; skipped: number }>> {
   const session = await auth();
   if (!session?.user?.id) return { success: false, error: "Not authenticated" };
   const userId = session.user.id;
@@ -446,7 +510,10 @@ export async function importAppleHealthXML(
     }
   }
 
-  return { success: true, data: { cardio: cardioInserted, training: trainingEnriched, skipped } };
+  // ── Parse + insert body weight records ────────────────────────────────────
+  const bodyWeightInserted = await importBodyRecordsFromXML(xmlText, userId, shouldDedupe);
+
+  return { success: true, data: { cardio: cardioInserted, training: trainingEnriched, bodyWeight: bodyWeightInserted, skipped } };
 }
 
 // ── importAppleHealthParsed ───────────────────────────────────────────────────
@@ -454,8 +521,9 @@ export async function importAppleHealthXML(
 // send the raw (potentially 10 MB+) zip/xml through Vercel's 4.5 MB limit.
 
 export async function importAppleHealthParsed(
-  workouts: ParsedAppleHealthWorkout[]
-): Promise<ActionResult<{ cardio: number; training: number; skipped: number }>> {
+  workouts: ParsedAppleHealthWorkout[],
+  bodyRecords?: ParsedAppleHealthBodyRecord[]
+): Promise<ActionResult<{ cardio: number; training: number; bodyWeight: number; skipped: number }>> {
   const session = await auth();
   if (!session?.user?.id) return { success: false, error: "Not authenticated" };
   const userId = session.user.id;
@@ -467,8 +535,8 @@ export async function importAppleHealthParsed(
     return { success: false, error: "Apple Health import is currently disabled." };
   }
 
-  if (!workouts?.length) {
-    return { success: true, data: { cardio: 0, training: 0, skipped: 0 } };
+  if (!workouts?.length && !bodyRecords?.length) {
+    return { success: true, data: { cardio: 0, training: 0, bodyWeight: 0, skipped: 0 } };
   }
 
   const sessionsCol = await getSessionsCollection();
@@ -567,5 +635,33 @@ export async function importAppleHealthParsed(
     }
   }
 
-  return { success: true, data: { cardio: cardioInserted, training: trainingEnriched, skipped } };
+  // ── Insert body weight records ─────────────────────────────────────────────
+  let bodyWeightInserted = 0;
+  if (bodyRecords?.length) {
+    const bodyWeightCol = await getBodyWeightCollection();
+    const dates = bodyRecords.map((r) => r.date);
+    const existingDates = shouldDedupe
+      ? new Set(
+          (await bodyWeightCol.find({ userId, date: { $in: dates } }).project<{ date: string }>({ date: 1 }).toArray()).map((d) => d.date)
+        )
+      : new Set<string>();
+
+    const toInsert = bodyRecords
+      .filter((r) => r.weightKg != null && !existingDates.has(r.date))
+      .map((r) => ({
+        _id: new ObjectId(),
+        userId,
+        date: r.date,
+        weight: Math.round(r.weightKg! * 100) / 100,
+        weightUnit: "kg" as const,
+        bmi: r.bmi,
+        notes: "Imported from Apple Health",
+        createdAt: new Date(),
+      }));
+
+    if (toInsert.length) await bodyWeightCol.insertMany(toInsert);
+    bodyWeightInserted = toInsert.length;
+  }
+
+  return { success: true, data: { cardio: cardioInserted, training: trainingEnriched, bodyWeight: bodyWeightInserted, skipped } };
 }

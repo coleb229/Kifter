@@ -5,7 +5,6 @@ import { Download, Upload, CheckCircle, AlertCircle, Apple } from "lucide-react"
 import { exportWorkoutsCSV, exportDietCSV } from "@/actions/export-actions";
 import { importWorkoutsCSV, importDietCSV, importAppleHealthParsed } from "@/actions/import-actions";
 import { parseAppleHealthFile } from "@/lib/apple-health-client-parser";
-import type { ParsedAppleHealthWorkout } from "@/types";
 
 function downloadCsv(content: string, filename: string) {
   const blob = new Blob([content], { type: "text/csv" });
@@ -150,28 +149,29 @@ export default function DataPage() {
 
   async function handleImportAppleHealth(file: File) {
     setMsgAH(null);
-    let workouts: ParsedAppleHealthWorkout[];
+    let parsed: { workouts: import("@/types").ParsedAppleHealthWorkout[]; bodyRecords: import("@/types").ParsedAppleHealthBodyRecord[] };
     try {
-      workouts = await parseAppleHealthFile(file);
+      parsed = await parseAppleHealthFile(file);
     } catch (e) {
       setMsgAH({ type: "error", text: e instanceof Error ? e.message : "Failed to parse file." });
       return;
     }
     startAH(async () => {
-      const result = await importAppleHealthParsed(workouts);
+      const result = await importAppleHealthParsed(parsed.workouts, parsed.bodyRecords);
       if (result.success) {
-        const { cardio, training, skipped } = result.data;
-        setMsgAH({ type: "success", text: buildImportMsg(cardio, training, skipped) });
+        const { cardio, training, bodyWeight, skipped } = result.data;
+        setMsgAH({ type: "success", text: buildImportMsg(cardio, training, bodyWeight, skipped) });
       } else {
         setMsgAH({ type: "error", text: result.error });
       }
     });
   }
 
-  function buildImportMsg(cardio: number, training: number, skipped: number): string {
+  function buildImportMsg(cardio: number, training: number, bodyWeight: number, skipped: number): string {
     const parts: string[] = [];
     if (cardio > 0) parts.push(`${cardio} cardio session${cardio !== 1 ? "s" : ""} imported`);
     if (training > 0) parts.push(`${training} training session${training !== 1 ? "s" : ""} enriched with Apple Health data`);
+    if (bodyWeight > 0) parts.push(`${bodyWeight} body weight record${bodyWeight !== 1 ? "s" : ""} imported`);
     const base = parts.length > 0 ? parts.join(", ") + "." : "No matching sessions found.";
     return skipped > 0 ? `${base} ${skipped} cardio skipped as duplicate${skipped !== 1 ? "s" : ""}.` : base;
   }

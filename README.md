@@ -166,6 +166,9 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ### 2026-03-24 (latest)
 
+**New Features**
+- Apple Health import now creates body weight records on the `/body` page — `HKQuantityTypeIdentifierBodyMass` entries are imported as weight records (stored in kg); `HKQuantityTypeIdentifierBodyMassIndex` entries populate a BMI field shown in the weight history list and chart tooltip; deduplication by calendar date prevents duplicate records on re-import
+
 **Improvements**
 - Admin inline edit forms for bug reports and suggestions now use UploadThing file pickers (thumbnail grid + dashed-border upload button) instead of URL-paste textareas — matches the UX of the initial submission forms
 

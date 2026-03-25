@@ -1,5 +1,5 @@
 import { unzipSync, gunzipSync, strFromU8 } from "fflate";
-import type { ParsedAppleHealthWorkout } from "@/types";
+import type { ParsedAppleHealthWorkout, ParsedAppleHealthBodyRecord } from "@/types";
 
 function getAttr(tag: string, name: string): string {
   const m = tag.match(new RegExp(`${name}="([^"]*)"`));
@@ -108,7 +108,41 @@ export function parseWorkoutsFromXML(xmlText: string): ParsedAppleHealthWorkout[
   return workouts;
 }
 
-export async function parseAppleHealthFile(file: File): Promise<ParsedAppleHealthWorkout[]> {
+export function parseBodyRecordsFromXML(xmlText: string): ParsedAppleHealthBodyRecord[] {
+  const byDate = new Map<string, ParsedAppleHealthBodyRecord>();
+  const recordRe = /<Record\s((?:"[^"]*"|[^>])*)\/?>/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = recordRe.exec(xmlText)) !== null) {
+    const attrs = match[1];
+    const type = getAttr(attrs, "type");
+    if (type !== "HKQuantityTypeIdentifierBodyMass" && type !== "HKQuantityTypeIdentifierBodyMassIndex") continue;
+
+    const startDateStr = getAttr(attrs, "startDate");
+    if (!startDateStr) continue;
+    const dateStr = startDateStr.slice(0, 10); // "YYYY-MM-DD"
+
+    const value = parseFloat(getAttr(attrs, "value"));
+    if (isNaN(value) || value <= 0) continue;
+
+    const existing = byDate.get(dateStr) ?? { date: dateStr };
+
+    if (type === "HKQuantityTypeIdentifierBodyMass") {
+      const unit = getAttr(attrs, "unit");
+      existing.weightKg = unit === "lb" ? value * 0.453592 : value;
+    } else {
+      existing.bmi = Math.round(value * 10) / 10;
+    }
+
+    byDate.set(dateStr, existing);
+  }
+
+  return Array.from(byDate.values());
+}
+
+export async function parseAppleHealthFile(
+  file: File
+): Promise<{ workouts: ParsedAppleHealthWorkout[]; bodyRecords: ParsedAppleHealthBodyRecord[] }> {
   const bytes = new Uint8Array(await file.arrayBuffer());
   const isZip  = bytes[0] === 0x50 && bytes[1] === 0x4b;
   const isGzip = bytes[0] === 0x1f && bytes[1] === 0x8b;
@@ -133,5 +167,8 @@ export async function parseAppleHealthFile(file: File): Promise<ParsedAppleHealt
     }
   }
 
-  return parseWorkoutsFromXML(xmlText);
+  return {
+    workouts: parseWorkoutsFromXML(xmlText),
+    bodyRecords: parseBodyRecordsFromXML(xmlText),
+  };
 }
