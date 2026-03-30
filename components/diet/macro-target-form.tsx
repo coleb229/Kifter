@@ -95,10 +95,10 @@ export function MacroTargetForm({ currentTargets, onClose }: Props) {
         </div>
 
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" size="sm" disabled={isPending}>
+          <Button type="submit" disabled={isPending}>
             {isPending ? "Saving…" : "Save Targets"}
           </Button>
         </div>

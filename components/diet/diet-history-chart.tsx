@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import { format, parseISO } from "date-fns";
 import type { DietDaySummary, MacroTarget } from "@/types";
+import { MACRO_COLORS } from "@/lib/label-colors";
 
 interface Props {
   history: DietDaySummary[];
@@ -79,7 +80,7 @@ export function DietHistoryChart({ history, targets, mode = "daily" }: Props) {
   }
 
   return (
-    <ResponsiveContainer width="100%" height={220}>
+    <ResponsiveContainer width="100%" height={220} className="lg:!h-[300px]">
       <ComposedChart data={data} margin={{ top: 4, right: targets ? 48 : 4, left: -16, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
         <XAxis
@@ -116,15 +117,15 @@ export function DietHistoryChart({ history, targets, mode = "daily" }: Props) {
           iconSize={8}
           wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }}
         />
-        <Bar yAxisId="left" dataKey="protein" stackId="macros" fill="#10b981" name="protein" radius={[0, 0, 0, 0]} />
-        <Bar yAxisId="left" dataKey="carbs" stackId="macros" fill="#f59e0b" name="carbs" radius={[0, 0, 0, 0]} />
-        <Bar yAxisId="left" dataKey="fat" stackId="macros" fill="#f43f5e" name="fat" radius={[4, 4, 0, 0]} />
+        <Bar yAxisId="left" dataKey="protein" stackId="macros" fill={MACRO_COLORS.protein.hex} name="protein" radius={[0, 0, 0, 0]} />
+        <Bar yAxisId="left" dataKey="carbs" stackId="macros" fill={MACRO_COLORS.carbs.hex} name="carbs" radius={[0, 0, 0, 0]} />
+        <Bar yAxisId="left" dataKey="fat" stackId="macros" fill={MACRO_COLORS.fat.hex} name="fat" radius={[4, 4, 0, 0]} />
         {targets && (
           <Line
             yAxisId="right"
             type="monotone"
             dataKey="target"
-            stroke="#6366f1"
+            stroke={MACRO_COLORS.calories.hex}
             strokeWidth={1.5}
             dot={false}
             strokeDasharray="4 2"

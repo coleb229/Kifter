@@ -34,17 +34,20 @@ interface Props {
   date: string;
   defaultMealType?: MealType;
   editingEntry?: DietEntry;
+  prefillFood?: FoodSearchResult;
   onClose: (saved?: boolean) => void;
 }
 
 const labelClass = "block text-xs font-medium text-muted-foreground mb-1";
 const errorClass = "mt-1 text-xs text-rose-500";
 
+import { MACRO_COLORS } from "@/lib/label-colors";
+
 const MACRO_LABELS: Record<string, { label: string; color: string }> = {
-  calories: { label: "Calories",   color: "text-amber-600 dark:text-amber-400" },
-  protein:  { label: "Protein (g)", color: "text-emerald-600 dark:text-emerald-400" },
-  carbs:    { label: "Carbs (g)",   color: "text-sky-600 dark:text-sky-400" },
-  fat:      { label: "Fat (g)",     color: "text-orange-600 dark:text-orange-400" },
+  calories: { label: "Calories",    color: MACRO_COLORS.calories.text },
+  protein:  { label: "Protein (g)", color: MACRO_COLORS.protein.text },
+  carbs:    { label: "Carbs (g)",   color: MACRO_COLORS.carbs.text },
+  fat:      { label: "Fat (g)",     color: MACRO_COLORS.fat.text },
 };
 
 const MULTIPLIERS = [0.5, 1, 1.5, 2, 3];
@@ -103,12 +106,14 @@ function MacroStepper({
 
   function startRepeat(delta: number) {
     let current = value;
+    navigator.vibrate?.(10);
     onChange(Math.max(0, Math.min(max, current + delta)));
     current = Math.max(0, Math.min(max, current + delta));
     intervalRef.current = setInterval(() => {
+      navigator.vibrate?.(5);
       current = Math.max(0, Math.min(max, current + delta));
       onChange(current);
-    }, 120);
+    }, 80);
   }
 
   function stopRepeat() {
@@ -124,10 +129,11 @@ function MacroStepper({
     <div className="flex items-center rounded-lg border border-border overflow-hidden">
       <button
         type="button"
+        aria-label="Decrease"
         onPointerDown={() => startRepeat(-1)}
         onPointerUp={stopRepeat}
         onPointerLeave={stopRepeat}
-        className="flex h-10 w-9 items-center justify-center text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:bg-muted select-none touch-none"
+        className="flex h-10 w-9 items-center justify-center text-muted-foreground transition-all hover:bg-muted hover:text-foreground active:bg-muted active:scale-95 select-none touch-none"
       >
         −
       </button>
@@ -157,10 +163,11 @@ function MacroStepper({
       />
       <button
         type="button"
+        aria-label="Increase"
         onPointerDown={() => startRepeat(1)}
         onPointerUp={stopRepeat}
         onPointerLeave={stopRepeat}
-        className="flex h-10 w-9 items-center justify-center text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:bg-muted select-none touch-none"
+        className="flex h-10 w-9 items-center justify-center text-muted-foreground transition-all hover:bg-muted hover:text-foreground active:bg-muted active:scale-95 select-none touch-none"
       >
         +
       </button>
@@ -168,7 +175,7 @@ function MacroStepper({
   );
 }
 
-export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry, onClose }: Props) {
+export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry, prefillFood, onClose }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [saveToLibrary, setSaveToLibrary] = useState(false);
@@ -235,6 +242,25 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
     });
   }, []);
 
+  // Prefill from barcode scan or external source
+  const prefillApplied = useRef(false);
+  useEffect(() => {
+    if (prefillFood && !prefillApplied.current) {
+      prefillApplied.current = true;
+      setValue("food", prefillFood.name, { shouldValidate: true });
+      setValue("calories", prefillFood.calories);
+      setValue("protein", prefillFood.protein);
+      setValue("carbs", prefillFood.carbs);
+      setValue("fat", prefillFood.fat);
+      setValue("servingSize", prefillFood.servingSize);
+      setValue("servingUnit", prefillFood.servingUnit);
+      setSelectedFood(prefillFood);
+      setBaseFood({ calories: prefillFood.calories, protein: prefillFood.protein, carbs: prefillFood.carbs, fat: prefillFood.fat, servingSize: prefillFood.servingSize, servingUnit: prefillFood.servingUnit });
+      setActiveMultiplier(1);
+      setCustomAmount(String(prefillFood.servingSize));
+    }
+  }, [prefillFood, setValue]);
+
   function handleFoodSelect(food: FoodSearchResult) {
     setValue("food", food.name, { shouldValidate: true });
     setValue("calories", food.calories);
@@ -256,38 +282,33 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
     setValue("food", e.target.value, { shouldValidate: true });
   }
 
+  const scaleMacros = useCallback((base: { calories: number; protein: number; carbs: number; fat: number }, factor: number) => {
+    setValue("calories", Math.round(base.calories * factor));
+    setValue("protein", Math.round(base.protein * factor * 10) / 10);
+    setValue("carbs", Math.round(base.carbs * factor * 10) / 10);
+    setValue("fat", Math.round(base.fat * factor * 10) / 10);
+  }, [setValue]);
+
   function applyMultiplier(mult: number) {
     if (!baseFood) return;
     setActiveMultiplier(mult);
     setCustomAmount(String(Math.round(baseFood.servingSize * mult * 10) / 10));
-    setValue("calories", Math.round(baseFood.calories * mult));
-    setValue("protein", Math.round(baseFood.protein * mult * 10) / 10);
-    setValue("carbs", Math.round(baseFood.carbs * mult * 10) / 10);
-    setValue("fat", Math.round(baseFood.fat * mult * 10) / 10);
+    scaleMacros(baseFood, mult);
   }
 
   function applyCustomAmount(amountStr: string) {
     const amount = parseFloat(amountStr);
     if (!baseFood || isNaN(amount) || amount <= 0 || baseFood.servingSize <= 0) return;
-    const factor = amount / baseFood.servingSize;
-    setActiveMultiplier(-1); // deselect preset buttons
+    setActiveMultiplier(-1);
     setValue("servingSize", amount);
-    setValue("calories", Math.round(baseFood.calories * factor));
-    setValue("protein", Math.round(baseFood.protein * factor * 10) / 10);
-    setValue("carbs", Math.round(baseFood.carbs * factor * 10) / 10);
-    setValue("fat", Math.round(baseFood.fat * factor * 10) / 10);
+    scaleMacros(baseFood, amount / baseFood.servingSize);
   }
 
   function handleGramChip(grams: number) {
     setValue("servingSize", grams);
     setShowAdvanced(true);
-    // Scale macros by grams relative to selected food's serving size
     if (baseFood && baseFood.servingSize > 0) {
-      const factor = grams / baseFood.servingSize;
-      setValue("calories", Math.round(baseFood.calories * factor));
-      setValue("protein", Math.round(baseFood.protein * factor * 10) / 10);
-      setValue("carbs", Math.round(baseFood.carbs * factor * 10) / 10);
-      setValue("fat", Math.round(baseFood.fat * factor * 10) / 10);
+      scaleMacros(baseFood, grams / baseFood.servingSize);
     }
   }
 
@@ -357,11 +378,7 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
           // Apply gram quantity if provided
           const grams = gramsMatch ? parseFloat(gramsMatch[1]) : ozMatch ? parseFloat(ozMatch[1]) * 28.35 : null;
           if (grams && match.servingSize > 0) {
-            const factor = grams / match.servingSize;
-            setValue("calories", Math.round(match.calories * factor));
-            setValue("protein", Math.round(match.protein * factor * 10) / 10);
-            setValue("carbs", Math.round(match.carbs * factor * 10) / 10);
-            setValue("fat", Math.round(match.fat * factor * 10) / 10);
+            scaleMacros(match, grams / match.servingSize);
             setValue("servingSize", grams);
           }
         } else if (calMatch) {
@@ -376,7 +393,8 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
     };
     recognition.onend = () => setVoiceListening(false);
     recognition.start();
-  }, [setValue]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setValue, scaleMacros]);
 
   function stopVoice() {
     recognitionRef.current?.stop();
@@ -468,24 +486,7 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
     <div className="rounded-xl border border-border bg-card p-4 animate-fade-up">
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h3 className="text-sm font-semibold">{isEditing ? "Edit Food" : "Add Food"}</h3>
-          {!isEditing && (
-            <button
-              type="button"
-              onClick={toggleCaloriesOnly}
-              className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors ${
-                caloriesOnly
-                  ? "border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                  : "border-border text-muted-foreground hover:bg-muted"
-              }`}
-              title="Log calories only (hide macros)"
-            >
-              <Zap className="size-2.5" />
-              Cal only
-            </button>
-          )}
-        </div>
+        <h3 className="text-sm font-semibold">{isEditing ? "Edit Food" : "Add Food"}</h3>
         <button
           type="button"
           onClick={() => onClose()}
@@ -506,6 +507,7 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
                   onSelect={handleFoodSelect}
                   favorites={favorites}
                   onToggleFavorite={handleToggleFavorite}
+                  autoFocus={!isEditing && !prefillFood}
                 />
               </div>
               <BarcodeScanner onSelect={handleFoodSelect} />
@@ -524,7 +526,7 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
               value={foodName ?? ""}
               onChange={handleFoodNameChange}
               placeholder="e.g. Chicken breast"
-              className="h-10 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-colors placeholder:text-muted-foreground"
+              className="h-10 w-full rounded-lg border border-border bg-background px-3 py-2 text-base sm:text-sm outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-colors placeholder:text-muted-foreground"
             />
             {hasSpeechAPI && !isEditing && (
               <button
@@ -628,13 +630,16 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
                   key={m}
                   type="button"
                   onClick={() => applyMultiplier(m)}
-                  className={`rounded-full border px-3 py-1 text-sm font-medium transition-colors ${
+                  className={`flex flex-col items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors touch-manipulation ${
                     activeMultiplier === m
                       ? "border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400"
                       : "border-border text-muted-foreground hover:bg-muted"
                   }`}
                 >
-                  {m}×
+                  <span>{m}×</span>
+                  {baseFood && (
+                    <span className="text-[10px] opacity-60">= {Math.round(baseFood.servingSize * m * 10) / 10}{baseFood.servingUnit}</span>
+                  )}
                 </button>
               ))}
             </div>
@@ -662,8 +667,33 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
           </div>
         )}
 
+        {/* Macro mode toggle */}
+        {!isEditing && (
+          <div className="flex items-center rounded-lg border border-border bg-muted p-1">
+            <button
+              type="button"
+              onClick={() => { if (caloriesOnly) toggleCaloriesOnly(); }}
+              className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                !caloriesOnly ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
+              }`}
+            >
+              Full macros
+            </button>
+            <button
+              type="button"
+              onClick={() => { if (!caloriesOnly) toggleCaloriesOnly(); }}
+              className={`flex-1 flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                caloriesOnly ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
+              }`}
+            >
+              <Zap className="size-3.5" />
+              Calories only
+            </button>
+          </div>
+        )}
+
         {/* Macro steppers */}
-        <div className={`grid gap-3 ${caloriesOnly ? "grid-cols-1" : "grid-cols-2 sm:grid-cols-4"}`}>
+        <div className={`grid gap-3 ${caloriesOnly ? "grid-cols-1 max-w-xs mx-auto" : "grid-cols-2 sm:grid-cols-4"}`}>
           {(caloriesOnly ? ["calories"] : ["calories", "protein", "carbs", "fat"] as const).map((field) => (
             <div key={field}>
               <label className={`${labelClass} ${MACRO_LABELS[field].color}`}>
@@ -704,7 +734,7 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
                   step={0.1}
                   onChange={(e) => setValue("servingSize", parseFloat(e.target.value) || 1)}
                   placeholder="1"
-                  className="h-10 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-colors placeholder:text-muted-foreground"
+                  className="h-10 w-full rounded-lg border border-border bg-background px-3 py-2 text-base sm:text-sm outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-colors placeholder:text-muted-foreground"
                 />
               </div>
               <div>
@@ -713,7 +743,7 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
                   value={watch("servingUnit")}
                   onChange={(e) => setValue("servingUnit", e.target.value)}
                   placeholder="g / oz / cup / piece"
-                  className="h-10 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-colors placeholder:text-muted-foreground"
+                  className="h-10 w-full rounded-lg border border-border bg-background px-3 py-2 text-base sm:text-sm outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-colors placeholder:text-muted-foreground"
                 />
               </div>
               <div>
@@ -722,7 +752,7 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
                   value={watch("notes") ?? ""}
                   onChange={(e) => setValue("notes", e.target.value)}
                   placeholder="e.g. 200g cooked"
-                  className="h-10 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-colors placeholder:text-muted-foreground"
+                  className="h-10 w-full rounded-lg border border-border bg-background px-3 py-2 text-base sm:text-sm outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-colors placeholder:text-muted-foreground"
                 />
               </div>
             </div>
@@ -737,7 +767,7 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
                       key={label}
                       type="button"
                       onClick={() => handleGramChip(grams)}
-                      className="rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground touch-manipulation"
                     >
                       {label}
                     </button>
@@ -767,10 +797,10 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
         )}
 
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={() => onClose()}>
+          <Button type="button" variant="outline" onClick={() => onClose()}>
             Cancel
           </Button>
-          <Button type="submit" size="sm" disabled={isPending}>
+          <Button type="submit" disabled={isPending}>
             {isPending ? "Saving…" : isEditing ? "Save Changes" : "Add Food"}
           </Button>
         </div>

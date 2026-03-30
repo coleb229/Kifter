@@ -1,5 +1,17 @@
 import type { BodyTarget, MealType } from "@/types";
 
+export type MacroKey = "calories" | "protein" | "carbs" | "fat";
+
+export const MACRO_COLORS: Record<
+  MacroKey,
+  { text: string; hex: string; stroke: string; trackStroke: string; bar: string; barTrack: string }
+> = {
+  calories: { text: "text-indigo-600 dark:text-indigo-400",  hex: "#6366f1", stroke: "stroke-indigo-500",  trackStroke: "stroke-indigo-100 dark:stroke-indigo-950/60",  bar: "bg-indigo-500",  barTrack: "bg-indigo-100 dark:bg-indigo-950/60"  },
+  protein:  { text: "text-emerald-600 dark:text-emerald-400", hex: "#10b981", stroke: "stroke-emerald-500", trackStroke: "stroke-emerald-100 dark:stroke-emerald-950/60", bar: "bg-emerald-500", barTrack: "bg-emerald-100 dark:bg-emerald-950/60" },
+  carbs:    { text: "text-amber-600 dark:text-amber-400",    hex: "#f59e0b", stroke: "stroke-amber-500",   trackStroke: "stroke-amber-100 dark:stroke-amber-950/60",   bar: "bg-amber-500",   barTrack: "bg-amber-100 dark:bg-amber-950/60"   },
+  fat:      { text: "text-rose-600 dark:text-rose-400",      hex: "#f43f5e", stroke: "stroke-rose-500",    trackStroke: "stroke-rose-100 dark:stroke-rose-950/60",    bar: "bg-rose-500",    barTrack: "bg-rose-100 dark:bg-rose-950/60"    },
+};
+
 export const BODY_TARGET_STYLES: Record<
   BodyTarget,
   { pill: { active: string; inactive: string }; badge: string; dot: string }
@@ -17,10 +29,10 @@ export const BODY_TARGET_STYLES: Record<
 
 export const MEAL_TYPE_STYLES: Record<
   MealType,
-  { pill: { active: string; inactive: string }; icon: string; header: string }
+  { pill: { active: string; inactive: string }; icon: string; header: string; borderLeft: string }
 > = {
-  breakfast: { pill: { active: "bg-amber-500 border-amber-500 text-white",   inactive: "border-amber-200 text-amber-600 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/40"     }, icon: "text-amber-500",   header: "text-amber-600 dark:text-amber-400"   },
-  lunch:     { pill: { active: "bg-emerald-500 border-emerald-500 text-white", inactive: "border-emerald-200 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/40" }, icon: "text-emerald-500", header: "text-emerald-600 dark:text-emerald-400" },
-  dinner:    { pill: { active: "bg-indigo-500 border-indigo-500 text-white",  inactive: "border-indigo-200 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-400 dark:hover:bg-indigo-950/40" }, icon: "text-indigo-500",  header: "text-indigo-600 dark:text-indigo-400"  },
-  snack:     { pill: { active: "bg-orange-500 border-orange-500 text-white",  inactive: "border-orange-200 text-orange-600 hover:bg-orange-50 dark:border-orange-800 dark:text-orange-400 dark:hover:bg-orange-950/40" }, icon: "text-orange-500",  header: "text-orange-600 dark:text-orange-400"  },
+  breakfast: { pill: { active: "bg-amber-500 border-amber-500 text-white",   inactive: "border-amber-200 text-amber-600 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/40"     }, icon: "text-amber-500",   header: "text-amber-600 dark:text-amber-400",   borderLeft: "border-l-amber-500"   },
+  lunch:     { pill: { active: "bg-emerald-500 border-emerald-500 text-white", inactive: "border-emerald-200 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/40" }, icon: "text-emerald-500", header: "text-emerald-600 dark:text-emerald-400", borderLeft: "border-l-emerald-500" },
+  dinner:    { pill: { active: "bg-indigo-500 border-indigo-500 text-white",  inactive: "border-indigo-200 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-400 dark:hover:bg-indigo-950/40" }, icon: "text-indigo-500",  header: "text-indigo-600 dark:text-indigo-400",  borderLeft: "border-l-indigo-500"  },
+  snack:     { pill: { active: "bg-orange-500 border-orange-500 text-white",  inactive: "border-orange-200 text-orange-600 hover:bg-orange-50 dark:border-orange-800 dark:text-orange-400 dark:hover:bg-orange-950/40" }, icon: "text-orange-500",  header: "text-orange-600 dark:text-orange-400",  borderLeft: "border-l-orange-500"  },
 };

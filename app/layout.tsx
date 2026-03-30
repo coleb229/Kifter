@@ -10,6 +10,7 @@ import { SuggestionButton } from "@/components/suggestion-button";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { PresenceTracker } from "@/components/admin/presence-tracker";
 import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
+import { ToastProvider } from "@/components/ui/toast";
 import "./globals.css";
 
 const geistMono = Geist_Mono({
@@ -54,15 +55,17 @@ export default async function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <div className={session ? "pb-16 sm:pb-0" : undefined}>
-              {children}
-            </div>
-            {session && <PresenceTracker />}
-            <MobileBottomNav />
-            <AdminFab />
-            <SuggestionButton />
-            <BugReportButton />
-            <PwaInstallPrompt />
+            <ToastProvider>
+              <div className={session ? "pb-16 sm:pb-0" : undefined}>
+                {children}
+              </div>
+              {session && <PresenceTracker />}
+              <MobileBottomNav />
+              <AdminFab />
+              <SuggestionButton />
+              <BugReportButton />
+              <PwaInstallPrompt />
+            </ToastProvider>
           </ThemeProvider>
         </SessionProvider>
       </body>

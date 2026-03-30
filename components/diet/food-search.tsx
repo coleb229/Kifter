@@ -10,9 +10,10 @@ interface Props {
   onSelect: (food: FoodSearchResult) => void;
   favorites?: FavoriteFood[];
   onToggleFavorite?: (food: FoodSearchResult) => void;
+  autoFocus?: boolean;
 }
 
-export function FoodSearch({ onSelect, favorites = [], onToggleFavorite }: Props) {
+export function FoodSearch({ onSelect, favorites = [], onToggleFavorite, autoFocus }: Props) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<FoodSearchResult[]>([]);
   const [open, setOpen] = useState(false);
@@ -23,6 +24,14 @@ export function FoodSearch({ onSelect, favorites = [], onToggleFavorite }: Props
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const favNames = new Set(favorites.map((f) => f.name.toLowerCase()));
+
+  // Auto-focus with delay for bottom sheet animation
+  useEffect(() => {
+    if (autoFocus && inputRef.current) {
+      const timer = setTimeout(() => inputRef.current?.focus(), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [autoFocus]);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -110,15 +119,16 @@ export function FoodSearch({ onSelect, favorites = [], onToggleFavorite }: Props
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={() => results.length > 0 && setOpen(true)}
-          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          onBlur={() => setTimeout(() => setOpen(false), 250)}
           placeholder="Search foods (e.g. chicken breast, banana…)"
-          className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-9 text-sm outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-colors placeholder:text-muted-foreground"
+          className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-9 text-base sm:text-sm outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-colors placeholder:text-muted-foreground"
         />
       </div>
 
       {open && results.length > 0 && (
         <ul
           ref={listRef}
+          onPointerDown={(e) => e.preventDefault()}
           className="absolute z-50 mt-1 w-full overflow-hidden rounded-xl border border-border bg-card shadow-lg max-h-72 overflow-y-auto"
         >
           {results.map((food, i) => {
@@ -132,7 +142,7 @@ export function FoodSearch({ onSelect, favorites = [], onToggleFavorite }: Props
                 >
                   <button
                     type="button"
-                    onMouseDown={() => handleSelect(food)}
+                    onPointerDown={() => handleSelect(food)}
                     className="flex min-w-0 flex-1 items-start gap-2 text-left"
                   >
                     {/* Source icon */}
@@ -155,11 +165,11 @@ export function FoodSearch({ onSelect, favorites = [], onToggleFavorite }: Props
                   {onToggleFavorite && (
                     <button
                       type="button"
-                      onMouseDown={(e) => {
+                      onPointerDown={(e) => {
                         e.stopPropagation();
                         onToggleFavorite(food);
                       }}
-                      className="ml-1 shrink-0 self-center p-0.5 text-muted-foreground transition-colors hover:text-amber-500"
+                      className="ml-1 shrink-0 self-center p-2 text-muted-foreground transition-colors hover:text-amber-500"
                       title={isFav ? "Remove from favorites" : "Add to favorites"}
                     >
                       <Star
