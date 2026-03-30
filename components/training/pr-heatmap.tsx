@@ -88,7 +88,7 @@ export function PrHeatmap({ prHistory }: Props) {
 
   return (
     <div className="rounded-xl border border-border bg-card p-5">
-      <h2 className="mb-1 text-sm font-semibold">Personal Records Calendar</h2>
+      <h2 className="mb-1 text-base font-semibold">Personal Records Calendar</h2>
       <p className="mb-4 text-xs text-muted-foreground">Days where you set a new PR on any exercise — last 12 months</p>
 
       <div className="mb-3 flex items-center justify-between">

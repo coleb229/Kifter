@@ -119,7 +119,7 @@ export function AIInsights() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
           <Sparkles className="size-4 text-indigo-500" />
-          <h2 className="text-sm font-semibold">AI Coaching Insights</h2>
+          <h2 className="text-base font-semibold">AI Coaching Insights</h2>
           <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-medium text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">
             Last 60 days
           </span>

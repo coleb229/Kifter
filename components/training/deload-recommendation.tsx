@@ -26,7 +26,7 @@ export function DeloadRecommendation({ recommendation }: Props) {
           <BatteryWarning className="size-4" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">Deload Week Recommended</p>
+          <p className="text-base font-semibold">Deload Week Recommended</p>
           <p className="mt-0.5 text-xs text-muted-foreground">{recommendation.reason}</p>
 
           {recommendation.weeklyVolumes.some((w) => w.volume > 0) && (

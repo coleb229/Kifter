@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useOptimistic, useRef } from "react";
+import { useState, useTransition, useOptimistic, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2, Check, X, Plus, PlayCircle, Link2, Share2, Wand2, Loader2 } from "lucide-react";
 import { OnboardingTip } from "@/components/ui/onboarding-tip";
@@ -598,6 +598,7 @@ function ExerciseGroupCard({
           return (
             <div
               key={set.id}
+              data-set-row
               className="group relative grid grid-cols-[2rem_1fr_1fr_4rem] items-center gap-2 min-h-10 py-1 rounded-md transition-transform"
               onTouchStart={(e) => {
                 touchStartX.current = e.touches[0].clientX;
@@ -636,8 +637,10 @@ function ExerciseGroupCard({
                 touchActiveId.current = "";
                 if (delta > 60) {
                   handleToggleComplete(set);
+                  localStorage.setItem("kifted_swipe_hint_shown", "1");
                 } else if (delta < -60) {
                   setSetState(set.id, { type: "confirm-delete" });
+                  localStorage.setItem("kifted_swipe_hint_shown", "1");
                 }
               }}
             >
@@ -836,6 +839,32 @@ export function SessionExercises({ sessionId, sets, videoUrls = {}, tagsMap = {}
   const [, startShareTransition] = useTransition();
   const [pendingSuperset, setPendingSuperset] = useState<string | null>(null);
   const [, startSupersetTransition] = useTransition();
+  const [showSwipeHint, setShowSwipeHint] = useState(false);
+
+  // Swipe affordance hint — animate first set row once to teach swipe gesture
+  useEffect(() => {
+    if (sets.length === 0) return;
+    if (typeof window === "undefined") return;
+    if (localStorage.getItem("kifted_swipe_hint_shown")) return;
+
+    const timer = setTimeout(() => {
+      const firstSetRow = document.querySelector<HTMLDivElement>("[data-set-row]");
+      if (!firstSetRow) return;
+      setShowSwipeHint(true);
+      firstSetRow.style.transition = "transform 0.3s ease";
+      firstSetRow.style.transform = "translateX(-20px)";
+      setTimeout(() => {
+        firstSetRow.style.transform = "translateX(0)";
+        setTimeout(() => {
+          firstSetRow.style.transition = "";
+          setShowSwipeHint(false);
+          localStorage.setItem("kifted_swipe_hint_shown", "1");
+        }, 400);
+      }, 400);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [sets.length]);
 
   const totalVolumeKg = sets.reduce((sum, s) => {
     const kg = s.weightUnit === "lb" ? s.weight / 2.20462 : s.weight;
@@ -922,6 +951,11 @@ export function SessionExercises({ sessionId, sets, videoUrls = {}, tagsMap = {}
           {shareState === "pending" ? "Sharing…" : shareState === "shared" ? "Shared!" : shareState === "error" ? "Failed" : "Share"}
         </button>
       </div>
+      {showSwipeHint && (
+        <p className="text-xs text-muted-foreground animate-fade-up text-center">
+          Swipe to manage
+        </p>
+      )}
       <OnboardingTip
         tipKey="swipe-exercises"
         title="Swipe to manage exercises"

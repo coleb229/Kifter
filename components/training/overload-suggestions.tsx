@@ -18,7 +18,7 @@ export function OverloadSuggestions({ suggestions }: Props) {
     <div className="mb-6 animate-fade-up" style={{ animationDelay: "60ms" }}>
       <div className="mb-2 flex items-center gap-2">
         <TrendingUp className="size-4 text-emerald-500" />
-        <p className="text-sm font-semibold">Ready to Progress</p>
+        <p className="text-base font-semibold">Ready to Progress</p>
         <span className="rounded-full bg-emerald-100 dark:bg-emerald-950/50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
           {visible.length}
         </span>

@@ -176,13 +176,13 @@ export function AnalyticsChart({ data, isPending }: Props) {
       {isPending ? (
         <ChartSkeleton />
       ) : data.length < 2 ? (
-        <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
+        <div className="flex h-75 lg:h-105 items-center justify-center text-sm text-muted-foreground">
           {data.length === 0
             ? "No data for this exercise."
             : "Log at least 2 sessions to see a trend."}
         </div>
       ) : mode === "weight" || mode === "1rm" ? (
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height="100%" className="h-75 lg:h-105">
           <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="weightGradient" x1="0" y1="0" x2="0" y2="1">
@@ -228,7 +228,7 @@ export function AnalyticsChart({ data, isPending }: Props) {
           </AreaChart>
         </ResponsiveContainer>
       ) : mode === "volume" ? (
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height="100%" className="h-75 lg:h-105">
           <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="volumeGradient" x1="0" y1="0" x2="0" y2="1">
@@ -251,7 +251,7 @@ export function AnalyticsChart({ data, isPending }: Props) {
           </BarChart>
         </ResponsiveContainer>
       ) : (
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height="100%" className="h-75 lg:h-105">
           <LineChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-border" strokeOpacity={0.5} vertical={false} />
             <XAxis dataKey="date" tick={{ fontSize: 12, fill: "#888" }} axisLine={false} tickLine={false} />

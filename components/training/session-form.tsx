@@ -74,6 +74,10 @@ export function SessionForm() {
 
   function onSubmit(formValues: SessionFormValues) {
     setSubmitError(null);
+    if (!navigator.onLine) {
+      setSubmitError("You're offline. Your data is saved locally and will sync when you reconnect.");
+      return;
+    }
     startTransition(async () => {
       const result = await createSession(formValues);
       if (result.success) {

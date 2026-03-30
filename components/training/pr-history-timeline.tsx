@@ -38,7 +38,7 @@ export function PRHistoryTimeline({ initialData }: Props) {
 
   return (
     <div className="rounded-xl border border-border bg-card p-5">
-      <h2 className="mb-1 text-sm font-semibold">PR History</h2>
+      <h2 className="mb-1 text-base font-semibold">PR History</h2>
       <p className="mb-4 text-xs text-muted-foreground">Personal records over time, by exercise</p>
 
       <input

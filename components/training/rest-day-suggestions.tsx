@@ -47,7 +47,7 @@ export function RestDaySuggestions({ suggestions }: Props) {
     <div className="mb-6 animate-fade-up" style={{ animationDelay: "80ms" }}>
       <div className="mb-3 flex items-center gap-2">
         <Clock className="size-4 text-muted-foreground" />
-        <h2 className="text-sm font-semibold">Recovery Status</h2>
+        <h2 className="text-base font-semibold">Recovery Status</h2>
       </div>
       <div className="relative">
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-border" style={{ maskImage: "linear-gradient(to right, black calc(100% - 2rem), transparent)" }}>

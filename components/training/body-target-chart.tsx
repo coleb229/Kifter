@@ -51,7 +51,7 @@ export function BodyTargetChart({ data }: Props) {
 
   return (
     <div className="rounded-xl border border-border bg-card p-5">
-      <h2 className="mb-1 text-sm font-semibold">Muscle Group Volume</h2>
+      <h2 className="mb-1 text-base font-semibold">Muscle Group Volume</h2>
       <p className="mb-4 text-xs text-muted-foreground">Last 4 weeks</p>
       <ResponsiveContainer width="100%" height={200}>
         <BarChart data={data} barSize={36} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>

@@ -205,7 +205,7 @@ export function MuscleHeatmap({ data }: Props) {
 
   return (
     <div className="rounded-xl border border-border bg-card p-5">
-      <h2 className="mb-1 text-sm font-semibold">Muscle Group Volume</h2>
+      <h2 className="mb-1 text-base font-semibold">Muscle Group Volume</h2>
       <p className="mb-4 text-xs text-muted-foreground">
         Weekly training volume by muscle group — hover or tap to drill down
       </p>

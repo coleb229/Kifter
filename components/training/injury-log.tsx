@@ -165,7 +165,7 @@ export function InjuryLog({ injuries: initialInjuries }: Props) {
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <ShieldAlert className="size-4 text-muted-foreground" />
-          <h2 className="text-sm font-semibold">Injury & Soreness Log</h2>
+          <h2 className="text-base font-semibold">Injury & Soreness Log</h2>
         </div>
         <button
           type="button"

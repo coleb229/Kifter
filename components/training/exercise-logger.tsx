@@ -156,6 +156,10 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
   }
 
   function onSubmit(values: FormValues) {
+    if (!navigator.onLine) {
+      form.setError("root", { message: "You're offline. Your data is saved locally and will sync when you reconnect." });
+      return;
+    }
     startTransition(async () => {
       const result = await addExerciseToSession(sessionId, {
         exercise: values.exercise,
