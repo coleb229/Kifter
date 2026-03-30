@@ -37,18 +37,21 @@ export default async function SessionPage({
         className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="size-4" />
-        All sessions
+        Training
       </Link>
 
       {/* Session header — editable */}
       <EditableSessionHeader session={session} />
 
-      {/* Logged exercises */}
-      <SessionExercises sessionId={id} sets={sets} videoUrls={videoUrls} tagsMap={tagsMap} allUserTags={allUserTags} />
+      {/* Two-column on desktop: exercises left, logger right (sticky) */}
+      <div className="lg:grid lg:grid-cols-[1fr_400px] lg:gap-8">
+        {/* Logged exercises */}
+        <SessionExercises sessionId={id} sets={sets} videoUrls={videoUrls} tagsMap={tagsMap} allUserTags={allUserTags} />
 
-      {/* Log another exercise */}
-      <div id="exercise-logger">
-        <ExerciseLogger sessionId={id} exercises={exercises} />
+        {/* Log another exercise */}
+        <div id="exercise-logger" className="lg:sticky lg:top-24 lg:self-start">
+          <ExerciseLogger sessionId={id} exercises={exercises} />
+        </div>
       </div>
 
       <QuickLogFAB targetId="exercise-logger" label="Log Exercise" />

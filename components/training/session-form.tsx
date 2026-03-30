@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
-import { Plus } from "lucide-react";
+import { Plus, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BODY_TARGETS } from "@/types";
 import { createSession } from "@/actions/workout-actions";
@@ -32,6 +32,7 @@ export function SessionForm() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [showNotes, setShowNotes] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<SessionFormValues>({
     resolver: zodResolver(sessionSchema),
@@ -72,14 +73,14 @@ export function SessionForm() {
   }
 
   function onSubmit(formValues: SessionFormValues) {
+    setSubmitError(null);
     startTransition(async () => {
       const result = await createSession(formValues);
       if (result.success) {
         clearDraft();
         router.push(`/training/${result.data.sessionId}`);
       } else {
-        // surface error — no root.setError available without full form object, use alert as fallback
-        console.error(result.error);
+        setSubmitError(result.error);
       }
     });
   }
@@ -103,7 +104,7 @@ export function SessionForm() {
           {/* Date */}
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium">Date</label>
-            <input {...register("date")} type="date" className={inputClass} />
+            <input {...register("date")} type="date" className={inputClass} suppressHydrationWarning />
             {errors.date && (
               <p className="text-xs text-destructive">{errors.date.message}</p>
             )}
@@ -112,7 +113,7 @@ export function SessionForm() {
           {/* Body target — colored tile selector */}
           <div className="flex flex-col gap-2 sm:col-span-2">
             <label className="text-sm font-medium">Body target</label>
-            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+            <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
               {BODY_TARGETS.map((target) => {
                 const colors = BODY_TARGET_STYLES[target].pill;
                 const isSelected = selectedTarget === target;
@@ -121,8 +122,8 @@ export function SessionForm() {
                     key={target}
                     type="button"
                     onClick={() => handleBodyTargetChange(target)}
-                    className={`rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors ${
-                      isSelected ? colors.active : colors.inactive
+                    className={`rounded-xl border px-4 py-2.5 text-sm font-semibold transition-all duration-200 ${
+                      isSelected ? `${colors.active} ring-2 ring-offset-2 ring-current` : colors.inactive
                     }`}
                   >
                     {target}
@@ -158,9 +159,19 @@ export function SessionForm() {
         </div>
       </div>
 
+      {submitError && (
+        <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <AlertCircle className="size-4 shrink-0" />
+          {submitError}
+        </div>
+      )}
+
       <div className="flex items-center justify-between gap-3">
         {isDraftSaved ? (
-          <span className="text-xs text-muted-foreground animate-in fade-in">Draft saved</span>
+          <span className="flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400 animate-fade-up">
+            <CheckCircle2 className="size-3.5" />
+            Draft saved
+          </span>
         ) : (
           <span />
         )}

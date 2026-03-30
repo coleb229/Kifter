@@ -23,11 +23,12 @@ export function OverloadSuggestions({ suggestions }: Props) {
           {visible.length}
         </span>
       </div>
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+      <div className="relative">
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-border" style={{ maskImage: "linear-gradient(to right, black calc(100% - 2rem), transparent)" }}>
         {visible.map((s) => (
           <div
             key={s.exercise}
-            className="relative flex min-w-[180px] flex-col gap-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800/40 bg-emerald-50 dark:bg-emerald-950/30 p-3 shrink-0"
+            className="relative flex min-w-[180px] flex-col gap-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800/40 border-l-3 border-l-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 p-3 shrink-0"
           >
             <button
               type="button"
@@ -51,6 +52,7 @@ export function OverloadSuggestions({ suggestions }: Props) {
             </p>
           </div>
         ))}
+      </div>
       </div>
     </div>
   );

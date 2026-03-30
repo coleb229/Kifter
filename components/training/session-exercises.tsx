@@ -3,6 +3,7 @@
 import { useState, useTransition, useOptimistic, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2, Check, X, Plus, PlayCircle, Link2, Share2, Wand2, Loader2 } from "lucide-react";
+import { OnboardingTip } from "@/components/ui/onboarding-tip";
 import {
   updateSet,
   deleteSet,
@@ -921,6 +922,11 @@ export function SessionExercises({ sessionId, sets, videoUrls = {}, tagsMap = {}
           {shareState === "pending" ? "Sharing…" : shareState === "shared" ? "Shared!" : shareState === "error" ? "Failed" : "Share"}
         </button>
       </div>
+      <OnboardingTip
+        tipKey="swipe-exercises"
+        title="Swipe to manage exercises"
+        description="Swipe left on any exercise to delete it, or swipe right to mark it complete."
+      />
       {renderGroups.map((rg) =>
         rg.type === "superset" ? (
           <div

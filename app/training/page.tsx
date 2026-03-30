@@ -15,6 +15,8 @@ import { StartFromProgramCard } from "@/components/training/start-from-program-c
 import { WeeklyPlanStrip } from "@/components/training/weekly-plan-strip";
 import { Button } from "@/components/ui/button";
 import { OnboardingTip } from "@/components/ui/onboarding-tip";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Dumbbell } from "lucide-react";
 
 export default async function TrainingPage() {
   const [result, suggestionsResult, overloadResult, injuriesResult, streakResult, programsResult, tagsResult] = await Promise.all([
@@ -43,26 +45,28 @@ export default async function TrainingPage() {
             {sessions.length} workout{sessions.length !== 1 ? "s" : ""} logged
           </p>
         </div>
-        <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:items-center">
-          <Button size="sm" variant="outline" render={<Link href="/training/analytics" />}>
-            Analytics
-          </Button>
-          <Button size="sm" variant="outline" render={<Link href="/training/exercises" />}>
-            Exercises
-          </Button>
-          <Button size="sm" variant="outline" render={<Link href="/training/programs" />}>
-            Programs
-          </Button>
-          <Button size="sm" variant="outline" render={<Link href="/training/1rm" />}>
-            1RM
-          </Button>
-          <Button size="sm" variant="outline" render={<Link href="/training/report" />}>
-            Report
-          </Button>
-          <Button size="sm" render={<Link href="/training/new" />}>
+        <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:items-center">
+          <Button size="sm" className="w-full sm:w-auto" render={<Link href="/training/new" />}>
             <Plus className="size-4" />
             Log Workout
           </Button>
+          <div className="flex flex-wrap gap-2 sm:flex-nowrap">
+            <Button size="sm" variant="outline" render={<Link href="/training/analytics" />}>
+              Analytics
+            </Button>
+            <Button size="sm" variant="outline" render={<Link href="/training/exercises" />}>
+              Exercises
+            </Button>
+            <Button size="sm" variant="outline" render={<Link href="/training/programs" />}>
+              Programs
+            </Button>
+            <Button size="sm" variant="outline" render={<Link href="/training/1rm" />}>
+              1RM
+            </Button>
+            <Button size="sm" variant="outline" render={<Link href="/training/report" />}>
+              Report
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -84,17 +88,16 @@ export default async function TrainingPage() {
 
 
       {sessions.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border p-12 text-center">
-          <p className="text-sm text-muted-foreground">No workouts logged yet.</p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-4"
-            render={<Link href="/training/new" />}
-          >
-            Log your first workout
-          </Button>
-        </div>
+        <EmptyState
+          icon={Dumbbell}
+          title="No workouts logged yet"
+          description="Start tracking your progress by logging your first workout."
+          action={
+            <Button variant="outline" size="sm" render={<Link href="/training/new" />}>
+              Log your first workout
+            </Button>
+          }
+        />
       ) : (
         <SessionsView sessions={sessions} tagsMap={tagsMap} />
       )}

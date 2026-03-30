@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { format, startOfWeek, addDays } from "date-fns";
 import type { WorkoutSession } from "@/types";
 import { BODY_TARGET_STYLES } from "@/lib/label-colors";
@@ -32,21 +33,27 @@ export function WeeklyPlanStrip({ sessions }: Props) {
   }
 
   return (
-    <div className="mb-6 rounded-xl border border-border bg-card p-4 animate-fade-up">
+    <div className="mb-6 rounded-xl border border-border bg-card p-5 animate-fade-up">
       <p className="mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">
         This Week
       </p>
-      <div className="grid grid-cols-7 gap-1">
+      <div role="grid" aria-label="Weekly training plan" className="grid grid-cols-7 gap-1">
         {days.map((day, i) => {
           const key = format(day, "yyyy-MM-dd");
           const daySessions = sessionsByDate.get(key) ?? [];
           const today = todayStr !== "" && key === todayStr;
           const isPast = todayStr !== "" && key < todayStr;
 
+          const href = daySessions.length > 0
+            ? `/training/${daySessions[0].id}`
+            : `/training/new?date=${key}`;
+
           return (
-            <div
+            <Link
               key={key}
-              className={`flex flex-col items-center gap-1.5 rounded-lg px-1 py-2 text-center ${
+              href={href}
+              suppressHydrationWarning
+              className={`flex flex-col items-center gap-1.5 rounded-lg px-1 py-2 text-center cursor-pointer transition-colors hover:bg-muted/50 ${
                 today ? "bg-primary/10 ring-1 ring-primary/30" : ""
               }`}
             >
@@ -73,7 +80,7 @@ export function WeeklyPlanStrip({ sessions }: Props) {
               ) : (
                 <span className="size-2" />
               )}
-            </div>
+            </Link>
           );
         })}
       </div>

@@ -49,14 +49,15 @@ export function RestDaySuggestions({ suggestions }: Props) {
         <Clock className="size-4 text-muted-foreground" />
         <h2 className="text-sm font-semibold">Recovery Status</h2>
       </div>
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+      <div className="relative">
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-border" style={{ maskImage: "linear-gradient(to right, black calc(100% - 2rem), transparent)" }}>
         {display.map((s) => {
           const cfg = STATUS_CONFIG[s.recommendation];
           const Icon = cfg.icon;
           return (
             <div
               key={s.bodyTarget}
-              className={`flex min-w-[110px] shrink-0 flex-col gap-1 rounded-xl border p-3 ${cfg.bg} ${cfg.border}`}
+              className={`flex min-w-[110px] shrink-0 flex-col gap-1 rounded-xl border border-l-3 p-3 ${cfg.bg} ${cfg.border}`}
             >
               <div className="flex items-center gap-1.5">
                 <Icon className={`size-3.5 shrink-0 ${cfg.iconClass}`} />
@@ -69,6 +70,7 @@ export function RestDaySuggestions({ suggestions }: Props) {
             </div>
           );
         })}
+      </div>
       </div>
     </div>
   );

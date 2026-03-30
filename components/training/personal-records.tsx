@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Trophy } from "lucide-react";
 import { format } from "date-fns";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { PersonalRecord } from "@/actions/workout-actions";
 
 type SortKey = "date" | "exercise" | "1rm";
@@ -22,11 +23,11 @@ export function PersonalRecords({ records }: Props) {
 
   if (records.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-border p-8 text-center">
-        <Trophy className="mx-auto mb-2 size-7 text-muted-foreground" />
-        <p className="text-sm font-medium">No personal records yet</p>
-        <p className="mt-1 text-xs text-muted-foreground">Complete some sets to see your all-time bests here.</p>
-      </div>
+      <EmptyState
+        icon={Trophy}
+        title="No personal records yet"
+        description="Complete some sets to see your all-time bests here."
+      />
     );
   }
 

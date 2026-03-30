@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2, Play, ChevronDown, ChevronUp, X } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { createProgram, deleteProgram, applyProgram } from "@/actions/program-actions";
 import { BODY_TARGETS } from "@/types";
 import type { WorkoutProgram, ProgramDay, ProgramExercise, BodyTarget } from "@/types";
@@ -28,6 +29,8 @@ export function ProgramsView({ initialPrograms }: Props) {
   const [description, setDescription] = useState("");
   const [days, setDays] = useState<ProgramDay[]>([emptyDay()]);
 
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+
   const [isSaving, startSave] = useTransition();
   const [isDeleting, startDelete] = useTransition();
   const [isApplying, startApply] = useTransition();
@@ -50,7 +53,13 @@ export function ProgramsView({ initialPrograms }: Props) {
     });
   }
 
+  function handleConfirmDelete(id: string) {
+    setConfirmingId(id);
+    setTimeout(() => setConfirmingId((prev) => prev === id ? null : prev), 3000);
+  }
+
   function handleDelete(id: string) {
+    setConfirmingId(null);
     startDelete(async () => {
       await deleteProgram(id);
       setPrograms((prev) => prev.filter((p) => p.id !== id));
@@ -115,30 +124,34 @@ export function ProgramsView({ initialPrograms }: Props) {
 
       {/* Create form */}
       {showForm && (
-        <div className="rounded-xl border border-border bg-card p-5 flex flex-col gap-4 animate-fade-up">
-          <div className="flex items-center justify-between">
-            <p className="font-semibold">New Program</p>
-            <button type="button" onClick={resetForm} className="text-muted-foreground hover:text-foreground">
-              <X className="size-4" />
-            </button>
+        <div className="rounded-xl border border-border bg-card p-5 flex flex-col gap-4 animate-fade-up lg:grid lg:grid-cols-[280px_1fr] lg:gap-6">
+          <div className="flex flex-col gap-4 lg:col-span-2">
+            <div className="flex items-center justify-between">
+              <p className="font-semibold">New Program</p>
+              <button type="button" onClick={resetForm} className="text-muted-foreground hover:text-foreground">
+                <X className="size-4" />
+              </button>
+            </div>
           </div>
 
-          <input
-            type="text"
-            placeholder="Program name (e.g. PPL 6-Day)"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={80}
-            className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-          />
-          <input
-            type="text"
-            placeholder="Description (optional)"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            maxLength={300}
-            className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-          />
+          <div className="flex flex-col gap-4">
+            <input
+              type="text"
+              placeholder="Program name (e.g. PPL 6-Day)"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={80}
+              className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+            />
+            <input
+              type="text"
+              placeholder="Description (optional)"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              maxLength={300}
+              className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
 
           {/* Days */}
           <div className="flex flex-col gap-3">
@@ -279,9 +292,11 @@ export function ProgramsView({ initialPrograms }: Props) {
 
       {/* Program list */}
       {programs.length === 0 && !showForm && (
-        <div className="rounded-xl border border-dashed border-border p-12 text-center animate-fade-up">
-          <p className="text-sm text-muted-foreground">No programs yet. Create one to get started.</p>
-        </div>
+        <EmptyState
+          icon={Play}
+          title="No programs yet"
+          description="Create one to get started."
+        />
       )}
 
       <div className="flex flex-col gap-4">
@@ -315,15 +330,35 @@ export function ProgramsView({ initialPrograms }: Props) {
                 >
                   <Play className="size-3" /> Apply
                 </button>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(p.id)}
-                  disabled={isDeleting}
-                  className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-destructive"
-                  aria-label="Delete program"
-                >
-                  <Trash2 className="size-4" />
-                </button>
+                {confirmingId === p.id ? (
+                  <div className="flex items-center gap-1" aria-live="polite">
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(p.id)}
+                      disabled={isDeleting}
+                      className="rounded-lg px-2 py-1 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
+                    >
+                      Delete?
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingId(null)}
+                      className="rounded-lg px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleConfirmDelete(p.id)}
+                    disabled={isDeleting}
+                    className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-destructive"
+                    aria-label="Delete program"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                )}
               </div>
             </div>
 

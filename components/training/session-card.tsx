@@ -60,11 +60,11 @@ export function SessionCard({ session, index }: SessionCardProps) {
     >
       <a
         href={`/training/${session.id}`}
-        className="flex flex-col gap-2 rounded-xl border border-border bg-card p-5 text-card-foreground transition-colors hover:bg-muted/30"
+        className="flex flex-col gap-2 rounded-xl border border-border bg-card p-5 text-card-foreground transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98]"
       >
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="font-semibold">
+          <div className="min-w-0">
+            <p className="font-semibold truncate">
               {session.name ?? format(date, "EEEE, MMM d")}
             </p>
             <p className="text-xs text-muted-foreground">
@@ -87,6 +87,22 @@ export function SessionCard({ session, index }: SessionCardProps) {
             <span className="truncate">
               {session.exerciseNames.join(" · ")}
             </span>
+          </div>
+        )}
+
+        {/* Desktop hover detail */}
+        {session.exerciseNames && session.exerciseNames.length > 0 && (
+          <div className="hidden max-h-0 overflow-hidden opacity-0 transition-all duration-200 group-hover:max-h-24 group-hover:opacity-100 lg:block">
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {session.exerciseNames.slice(0, 5).map((name) => (
+                <span key={name} className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                  {name}
+                </span>
+              ))}
+              {session.exerciseNames.length > 5 && (
+                <span className="text-[11px] text-muted-foreground">+{session.exerciseNames.length - 5} more</span>
+              )}
+            </div>
           </div>
         )}
 

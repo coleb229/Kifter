@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Snowflake } from "lucide-react";
+import { Flame, Snowflake } from "lucide-react";
 import { useStreakFreeze } from "@/actions/streak-actions";
 import type { Streak } from "@/types";
 
@@ -24,8 +24,8 @@ export function StreakBanner({ streak }: Props) {
   }
 
   return (
-    <div className="mb-6 flex items-center gap-3 rounded-xl border border-border bg-card px-5 py-3 animate-fade-up">
-      <span className="text-2xl leading-none select-none">🔥</span>
+    <div className="mb-6 flex items-center gap-3 rounded-xl border border-border bg-card px-5 py-3.5 animate-fade-up">
+      <Flame className="size-6 text-orange-500 shrink-0" />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold">
           {streak.currentStreak} day streak

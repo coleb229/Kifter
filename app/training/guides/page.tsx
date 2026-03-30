@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { BookOpen, Activity, Dumbbell, Clock, ArrowRight } from "lucide-react";
 import { getPublishedGuides } from "@/actions/published-guide-actions";
+import { EmptyState } from "@/components/ui/empty-state";
 import { auth } from "@/auth";
 import type { PublishedGuide, GuideType } from "@/types";
 
@@ -115,11 +116,16 @@ export default async function GuidesPage() {
 
   return (
     <div className="animate-fade-up">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight">Training Guides</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Step-by-step guides written for real people — no gym experience required.
-        </p>
+      <div className="mb-8 flex items-center gap-3">
+        <div className="flex size-9 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-950/40">
+          <BookOpen className="size-5 text-indigo-600 dark:text-indigo-400" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Training Guides</h1>
+          <p className="text-sm text-muted-foreground">
+            Step-by-step guides written for real people — no gym experience required.
+          </p>
+        </div>
       </div>
 
       {isAdmin && drafts.length > 0 && (
@@ -132,22 +138,20 @@ export default async function GuidesPage() {
       )}
 
       {published.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border py-24 text-center">
-          <BookOpen className="mx-auto mb-4 size-10 text-muted-foreground/30" />
-          <p className="text-base font-semibold">No guides published yet</p>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            {isAdmin ? "Head to the admin panel to generate and publish your first guide." : "Check back soon — guides are on the way."}
-          </p>
-          {isAdmin && (
+        <EmptyState
+          icon={BookOpen}
+          title="No guides published yet"
+          description={isAdmin ? "Head to the admin panel to generate and publish your first guide." : "Check back soon — guides are on the way."}
+          action={isAdmin ? (
             <Link
               href="/admin"
-              className="mt-5 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
             >
               Go to Admin Panel
               <ArrowRight className="size-4" />
             </Link>
-          )}
-        </div>
+          ) : undefined}
+        />
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {published.map((g) => <GuideCard key={g.id} guide={g} />)}

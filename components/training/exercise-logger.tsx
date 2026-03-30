@@ -43,13 +43,14 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
   const [history, setHistory] = useState<{ date: string; maxWeight: number; weightUnit: string }[]>([]);
   const [query, setQuery] = useState("");
   const [comboOpen, setComboOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const comboRef = useRef<HTMLDivElement>(null);
+  const DEFAULT_REST = 90;
   const [restTimer, setRestTimer] = useState<number | null>(null);
+  const [restTotal, setRestTotal] = useState<number>(DEFAULT_REST);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
-
-  const DEFAULT_REST = 90;
 
   useEffect(() => {
     function handleRestTimerStart() {
@@ -57,7 +58,9 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
         Notification.requestPermission();
       }
       const stored = localStorage.getItem("kifted_rest_duration");
-      setRestTimer(stored ? parseInt(stored, 10) : DEFAULT_REST);
+      const duration = stored ? parseInt(stored, 10) : DEFAULT_REST;
+      setRestTimer(duration);
+      setRestTotal(duration);
     }
     window.addEventListener("rest-timer-start", handleRestTimerStart);
     return () => window.removeEventListener("rest-timer-start", handleRestTimerStart);
@@ -67,7 +70,7 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
     if (restTimer === null) return;
     if (restTimer === 0) {
       if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-        new Notification("Rest over — next set! 💪", {
+        new Notification("Rest over — next set!", {
           body: "Time to get back to it.",
           icon: "/icons/192x192.png",
         });
@@ -220,37 +223,69 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium">Exercise</label>
             <div ref={comboRef} className="relative">
-              <input
-                type="text"
-                value={query || form.watch("exercise")}
-                placeholder="Search exercises…"
-                className={inputClass}
-                onFocus={() => { setQuery(""); setComboOpen(true); }}
-                onChange={(e) => { setQuery(e.target.value); setComboOpen(true); }}
-                onBlur={() => setTimeout(() => setComboOpen(false), 150)}
-              />
-              {comboOpen && (
-                <ul className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-border bg-popover shadow-md">
-                  {exercises
-                    .filter((name) => name.toLowerCase().includes(query.toLowerCase()))
-                    .map((name) => (
-                      <li
-                        key={name}
-                        onMouseDown={() => {
+              {(() => {
+                const filtered = exercises.filter((name) => name.toLowerCase().includes(query.toLowerCase()));
+                return (
+                  <>
+                    <input
+                      type="text"
+                      value={query || form.watch("exercise")}
+                      placeholder="Search exercises…"
+                      className={inputClass}
+                      role="combobox"
+                      aria-expanded={comboOpen}
+                      aria-controls="exercise-listbox"
+                      aria-activedescendant={activeIndex >= 0 ? `exercise-option-${activeIndex}` : undefined}
+                      onFocus={() => { setQuery(""); setComboOpen(true); setActiveIndex(-1); }}
+                      onChange={(e) => { setQuery(e.target.value); setComboOpen(true); setActiveIndex(-1); }}
+                      onKeyDown={(e) => {
+                        if (!comboOpen) return;
+                        if (e.key === "ArrowDown") {
+                          e.preventDefault();
+                          setActiveIndex((i) => Math.min(i + 1, filtered.length - 1));
+                        } else if (e.key === "ArrowUp") {
+                          e.preventDefault();
+                          setActiveIndex((i) => Math.max(i - 1, 0));
+                        } else if (e.key === "Enter" && activeIndex >= 0) {
+                          e.preventDefault();
                           setQuery("");
                           setComboOpen(false);
-                          handleExerciseChange(name);
-                        }}
-                        className="cursor-pointer px-3 py-2 text-sm hover:bg-muted"
-                      >
-                        {name}
-                      </li>
-                    ))}
-                  {exercises.filter((n) => n.toLowerCase().includes(query.toLowerCase())).length === 0 && (
-                    <li className="px-3 py-2 text-sm text-muted-foreground">No matches</li>
-                  )}
-                </ul>
-              )}
+                          handleExerciseChange(filtered[activeIndex]);
+                          setActiveIndex(-1);
+                        } else if (e.key === "Escape") {
+                          setComboOpen(false);
+                          setActiveIndex(-1);
+                        }
+                      }}
+                    />
+                    {comboOpen && (
+                      <ul id="exercise-listbox" role="listbox" className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-border bg-popover shadow-md">
+                        {filtered.map((name, i) => (
+                          <li
+                            key={name}
+                            id={`exercise-option-${i}`}
+                            role="option"
+                            aria-selected={i === activeIndex}
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              setQuery("");
+                              setComboOpen(false);
+                              handleExerciseChange(name);
+                              setActiveIndex(-1);
+                            }}
+                            className={`cursor-pointer px-3 py-2 text-sm transition-colors ${i === activeIndex ? "bg-muted" : "hover:bg-muted"}`}
+                          >
+                            {name}
+                          </li>
+                        ))}
+                        {filtered.length === 0 && (
+                          <li className="px-3 py-2 text-sm text-muted-foreground">No matches</li>
+                        )}
+                      </ul>
+                    )}
+                  </>
+                );
+              })()}
             </div>
             {form.formState.errors.exercise && (
               <p className="text-xs text-destructive">
@@ -317,7 +352,7 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
                     <button
                       type="button"
                       onClick={() => decrementWeight(index)}
-                      className="flex h-10 w-8 shrink-0 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
+                      className="flex h-11 w-10 sm:h-10 sm:w-8 shrink-0 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95 touch-manipulation"
                       aria-label="Decrease weight"
                     >
                       <Minus className="size-3.5" />
@@ -329,12 +364,12 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
                       step="0.5"
                       placeholder="0"
                       onFocus={(e) => e.target.select()}
-                      className="h-10 w-full min-w-0 rounded-lg border border-input bg-background px-1 py-2 text-center text-sm focus-visible:outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                      className="h-10 w-full min-w-0 rounded-lg border border-input bg-background px-1 py-2 text-center text-base sm:text-sm focus-visible:outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                     />
                     <button
                       type="button"
                       onClick={() => incrementWeight(index)}
-                      className="flex h-10 w-8 shrink-0 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
+                      className="flex h-11 w-10 sm:h-10 sm:w-8 shrink-0 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95 touch-manipulation"
                       aria-label="Increase weight"
                     >
                       <Plus className="size-3.5" />
@@ -346,7 +381,7 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
                     <button
                       type="button"
                       onClick={() => decrementReps(index)}
-                      className="flex h-10 w-8 shrink-0 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
+                      className="flex h-11 w-10 sm:h-10 sm:w-8 shrink-0 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95 touch-manipulation"
                       aria-label="Decrease reps"
                     >
                       <Minus className="size-3.5" />
@@ -357,12 +392,12 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
                       min="1"
                       placeholder="0"
                       onFocus={(e) => e.target.select()}
-                      className="h-10 w-full min-w-0 rounded-lg border border-input bg-background px-1 py-2 text-center text-sm focus-visible:outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                      className="h-10 w-full min-w-0 rounded-lg border border-input bg-background px-1 py-2 text-center text-base sm:text-sm focus-visible:outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                     />
                     <button
                       type="button"
                       onClick={() => incrementReps(index)}
-                      className="flex h-10 w-8 shrink-0 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
+                      className="flex h-11 w-10 sm:h-10 sm:w-8 shrink-0 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95 touch-manipulation"
                       aria-label="Increase reps"
                     >
                       <Plus className="size-3.5" />
@@ -399,12 +434,12 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
 
       {/* Sticky rest timer — rendered via portal so it floats above everything */}
       {mounted && restTimer !== null && createPortal(
-        <div className="fixed bottom-24 inset-x-4 z-40 rounded-2xl border border-border bg-card px-4 py-3 shadow-xl sm:inset-x-auto sm:right-6 sm:w-72">
+        <div role="timer" aria-live="assertive" aria-label="Rest timer" className="fixed bottom-24 inset-x-4 z-40 rounded-2xl border border-border bg-card px-4 py-3 shadow-xl sm:inset-x-auto sm:right-6 sm:w-72">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Rest Timer</p>
               <p className={`text-2xl font-bold tabular-nums transition-colors ${restTimer > 0 && restTimer <= 10 ? "text-destructive" : restTimer === 0 ? "text-emerald-500" : ""}`}>
-                {restTimer > 0 ? `${restTimer}s` : "Go! 💪"}
+                {restTimer > 0 ? `${restTimer}s` : "Go!"}
               </p>
             </div>
             <button
@@ -415,6 +450,17 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
               Done
             </button>
           </div>
+          {/* Progress bar */}
+          {restTimer !== null && restTotal > 0 && (
+            <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className={`h-full rounded-full transition-all duration-1000 ease-linear ${
+                  restTimer === 0 ? "bg-emerald-500" : restTimer / restTotal <= 0.1 ? "bg-destructive" : restTimer / restTotal <= 0.3 ? "bg-amber-500" : "bg-indigo-500"
+                }`}
+                style={{ width: `${restTotal > 0 ? (restTimer / restTotal) * 100 : 0}%` }}
+              />
+            </div>
+          )}
           <div className="mt-2 flex gap-1.5">
             {[60, 90, 120, 180].map((s) => (
               <button
@@ -423,6 +469,7 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
                 onClick={() => {
                   localStorage.setItem("kifted_rest_duration", String(s));
                   setRestTimer(s);
+                  setRestTotal(s);
                 }}
                 className="flex-1 rounded-md border border-border py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-primary hover:text-primary"
               >

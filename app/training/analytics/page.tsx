@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, BarChart2 } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   getExercisesWithHistory,
   getExerciseHistory,
@@ -58,14 +59,19 @@ export default async function AnalyticsPage() {
         className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="size-4" />
-        All sessions
+        Training
       </Link>
 
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Analytics</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Track your progress over time
-        </p>
+      <div className="flex items-center gap-3">
+        <div className="flex size-9 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-950/40">
+          <BarChart2 className="size-5 text-indigo-600 dark:text-indigo-400" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Analytics</h1>
+          <p className="text-sm text-muted-foreground">
+            Track your progress over time
+          </p>
+        </div>
       </div>
 
       {deloadData && <DeloadRecommendation recommendation={deloadData} />}
@@ -93,31 +99,43 @@ export default async function AnalyticsPage() {
         </div>
       )}
 
+      {/* Exercise Analysis */}
       {exercises.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border p-16 text-center">
-          <p className="font-medium">No data yet</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Log some workouts to see your progress here.
-          </p>
-        </div>
+        <EmptyState
+          icon={BarChart2}
+          title="No data yet"
+          description="Log some workouts to see your progress here."
+        />
       ) : (
-        <>
-          <AnalyticsDashboard
-            exercises={exercises}
-            initialExercise={exercises[0]}
-            initialData={initialData ?? []}
-          />
-          {isAdmin && <AIInsights />}
-        </>
+        <details className="group" open>
+          <summary className="flex cursor-pointer items-center gap-2 text-base font-semibold select-none list-none [&::-webkit-details-marker]:hidden">
+            <svg className="size-4 text-muted-foreground transition-transform group-open:rotate-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 18 6-6-6-6"/></svg>
+            Exercise Analysis
+          </summary>
+          <div className="mt-4 flex flex-col gap-8">
+            <AnalyticsDashboard
+              exercises={exercises}
+              initialExercise={exercises[0]}
+              initialData={initialData ?? []}
+            />
+            {isAdmin && <AIInsights />}
+            <MuscleHeatmap data={muscleVolumeData} />
+          </div>
+        </details>
       )}
 
-      <MuscleHeatmap data={muscleVolumeData} />
-
-      <PersonalRecords records={prData} />
-
-      {prHistoryData.length > 0 && <PrHeatmap prHistory={prHistoryData} />}
-
-      {prHistoryData.length > 0 && <PRHistoryTimeline initialData={prHistoryData} />}
+      {/* Records & PRs */}
+      <details className="group" open>
+        <summary className="flex cursor-pointer items-center gap-2 text-base font-semibold select-none list-none [&::-webkit-details-marker]:hidden">
+          <svg className="size-4 text-muted-foreground transition-transform group-open:rotate-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 18 6-6-6-6"/></svg>
+          Records &amp; PRs
+        </summary>
+        <div className="mt-4 flex flex-col gap-8">
+          <PersonalRecords records={prData} />
+          {prHistoryData.length > 0 && <PrHeatmap prHistory={prHistoryData} />}
+          {prHistoryData.length > 0 && <PRHistoryTimeline initialData={prHistoryData} />}
+        </div>
+      </details>
     </div>
   );
 }
