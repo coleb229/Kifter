@@ -86,12 +86,14 @@ function MacroStepper({
   value,
   onChange,
   max = 9999,
+  step = 1,
   colorClass,
   label,
 }: {
   value: number;
   onChange: (v: number) => void;
   max?: number;
+  step?: number;
   colorClass: string;
   label?: string;
 }) {
@@ -106,14 +108,15 @@ function MacroStepper({
     }
   }, [value, isFocused]);
 
-  function startRepeat(delta: number) {
+  function startRepeat(direction: number) {
+    const delta = direction * step;
     let current = value;
     navigator.vibrate?.(10);
-    onChange(Math.max(0, Math.min(max, current + delta)));
-    current = Math.max(0, Math.min(max, current + delta));
+    current = Math.round(Math.max(0, Math.min(max, current + delta)) * 1e4) / 1e4;
+    onChange(current);
     intervalRef.current = setInterval(() => {
       navigator.vibrate?.(5);
-      current = Math.max(0, Math.min(max, current + delta));
+      current = Math.round(Math.max(0, Math.min(max, current + delta)) * 1e4) / 1e4;
       onChange(current);
     }, 80);
   }
@@ -718,6 +721,7 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
                 value={watch(field as keyof FormData) as number ?? 0}
                 onChange={(v) => setValue(field as keyof FormData, v as never)}
                 max={field === "calories" ? 9999 : 999}
+                step={field === "calories" ? 1 : 0.1}
                 colorClass={MACRO_LABELS[field].color}
                 label={MACRO_LABELS[field].label}
               />
