@@ -3,10 +3,12 @@
 import { useMemo, useState } from "react";
 import {
   ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ReferenceLine, ResponsiveContainer, Legend, Dot,
+  ReferenceLine, ResponsiveContainer, Legend,
 } from "recharts";
 import { format, parseISO } from "date-fns";
 import Image from "next/image";
+import { Camera, Sparkles, TrendingUp } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { BodyWeightEntry, PhysiqueMeasurement, ProgressPhoto } from "@/types";
 import { convertWeight } from "@/lib/weight";
 import type { WeightUnit } from "@/lib/weight";
@@ -59,7 +61,7 @@ function PhotoDot({ cx, cy, payload }: PhotoDotProps) {
   return (
     <g>
       <circle cx={cx} cy={cy} r={6} fill="#818cf8" stroke="white" strokeWidth={2} />
-      <text x={cx} y={(cy ?? 0) - 10} textAnchor="middle" fontSize={8} fill="var(--muted-foreground)">📷</text>
+      <circle cx={cx} cy={(cy ?? 0) - 10} r={3} fill="#818cf8" opacity={0.5} />
     </g>
   );
 }
@@ -133,10 +135,12 @@ export function CompositionTimeline({ bodyWeights, measurements, photos, display
   if (timelineData.length < 2) {
     return (
       <div className="rounded-xl border border-border bg-card p-5">
-        <h2 className="mb-1 text-sm font-semibold">Body Composition Timeline</h2>
-        <p className="mt-8 mb-8 text-center text-sm text-muted-foreground">
-          Log body weight and measurements over time to see your composition change here.
-        </p>
+        <h2 className="mb-4 text-sm font-semibold">Body Composition Timeline</h2>
+        <EmptyState
+          icon={TrendingUp}
+          title="Not enough data"
+          description="Log weight and measurements over time to see your composition timeline."
+        />
       </div>
     );
   }
@@ -145,10 +149,11 @@ export function CompositionTimeline({ bodyWeights, measurements, photos, display
     <div className="rounded-xl border border-border bg-card p-5">
       <h2 className="mb-1 text-sm font-semibold">Body Composition Timeline</h2>
       <p className="mb-4 text-xs text-muted-foreground">
-        Weight, waist &amp; hip measurements over time · 📷 = progress photo
-        {recompDates.length > 0 && " · ✨ = possible recomposition"}
+        Weight, waist &amp; hip measurements over time · <Camera className="inline size-3" /> = progress photo
+        {recompDates.length > 0 && <> · <Sparkles className="inline size-3" /> = possible recomposition</>}
       </p>
 
+      <div role="img" aria-label="Body composition timeline showing weight, waist, and hip measurements">
       <ResponsiveContainer width="100%" height={280}>
         <ComposedChart data={timelineData} margin={{ top: 12, right: 40, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
@@ -189,7 +194,7 @@ export function CompositionTimeline({ bodyWeights, measurements, photos, display
               yAxisId="weight"
               stroke="#818cf8"
               strokeDasharray="3 3"
-              label={{ value: "✨", position: "top", fontSize: 12 }}
+              label={{ value: "↑", position: "top", fontSize: 10, fill: "#818cf8" }}
             />
           ))}
 
@@ -234,12 +239,17 @@ export function CompositionTimeline({ bodyWeights, measurements, photos, display
           )}
         </ComposedChart>
       </ResponsiveContainer>
+      </div>
 
       {/* Photo lightbox */}
       {lightboxPhoto && (
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Progress photo"
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/85"
           onClick={() => setLightboxPhoto(null)}
+          onKeyDown={(e) => { if (e.key === "Escape") setLightboxPhoto(null); }}
         >
           <Image
             src={lightboxPhoto}

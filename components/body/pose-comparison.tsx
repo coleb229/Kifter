@@ -34,8 +34,9 @@ export function PoseComparison({ photos }: Props) {
       {/* Selectors */}
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-medium text-muted-foreground">Before</label>
+          <label htmlFor="pose-before" className="text-xs font-medium text-muted-foreground">Before</label>
           <select
+            id="pose-before"
             value={leftId}
             onChange={(e) => setLeftId(e.target.value)}
             className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
@@ -50,8 +51,9 @@ export function PoseComparison({ photos }: Props) {
           </select>
         </div>
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-medium text-muted-foreground">After</label>
+          <label htmlFor="pose-after" className="text-xs font-medium text-muted-foreground">After</label>
           <select
+            id="pose-after"
             value={rightId}
             onChange={(e) => setRightId(e.target.value)}
             className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"

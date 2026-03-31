@@ -115,6 +115,11 @@ export function FoodSearch({ onSelect, favorites = [], onToggleFavorite, autoFoc
         <input
           ref={inputRef}
           type="text"
+          role="combobox"
+          aria-expanded={open}
+          aria-autocomplete="list"
+          aria-controls="food-search-listbox"
+          aria-activedescendant={activeIndex >= 0 ? `food-result-${activeIndex}` : undefined}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -128,13 +133,15 @@ export function FoodSearch({ onSelect, favorites = [], onToggleFavorite, autoFoc
       {open && results.length > 0 && (
         <ul
           ref={listRef}
+          id="food-search-listbox"
+          role="listbox"
           onPointerDown={(e) => e.preventDefault()}
           className="absolute z-50 mt-1 w-full overflow-hidden rounded-xl border border-border bg-card shadow-lg max-h-72 overflow-y-auto"
         >
           {results.map((food, i) => {
             const isFav = favNames.has(food.name.toLowerCase());
             return (
-              <li key={food.id}>
+              <li key={food.id} id={`food-result-${i}`} role="option" aria-selected={i === activeIndex}>
                 <div
                   className={`flex w-full items-start gap-2 px-3 py-2.5 transition-colors ${
                     i === activeIndex ? "bg-indigo-50 dark:bg-indigo-950/30" : "hover:bg-muted/60"
@@ -170,7 +177,8 @@ export function FoodSearch({ onSelect, favorites = [], onToggleFavorite, autoFoc
                         onToggleFavorite(food);
                       }}
                       className="ml-1 shrink-0 self-center p-2 text-muted-foreground transition-colors hover:text-amber-500"
-                      title={isFav ? "Remove from favorites" : "Add to favorites"}
+                      aria-label={isFav ? "Remove from favorites" : "Add to favorites"}
+                      aria-pressed={isFav}
                     >
                       <Star
                         className={`size-3.5 ${isFav ? "fill-amber-400 text-amber-400" : ""}`}

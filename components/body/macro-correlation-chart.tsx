@@ -12,6 +12,8 @@ import {
   Legend,
 } from "recharts";
 import { format, parseISO } from "date-fns";
+import { BarChart3 } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { MacroCorrelationPoint } from "@/actions/diet-actions";
 import { convertWeight } from "@/lib/weight";
 import type { WeightUnit } from "@/lib/weight";
@@ -65,14 +67,17 @@ export function MacroCorrelationChart({ data, displayUnit }: Props) {
 
   if (!hasAdherence && !hasWeight) {
     return (
-      <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
-        Log diet and body weight to see the correlation.
-      </div>
+      <EmptyState
+        icon={BarChart3}
+        title="No correlation data"
+        description="Log diet and body weight to see the correlation."
+      />
     );
   }
 
   return (
     <div>
+      <div role="img" aria-label="Nutrition versus body weight correlation">
       <ResponsiveContainer width="100%" height={260}>
         <ComposedChart data={chartData} margin={{ top: 8, right: 40, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
@@ -145,6 +150,7 @@ export function MacroCorrelationChart({ data, displayUnit }: Props) {
           )}
         </ComposedChart>
       </ResponsiveContainer>
+      </div>
       <p className="mt-1 text-center text-[10px] text-muted-foreground">
         Body weight (left) vs calorie adherence % of target (right, dashed) — last 90 days
       </p>

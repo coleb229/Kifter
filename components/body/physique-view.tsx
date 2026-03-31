@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
+import { useState, useTransition, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, Ruler, Calculator } from "lucide-react";
+import { Trash2, Ruler, Calculator, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import {
   LineChart,
@@ -75,10 +75,6 @@ const FIELDS: { key: keyof PhysiqueMeasurement; label: string; color: string }[]
   { key: "thighR",  label: "Thigh (R)",  color: "#f97316" },
 ];
 
-function todayStr() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 interface Props {
   initialMeasurements: PhysiqueMeasurement[];
 }
@@ -88,7 +84,8 @@ export function PhysiqueView({ initialMeasurements }: Props) {
   const [isPending, startTransition] = useTransition();
 
   // Form state
-  const [date, setDate] = useState(todayStr());
+  const [date, setDate] = useState("");
+  useEffect(() => { setDate(new Date().toISOString().slice(0, 10)); }, []);
   const [unit, setUnit] = useState<MeasurementUnit>("in");
   const [neck, setNeck] = useState("");
   const [waist, setWaist] = useState("");
@@ -100,6 +97,7 @@ export function PhysiqueView({ initialMeasurements }: Props) {
   const [thighR, setThighR] = useState("");
   const [height, setHeight] = useState("");
   const [error, setError] = useState("");
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
   // Body fat calculator state
   const [bfGender, setBfGender] = useState<"male" | "female">("male");
@@ -176,7 +174,7 @@ export function PhysiqueView({ initialMeasurements }: Props) {
       {latest && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {FIELDS.filter((f) => latest[f.key] !== undefined).map((f) => (
-            <div key={f.key} className="rounded-xl border border-border bg-card px-4 py-3">
+            <div key={f.key} className="rounded-xl border border-border bg-card px-4 py-3 transition-all duration-200 hover:shadow-sm hover:-translate-y-0.5">
               <p className="text-xs text-muted-foreground">{f.label}</p>
               <p className="mt-0.5 text-lg font-bold">{latest[f.key]} <span className="text-sm font-normal text-muted-foreground">{latest.unit}</span></p>
             </div>
@@ -188,6 +186,7 @@ export function PhysiqueView({ initialMeasurements }: Props) {
       {measurements.length >= 2 && (
         <div className="rounded-xl border border-border bg-card p-5">
           <p className="mb-4 text-sm font-medium text-muted-foreground">Measurement trends</p>
+          <div role="img" aria-label="Body measurement trends">
           <ResponsiveContainer width="100%" height={260}>
             <LineChart data={chartData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border" strokeOpacity={0.5} vertical={false} />
@@ -211,6 +210,7 @@ export function PhysiqueView({ initialMeasurements }: Props) {
               ))}
             </LineChart>
           </ResponsiveContainer>
+          </div>
         </div>
       )}
 
@@ -220,13 +220,13 @@ export function PhysiqueView({ initialMeasurements }: Props) {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="flex min-w-0 flex-col gap-1">
-              <label className="text-xs text-muted-foreground">Date</label>
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+              <label htmlFor="phys-date" className="text-xs text-muted-foreground">Date</label>
+              <input id="phys-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} suppressHydrationWarning
                 className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
             </div>
             <div className="flex min-w-0 flex-col gap-1">
-              <label className="text-xs text-muted-foreground">Unit</label>
-              <select value={unit} onChange={(e) => setUnit(e.target.value as MeasurementUnit)}
+              <label htmlFor="phys-unit" className="text-xs text-muted-foreground">Unit</label>
+              <select id="phys-unit" value={unit} onChange={(e) => setUnit(e.target.value as MeasurementUnit)}
                 className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30">
                 <option value="in">in</option>
                 <option value="cm">cm</option>
@@ -253,7 +253,12 @@ export function PhysiqueView({ initialMeasurements }: Props) {
               </div>
             ))}
           </div>
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {error && (
+            <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              <AlertCircle className="size-4 shrink-0" />
+              {error}
+            </div>
+          )}
           <button type="submit" disabled={isPending}
             className="self-start rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50">
             {isPending ? "Saving…" : "Log"}
@@ -270,50 +275,50 @@ export function PhysiqueView({ initialMeasurements }: Props) {
         <div className="flex flex-col gap-3">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div className="flex min-w-0 flex-col gap-1">
-              <label className="text-xs text-muted-foreground">Gender</label>
-              <select value={bfGender} onChange={(e) => setBfGender(e.target.value as "male" | "female")}
+              <label htmlFor="bf-gender" className="text-xs text-muted-foreground">Gender</label>
+              <select id="bf-gender" value={bfGender} onChange={(e) => setBfGender(e.target.value as "male" | "female")}
                 className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30">
                 <option value="male">Male</option>
                 <option value="female">Female</option>
               </select>
             </div>
             <div className="flex min-w-0 flex-col gap-1">
-              <label className="text-xs text-muted-foreground">Unit</label>
-              <select value={bfUnit} onChange={(e) => setBfUnit(e.target.value as MeasurementUnit)}
+              <label htmlFor="bf-unit" className="text-xs text-muted-foreground">Unit</label>
+              <select id="bf-unit" value={bfUnit} onChange={(e) => setBfUnit(e.target.value as MeasurementUnit)}
                 className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30">
                 <option value="in">in</option>
                 <option value="cm">cm</option>
               </select>
             </div>
             <div className="flex min-w-0 flex-col gap-1">
-              <label className="text-xs text-muted-foreground">Height</label>
-              <input type="number" step="0.1" min="0" placeholder={bfUnit === "in" ? "70" : "178"} value={bfHeight}
+              <label htmlFor="bf-height" className="text-xs text-muted-foreground">Height</label>
+              <input id="bf-height" type="number" step="0.1" min="0" placeholder={bfUnit === "in" ? "70" : "178"} value={bfHeight}
                 onChange={(e) => setBfHeight(e.target.value)}
                 className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
             </div>
             <div className="flex min-w-0 flex-col gap-1">
-              <label className="text-xs text-muted-foreground">Neck</label>
-              <input type="number" step="0.1" min="0" placeholder="—" value={bfNeck}
+              <label htmlFor="bf-neck" className="text-xs text-muted-foreground">Neck</label>
+              <input id="bf-neck" type="number" step="0.1" min="0" placeholder="—" value={bfNeck}
                 onChange={(e) => setBfNeck(e.target.value)}
                 className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
             </div>
             <div className="flex min-w-0 flex-col gap-1">
-              <label className="text-xs text-muted-foreground">Waist (navel)</label>
-              <input type="number" step="0.1" min="0" placeholder="—" value={bfWaist}
+              <label htmlFor="bf-waist" className="text-xs text-muted-foreground">Waist (navel)</label>
+              <input id="bf-waist" type="number" step="0.1" min="0" placeholder="—" value={bfWaist}
                 onChange={(e) => setBfWaist(e.target.value)}
                 className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
             </div>
             {bfGender === "female" && (
               <div className="flex min-w-0 flex-col gap-1">
-                <label className="text-xs text-muted-foreground">Hips (widest)</label>
-                <input type="number" step="0.1" min="0" placeholder="—" value={bfHips}
+                <label htmlFor="bf-hips" className="text-xs text-muted-foreground">Hips (widest)</label>
+                <input id="bf-hips" type="number" step="0.1" min="0" placeholder="—" value={bfHips}
                   onChange={(e) => setBfHips(e.target.value)}
                   className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
               </div>
             )}
           </div>
           {bfResult !== null && (
-            <div className="flex items-center gap-3 rounded-lg bg-muted/50 px-4 py-3">
+            <div className="flex items-center gap-3 rounded-lg bg-muted/50 px-4 py-3" aria-live="polite">
               <div>
                 <p className="text-xs text-muted-foreground">Estimated Body Fat</p>
                 <p className="text-2xl font-bold tabular-nums">{bfResult}%</p>
@@ -333,26 +338,44 @@ export function PhysiqueView({ initialMeasurements }: Props) {
           <p className="px-5 py-3 text-sm font-semibold border-b border-border">History</p>
           <div className="divide-y divide-border">
             {[...measurements].reverse().map((m) => (
-              <div key={m.id} className="flex items-center justify-between px-5 py-3">
-                <div>
+              <div key={m.id} className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-muted/50">
+                <div className="min-w-0">
                   <p className="text-sm font-medium">
                     {format(new Date(m.date + "T00:00:00"), "MMMM d, yyyy")}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground truncate">
                     {FIELDS.filter((f) => m[f.key] !== undefined)
                       .map((f) => `${f.label}: ${m[f.key]}${m.unit}`)
                       .join(" · ")}
                   </p>
                 </div>
-                <button type="button" onClick={() => {
-                  startTransition(async () => {
-                    await deletePhysiqueMeasurement(m.id);
-                    router.refresh();
-                  });
-                }} disabled={isPending}
-                  className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50">
-                  <Trash2 className="size-3.5" />
-                </button>
+                {confirmingId === m.id ? (
+                  <div className="flex items-center gap-1 shrink-0" aria-live="polite">
+                    <button type="button" onClick={() => {
+                      setConfirmingId(null);
+                      startTransition(async () => {
+                        await deletePhysiqueMeasurement(m.id);
+                        router.refresh();
+                      });
+                    }} disabled={isPending}
+                      className="text-xs font-medium text-destructive transition-colors hover:underline">
+                      {isPending ? "Deleting…" : "Delete?"}
+                    </button>
+                    <button type="button" onClick={() => setConfirmingId(null)}
+                      className="text-xs text-muted-foreground transition-colors hover:text-foreground">
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => {
+                    setConfirmingId(m.id);
+                    setTimeout(() => setConfirmingId((prev) => (prev === m.id ? null : prev)), 3000);
+                  }} disabled={isPending}
+                    aria-label="Delete measurement"
+                    className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50">
+                    <Trash2 className="size-3.5" />
+                  </button>
+                )}
               </div>
             ))}
           </div>

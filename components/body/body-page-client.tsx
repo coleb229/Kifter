@@ -42,6 +42,7 @@ export function BodyPageClient({ entries, photos, measurements, correlationData,
               key={u}
               type="button"
               onClick={() => handleUnitChange(u)}
+              aria-pressed={displayUnit === u}
               className={`px-3 py-1 text-xs font-medium transition-colors ${
                 displayUnit === u
                   ? "bg-primary text-primary-foreground"
@@ -66,28 +67,28 @@ export function BodyPageClient({ entries, photos, measurements, correlationData,
       )}
 
       {correlationData.length > 0 && (
-        <div className="animate-fade-up" style={{ animationDelay: "60ms" }}>
+        <div className="animate-fade-up" style={{ animationDelay: "80ms" }}>
           <h2 className="mb-3 text-base font-semibold">Nutrition vs Body Weight</h2>
-          <div className="rounded-xl border border-border bg-card p-4">
+          <div className="rounded-xl border border-border bg-card p-5">
             <MacroCorrelationChart data={correlationData} displayUnit={displayUnit} />
           </div>
         </div>
       )}
 
-      <div className="animate-fade-up" style={{ animationDelay: "60ms" }}>
+      <div className="animate-fade-up" style={{ animationDelay: "120ms" }}>
         <BodyWeightView initialEntries={entries} displayUnit={displayUnit} />
       </div>
 
-      <div className="animate-fade-up" style={{ animationDelay: "100ms" }}>
+      <div className="animate-fade-up" style={{ animationDelay: "160ms" }}>
         <PhysiqueView initialMeasurements={measurements} />
       </div>
 
-      <div className="animate-fade-up" style={{ animationDelay: "140ms" }}>
+      <div className="animate-fade-up" style={{ animationDelay: "200ms" }}>
         <ProgressGallery initialPhotos={photos} />
       </div>
 
       {photos.length >= 2 && (
-        <div className="animate-fade-up" style={{ animationDelay: "180ms" }}>
+        <div className="animate-fade-up" style={{ animationDelay: "240ms" }}>
           <PoseComparison photos={photos} />
         </div>
       )}

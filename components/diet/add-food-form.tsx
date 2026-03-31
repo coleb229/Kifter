@@ -87,11 +87,13 @@ function MacroStepper({
   onChange,
   max = 9999,
   colorClass,
+  label,
 }: {
   value: number;
   onChange: (v: number) => void;
   max?: number;
   colorClass: string;
+  label?: string;
 }) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [localValue, setLocalValue] = useState(String(value));
@@ -129,7 +131,7 @@ function MacroStepper({
     <div className="flex items-center rounded-lg border border-border overflow-hidden">
       <button
         type="button"
-        aria-label="Decrease"
+        aria-label={label ? `Decrease ${label}` : "Decrease"}
         onPointerDown={() => startRepeat(-1)}
         onPointerUp={stopRepeat}
         onPointerLeave={stopRepeat}
@@ -163,7 +165,7 @@ function MacroStepper({
       />
       <button
         type="button"
-        aria-label="Increase"
+        aria-label={label ? `Increase ${label}` : "Increase"}
         onPointerDown={() => startRepeat(1)}
         onPointerUp={stopRepeat}
         onPointerLeave={stopRepeat}
@@ -480,6 +482,19 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ("SpeechRecognition" in (window as any) || "webkitSpeechRecognition" in (window as any));
 
+  // Cmd/Ctrl+Enter keyboard shortcut to submit
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault();
+        handleSubmit(onSubmit)();
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handleSubmit]);
+
   const gramEstimators = selectedFood?.category ? GRAM_ESTIMATORS[selectedFood.category] ?? [] : [];
 
   return (
@@ -704,6 +719,7 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
                 onChange={(v) => setValue(field as keyof FormData, v as never)}
                 max={field === "calories" ? 9999 : 999}
                 colorClass={MACRO_LABELS[field].color}
+                label={MACRO_LABELS[field].label}
               />
               {errors[field as keyof FormData] && (
                 <p className={errorClass}>{errors[field as keyof FormData]!.message as string}</p>
