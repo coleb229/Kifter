@@ -186,11 +186,11 @@ export function AddFoodForm({ date, defaultMealType = "breakfast", editingEntry,
   const [saveToLibrary, setSaveToLibrary] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(!editingEntry);
   const [selectedFood, setSelectedFood] = useState<FoodSearchResult | null>(null);
-  // baseFood stores the 1× reference macros used by multiplier buttons.
-  // Initialized from editingEntry so multipliers work in edit mode too.
+  // baseFood stores the per-1-serving reference macros used by multiplier buttons.
+  // When editing, divide by servingSize to recover per-serving values (DB stores totals).
   const [baseFood, setBaseFood] = useState<{ calories: number; protein: number; carbs: number; fat: number; servingSize: number; servingUnit: string } | null>(
     editingEntry
-      ? { calories: editingEntry.calories, protein: editingEntry.protein, carbs: editingEntry.carbs, fat: editingEntry.fat, servingSize: editingEntry.servingSize ?? 1, servingUnit: editingEntry.servingUnit ?? "serving" }
+      ? (() => { const sz = editingEntry.servingSize ?? 1; return { calories: editingEntry.calories / sz, protein: editingEntry.protein / sz, carbs: editingEntry.carbs / sz, fat: editingEntry.fat / sz, servingSize: 1, servingUnit: editingEntry.servingUnit ?? "serving" }; })()
       : null
   );
   const [activeMultiplier, setActiveMultiplier] = useState(1);
