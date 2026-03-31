@@ -77,6 +77,7 @@ export function VolumeChart({ initialData, initialPeriod = 30 }: Props) {
           No workout data in this period
         </div>
       ) : (
+        <div role="img" aria-label="30-day training volume trend">
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
@@ -100,6 +101,7 @@ export function VolumeChart({ initialData, initialPeriod = 30 }: Props) {
             <Bar dataKey="totalVolumeKg" fill="#6366f1" radius={[3, 3, 0, 0]} maxBarSize={24} />
           </BarChart>
         </ResponsiveContainer>
+        </div>
       )}
     </div>
   );

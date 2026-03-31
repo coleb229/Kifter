@@ -53,6 +53,7 @@ export function BodyTargetChart({ data }: Props) {
     <div className="rounded-xl border border-border bg-card p-5">
       <h2 className="mb-1 text-base font-semibold">Muscle Group Volume</h2>
       <p className="mb-4 text-xs text-muted-foreground">Last 4 weeks</p>
+      <div role="img" aria-label="Body target distribution pie chart">
       <ResponsiveContainer width="100%" height={200}>
         <BarChart data={data} barSize={36} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
           <XAxis dataKey="target" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
@@ -71,6 +72,7 @@ export function BodyTargetChart({ data }: Props) {
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+      </div>
     </div>
   );
 }

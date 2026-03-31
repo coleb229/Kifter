@@ -91,7 +91,7 @@ export function TrainingHeatmap({ dates }: Props) {
         </div>
       </div>
 
-      <div ref={scrollRef} className="overflow-x-auto pb-1">
+      <div ref={scrollRef} role="img" aria-label="Training frequency heatmap, last 12 months" className="overflow-x-auto pb-1">
         <div style={{ minWidth: "max-content" }}>
           {/* Month labels */}
           <div className="mb-1 flex pl-7">

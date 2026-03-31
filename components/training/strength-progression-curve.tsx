@@ -97,7 +97,7 @@ export function StrengthProgressionCurve({ data }: Props) {
   }
 
   return (
-    <div>
+    <div role="img" aria-label="Estimated 1RM progression curve">
       <ResponsiveContainer width="100%" height={260}>
         <ComposedChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" className="stroke-border" />

@@ -557,7 +557,7 @@ export function GuidesBrowser({ guides }: { guides: Guide[] }) {
               <button
                 type="button"
                 onClick={resetFilters}
-                className="mt-4 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+                className="mt-4 text-xs font-medium text-primary hover:underline"
               >
                 Clear all filters
               </button>

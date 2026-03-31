@@ -69,7 +69,8 @@ export function SessionForm() {
   function handleBodyTargetChange(target: string) {
     setValue("bodyTarget", target as SessionFormValues["bodyTarget"], { shouldValidate: true });
     const currentName = watch("name");
-    if (!currentName) setValue("name", NAME_SUGGESTIONS[target] ?? "");
+    const isSuggested = !currentName || Object.values(NAME_SUGGESTIONS).includes(currentName);
+    if (isSuggested) setValue("name", NAME_SUGGESTIONS[target] ?? "");
   }
 
   function onSubmit(formValues: SessionFormValues) {

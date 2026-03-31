@@ -102,7 +102,7 @@ export function PrHeatmap({ prHistory }: Props) {
         </div>
       </div>
 
-      <div className="overflow-x-auto pb-1">
+      <div role="img" aria-label="Personal records calendar heatmap" className="overflow-x-auto pb-1">
         <div style={{ minWidth: "max-content" }}>
           {/* Month labels */}
           <div className="mb-1 flex pl-7">

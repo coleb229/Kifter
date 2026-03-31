@@ -127,7 +127,7 @@ export function AnalyticsDashboard({
               onClick={() => handleSelect(name)}
               className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors animate-fade-up ${
                 selected === name
-                  ? "bg-indigo-600 text-white shadow"
+                  ? "bg-primary text-primary-foreground shadow"
                   : "border border-border bg-muted text-muted-foreground hover:text-foreground"
               }`}
               style={{ animationDelay: `${i * 60}ms` }}
@@ -147,8 +147,8 @@ export function AnalyticsDashboard({
       <div className={`grid grid-cols-2 gap-3 sm:grid-cols-4 transition-opacity ${isPending ? "opacity-50" : ""}`}>
         <StatCard
           icon={<Trophy className="size-4" />}
-          iconBg="bg-indigo-100 dark:bg-indigo-950/40"
-          iconColor="text-indigo-600 dark:text-indigo-400"
+          iconBg="bg-primary/10"
+          iconColor="text-primary"
           label="Personal Record"
           value={prLabel}
           sub={prSub}

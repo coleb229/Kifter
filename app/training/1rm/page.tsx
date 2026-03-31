@@ -71,8 +71,8 @@ export default function OneRepMaxPage() {
       </Link>
 
       <div className="flex items-center gap-3 animate-fade-up">
-        <div className="flex size-9 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-950/40">
-          <Calculator className="size-5 text-indigo-600 dark:text-indigo-400" />
+        <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10">
+          <Calculator className="size-5 text-primary" />
         </div>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">1RM Calculator</h1>
@@ -87,12 +87,14 @@ export default function OneRepMaxPage() {
           <div className="flex flex-col gap-1">
             <label className="text-xs text-muted-foreground">Weight</label>
             <input
-              type="number"
-              min="0"
-              step="0.5"
+              type="text"
+              inputMode="decimal"
               placeholder="0"
               value={weight}
-              onChange={(e) => setWeight(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === "" || v === "." || !isNaN(parseFloat(v))) setWeight(v);
+              }}
               className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
             />
           </div>
@@ -110,13 +112,14 @@ export default function OneRepMaxPage() {
           <div className="flex flex-col gap-1">
             <label className="text-xs text-muted-foreground">Reps (1–50)</label>
             <input
-              type="number"
-              min="1"
-              max="50"
-              step="1"
+              type="text"
+              inputMode="numeric"
               placeholder="0"
               value={reps}
-              onChange={(e) => setReps(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === "" || (!isNaN(parseInt(v, 10)) && parseInt(v, 10) >= 0)) setReps(v);
+              }}
               className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
             />
           </div>

@@ -61,7 +61,7 @@ export function ExerciseManager({ customExercises }: ExerciseManagerProps) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search exercises…"
-          className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-base sm:text-sm outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-colors placeholder:text-muted-foreground"
+          className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-base sm:text-sm outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors placeholder:text-muted-foreground"
         />
         {search && (
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">

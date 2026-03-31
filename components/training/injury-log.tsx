@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Check, Trash2, ShieldAlert } from "lucide-react";
 import { format } from "date-fns";
@@ -45,11 +45,15 @@ function InjuryCard({
   onResolve,
   onDelete,
   isPending,
+  confirmingDeleteId,
+  setConfirmingDeleteId,
 }: {
   injury: Injury;
   onResolve: (id: string) => void;
   onDelete: (id: string) => void;
   isPending: boolean;
+  confirmingDeleteId: string | null;
+  setConfirmingDeleteId: (id: string | null) => void;
 }) {
   const styles = SEVERITY_STYLES[injury.severity];
   const isResolved = !!injury.resolvedAt;
@@ -90,15 +94,35 @@ function InjuryCard({
             >
               <Check className="size-3.5" />
             </button>
-            <button
-              type="button"
-              onClick={() => onDelete(injury.id)}
-              disabled={isPending}
-              className="rounded-lg border border-border bg-background/60 p-1.5 text-muted-foreground transition-colors hover:text-destructive disabled:opacity-50"
-              aria-label="Delete injury log"
-            >
-              <Trash2 className="size-3.5" />
-            </button>
+            {confirmingDeleteId === injury.id ? (
+              <div className="flex items-center gap-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => onDelete(injury.id)}
+                  disabled={isPending}
+                  className="rounded-lg bg-destructive px-2 py-1 font-medium text-destructive-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+                >
+                  Delete?
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmingDeleteId(null)}
+                  className="rounded-lg px-2 py-1 font-medium text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmingDeleteId(injury.id)}
+                disabled={isPending}
+                className="rounded-lg border border-border bg-background/60 p-1.5 text-muted-foreground transition-colors hover:text-destructive disabled:opacity-50"
+                aria-label="Delete injury log"
+              >
+                <Trash2 className="size-3.5" />
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -118,6 +142,18 @@ export function InjuryLog({ injuries: initialInjuries }: Props) {
     notes: "",
   });
   const [formError, setFormError] = useState<string | null>(null);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+
+  // Auto-dismiss delete confirmation after 3s
+  useEffect(() => {
+    if (!confirmingDeleteId) return;
+    const timer = setTimeout(() => setConfirmingDeleteId(null), 3000);
+    return () => clearTimeout(timer);
+  }, [confirmingDeleteId]);
+
+  const handleSetConfirmingDeleteId = useCallback((id: string | null) => {
+    setConfirmingDeleteId(id);
+  }, []);
 
   const active = initialInjuries.filter((i) => !i.resolvedAt);
   const resolved = initialInjuries.filter((i) => i.resolvedAt);
@@ -182,8 +218,9 @@ export function InjuryLog({ injuries: initialInjuries }: Props) {
         <div className="mb-3 rounded-xl border border-border bg-card p-4 flex flex-col gap-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Muscle Group</label>
+              <label htmlFor="injury-muscleGroup" className="mb-1 block text-xs font-medium text-muted-foreground">Muscle Group</label>
               <select
+                id="injury-muscleGroup"
                 value={form.muscleGroup}
                 onChange={(e) => setForm({ ...form, muscleGroup: e.target.value as MuscleGroup })}
                 className={selectClass + " w-full"}
@@ -195,8 +232,9 @@ export function InjuryLog({ injuries: initialInjuries }: Props) {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Severity</label>
+              <label htmlFor="injury-severity" className="mb-1 block text-xs font-medium text-muted-foreground">Severity</label>
               <select
+                id="injury-severity"
                 value={form.severity}
                 onChange={(e) => setForm({ ...form, severity: e.target.value as SeverityLevel })}
                 className={selectClass + " w-full"}
@@ -210,8 +248,9 @@ export function InjuryLog({ injuries: initialInjuries }: Props) {
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Start Date</label>
+              <label htmlFor="injury-startDate" className="mb-1 block text-xs font-medium text-muted-foreground">Start Date</label>
               <input
+                id="injury-startDate"
                 type="date"
                 value={form.startDate}
                 onChange={(e) => setForm({ ...form, startDate: e.target.value })}
@@ -219,8 +258,9 @@ export function InjuryLog({ injuries: initialInjuries }: Props) {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Expected Recovery (optional)</label>
+              <label htmlFor="injury-expectedRecovery" className="mb-1 block text-xs font-medium text-muted-foreground">Expected Recovery (optional)</label>
               <input
+                id="injury-expectedRecovery"
                 type="date"
                 value={form.expectedRecoveryDate}
                 onChange={(e) => setForm({ ...form, expectedRecoveryDate: e.target.value })}
@@ -229,8 +269,9 @@ export function InjuryLog({ injuries: initialInjuries }: Props) {
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">Notes (optional)</label>
+            <label htmlFor="injury-notes" className="mb-1 block text-xs font-medium text-muted-foreground">Notes (optional)</label>
             <input
+              id="injury-notes"
               type="text"
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
@@ -272,6 +313,8 @@ export function InjuryLog({ injuries: initialInjuries }: Props) {
               onResolve={handleResolve}
               onDelete={handleDelete}
               isPending={isPending}
+              confirmingDeleteId={confirmingDeleteId}
+              setConfirmingDeleteId={handleSetConfirmingDeleteId}
             />
           ))}
         </div>
@@ -287,6 +330,8 @@ export function InjuryLog({ injuries: initialInjuries }: Props) {
               onResolve={handleResolve}
               onDelete={handleDelete}
               isPending={isPending}
+              confirmingDeleteId={confirmingDeleteId}
+              setConfirmingDeleteId={handleSetConfirmingDeleteId}
             />
           ))}
         </div>

@@ -102,9 +102,9 @@ export function CalendarView({ sessions }: Props) {
                 onClick={() => setSelected(isSelected ? null : day)}
                 className={`relative flex w-full flex-col items-center gap-0.5 rounded-lg py-2 text-sm transition-colors ${
                   isSelected
-                    ? "bg-indigo-600 text-white"
+                    ? "bg-primary text-primary-foreground"
                     : today
-                    ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
+                    ? "bg-primary/10 text-primary"
                     : hasSessions
                     ? "hover:bg-muted cursor-pointer"
                     : "text-muted-foreground cursor-default"

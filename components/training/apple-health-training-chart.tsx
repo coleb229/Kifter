@@ -186,7 +186,7 @@ export function AppleHealthTrainingChart({ data }: Props) {
             onClick={() => setMode(m.key)}
             className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
               mode === m.key
-                ? "bg-indigo-600 text-white shadow"
+                ? "bg-primary text-primary-foreground shadow"
                 : "border border-border bg-muted text-muted-foreground hover:text-foreground"
             }`}
           >

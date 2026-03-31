@@ -1,24 +1,37 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { format, startOfWeek, addDays } from "date-fns";
-import type { WorkoutSession } from "@/types";
+import { Flame, Snowflake } from "lucide-react";
+import { useStreakFreeze as applyStreakFreeze } from "@/actions/streak-actions";
+import type { WorkoutSession, Streak } from "@/types";
 import { BODY_TARGET_STYLES } from "@/lib/label-colors";
 
 interface Props {
   sessions: WorkoutSession[];
+  streak?: Streak | null;
 }
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-export function WeeklyPlanStrip({ sessions }: Props) {
+export function WeeklyPlanStrip({ sessions, streak }: Props) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   // Use a client-side date string to avoid SSR/timezone mismatch where the
   // server (UTC) and the user's browser are in different calendar days.
   const [todayStr, setTodayStr] = useState("");
   const [activeDay, setActiveDay] = useState<string | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function handleFreeze() {
+    startTransition(async () => {
+      await applyStreakFreeze();
+      router.refresh();
+    });
+  }
 
   useEffect(() => {
     const now = new Date();
@@ -62,9 +75,43 @@ export function WeeklyPlanStrip({ sessions }: Props) {
 
   return (
     <div className="mb-6 rounded-xl border border-border bg-card p-5 animate-fade-up">
-      <p className="mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-        This Week
-      </p>
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          This Week
+        </p>
+        {streak && streak.currentStreak > 0 && (
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              <Flame className="size-4 text-orange-500" />
+              <span className="text-xs font-semibold">
+                {streak.currentStreak}d streak
+                {streak.longestStreak > streak.currentStreak && (
+                  <span className="ml-1 font-normal text-muted-foreground">
+                    · best {streak.longestStreak}
+                  </span>
+                )}
+              </span>
+            </div>
+            {streak.freezeTokens > 0 && (
+              <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-0.5">
+                  {Array.from({ length: streak.freezeTokens }).map((_, i) => (
+                    <Snowflake key={i} className="size-3 text-sky-400" />
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleFreeze}
+                  disabled={isPending}
+                  className="rounded-full border border-sky-300 bg-sky-50 px-2 py-0.5 text-[11px] font-medium text-sky-700 transition-colors hover:bg-sky-100 disabled:opacity-50 dark:border-sky-700 dark:bg-sky-950/40 dark:text-sky-300 dark:hover:bg-sky-950/60"
+                >
+                  {isPending ? "Using…" : "Freeze"}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
       <div role="grid" aria-label="Weekly training plan" className="grid grid-cols-7 gap-1">
         {days.map((day, i) => {
           const key = format(day, "yyyy-MM-dd");
@@ -139,7 +186,9 @@ export function WeeklyPlanStrip({ sessions }: Props) {
               {isActive && hasSessions && (
                 <div
                   ref={popoverRef}
-                  className="absolute top-full left-1/2 -translate-x-1/2 mt-1.5 z-20 w-44 rounded-lg border border-border bg-card p-3 shadow-lg animate-fade-up"
+                  className={`absolute top-full mt-1.5 z-20 w-44 rounded-lg border border-border bg-card p-3 shadow-lg animate-fade-up ${
+                    i <= 1 ? "left-0" : i >= 5 ? "right-0" : "left-1/2 -translate-x-1/2"
+                  }`}
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex flex-col gap-2">

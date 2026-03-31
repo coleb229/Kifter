@@ -112,7 +112,7 @@ export function VelocityChart({ data }: Props) {
   const deloadWeeks = velocityPoints.filter((p) => p.isDeload).map((p) => p.weekLabel);
 
   return (
-    <div>
+    <div role="img" aria-label="Rep velocity scatter chart">
       <ResponsiveContainer width="100%" height={240}>
         <ComposedChart data={velocityPoints} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" className="stroke-border" />

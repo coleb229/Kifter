@@ -191,19 +191,29 @@ export function ProgramsView({ initialPrograms }: Props) {
                         className="min-w-0 flex-1 rounded-md border border-border bg-card px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                       />
                       <input
-                        type="number"
-                        min={1}
-                        value={ex.sets}
-                        onChange={(e) => updateExercise(di, ei, "sets", parseInt(e.target.value) || 1)}
+                        type="text"
+                        inputMode="numeric"
+                        value={ex.sets || ""}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (v === "") { updateExercise(di, ei, "sets", 1); return; }
+                          const n = parseInt(v, 10);
+                          if (!isNaN(n) && n >= 0) updateExercise(di, ei, "sets", n);
+                        }}
                         title="Sets"
                         className="w-14 rounded-md border border-border bg-card px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                       />
                       <span className="text-xs text-muted-foreground">×</span>
                       <input
-                        type="number"
-                        min={1}
-                        value={ex.reps}
-                        onChange={(e) => updateExercise(di, ei, "reps", parseInt(e.target.value) || 1)}
+                        type="text"
+                        inputMode="numeric"
+                        value={ex.reps || ""}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (v === "") { updateExercise(di, ei, "reps", 1); return; }
+                          const n = parseInt(v, 10);
+                          if (!isNaN(n) && n >= 0) updateExercise(di, ei, "reps", n);
+                        }}
                         title="Reps"
                         className="w-14 rounded-md border border-border bg-card px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                       />

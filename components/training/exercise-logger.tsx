@@ -3,7 +3,7 @@
 import { useState, useTransition, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Minus, Plus } from "lucide-react";
@@ -93,6 +93,8 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
     control: form.control,
     name: "sets",
   });
+
+  const watchedSets = useWatch({ control: form.control, name: "sets" });
 
   async function handleExerciseChange(name: string) {
     form.setValue("exercise", name, { shouldValidate: true });
@@ -233,7 +235,7 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
                   <>
                     <input
                       type="text"
-                      value={query || form.watch("exercise")}
+                      value={comboOpen ? query : (query || form.getValues("exercise"))}
                       placeholder="Search exercises…"
                       className={inputClass}
                       role="combobox"
@@ -362,12 +364,17 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
                       <Minus className="size-3.5" />
                     </button>
                     <input
-                      {...form.register(`sets.${index}.weight`, { valueAsNumber: true })}
-                      type="number"
-                      min="0"
-                      step="0.5"
+                      type="text"
+                      inputMode="decimal"
+                      value={watchedSets?.[index]?.weight || ""}
                       placeholder="0"
                       onFocus={(e) => e.target.select()}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v === "" || v === ".") { form.setValue(`sets.${index}.weight`, 0); return; }
+                        const n = parseFloat(v);
+                        if (!isNaN(n)) form.setValue(`sets.${index}.weight`, n);
+                      }}
                       className="h-10 w-full min-w-0 rounded-lg border border-input bg-background px-1 py-2 text-center text-base sm:text-sm focus-visible:outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                     />
                     <button
@@ -391,11 +398,17 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
                       <Minus className="size-3.5" />
                     </button>
                     <input
-                      {...form.register(`sets.${index}.reps`, { valueAsNumber: true })}
-                      type="number"
-                      min="1"
+                      type="text"
+                      inputMode="numeric"
+                      value={watchedSets?.[index]?.reps || ""}
                       placeholder="0"
                       onFocus={(e) => e.target.select()}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v === "") { form.setValue(`sets.${index}.reps`, 0); return; }
+                        const n = parseInt(v, 10);
+                        if (!isNaN(n) && n >= 0) form.setValue(`sets.${index}.reps`, n);
+                      }}
                       className="h-10 w-full min-w-0 rounded-lg border border-input bg-background px-1 py-2 text-center text-base sm:text-sm focus-visible:outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                     />
                     <button
@@ -459,7 +472,7 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
             <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-muted">
               <div
                 className={`h-full rounded-full transition-all duration-1000 ease-linear ${
-                  restTimer === 0 ? "bg-emerald-500" : restTimer / restTotal <= 0.1 ? "bg-destructive" : restTimer / restTotal <= 0.3 ? "bg-amber-500" : "bg-indigo-500"
+                  restTimer === 0 ? "bg-emerald-500" : restTimer / restTotal <= 0.1 ? "bg-destructive" : restTimer / restTotal <= 0.3 ? "bg-amber-500" : "bg-primary"
                 }`}
                 style={{ width: `${restTotal > 0 ? (restTimer / restTotal) * 100 : 0}%` }}
               />

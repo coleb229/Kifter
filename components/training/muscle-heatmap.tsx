@@ -212,7 +212,7 @@ export function MuscleHeatmap({ data }: Props) {
 
       <div className="flex flex-col gap-6 md:flex-row md:gap-8">
         {/* SVG bodies */}
-        <div className="flex gap-6 justify-center">
+        <div role="img" aria-label="Muscle group weekly volume heatmap" className="flex gap-6 justify-center">
           <BodySVG
             muscles={FRONT_MUSCLES}
             volumeMap={volumeMap}
@@ -260,7 +260,7 @@ export function MuscleHeatmap({ data }: Props) {
                     onClick={() => setActiveGroup(activeGroup === d.muscleGroup ? null : d.muscleGroup)}
                     className={`flex items-center justify-between rounded-lg px-3 py-1.5 text-xs transition-colors text-left ${
                       activeGroup === d.muscleGroup
-                        ? "bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300"
+                        ? "bg-primary/10 text-primary"
                         : "hover:bg-muted/60"
                     }`}
                   >
@@ -273,12 +273,12 @@ export function MuscleHeatmap({ data }: Props) {
 
           {/* Drill-down panel */}
           {activeData && (
-            <div className="mt-4 rounded-lg border border-indigo-200 dark:border-indigo-900/60 bg-indigo-50 dark:bg-indigo-950/20 p-3">
-              <p className="mb-1 text-xs font-semibold text-indigo-700 dark:text-indigo-300">{activeData.muscleGroup}</p>
+            <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-3">
+              <p className="mb-1 text-xs font-semibold text-primary">{activeData.muscleGroup}</p>
               <p className="mb-2 text-xs text-muted-foreground">{activeData.volumeLb.toLocaleString()} lb this week</p>
               <div className="flex flex-wrap gap-1">
                 {activeData.exercises.map((ex) => (
-                  <span key={ex} className="rounded-full border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-indigo-950/40 px-2 py-0.5 text-[10px] text-indigo-700 dark:text-indigo-300">
+                  <span key={ex} className="rounded-full border border-primary/20 bg-primary/5 px-2 py-0.5 text-[10px] text-primary">
                     {ex}
                   </span>
                 ))}

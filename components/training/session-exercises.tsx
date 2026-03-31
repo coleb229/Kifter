@@ -379,7 +379,7 @@ function ExerciseGroupCard({
               type="button"
               onClick={handleGetSubstitutes}
               aria-label="Get AI exercise substitutes"
-              className="rounded p-1 text-muted-foreground transition-colors hover:text-indigo-500"
+              className="rounded p-1 text-muted-foreground transition-colors hover:text-primary"
             >
               {isLoadingSubs ? <Loader2 className="size-3.5 animate-spin" /> : <Wand2 className="size-3.5" />}
             </button>
@@ -453,7 +453,7 @@ function ExerciseGroupCard({
             <button
               type="button"
               onClick={onStartSuperset}
-              className="inline-flex items-center gap-0.5 rounded-full border border-dashed border-muted-foreground/40 px-2 py-0.5 text-xs text-muted-foreground hover:border-indigo-500 hover:text-indigo-500"
+              className="inline-flex items-center gap-0.5 rounded-full border border-dashed border-muted-foreground/40 px-2 py-0.5 text-xs text-muted-foreground hover:border-primary hover:text-primary"
             >
               SS
             </button>
@@ -462,7 +462,7 @@ function ExerciseGroupCard({
             <button
               type="button"
               onClick={onCompleteSuperset}
-              className="inline-flex items-center gap-0.5 rounded-full border border-indigo-500 bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-600 dark:bg-indigo-950/30 hover:bg-indigo-100"
+              className="inline-flex items-center gap-0.5 rounded-full border border-primary bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary hover:bg-primary/15"
             >
               Link with {pendingSuperset}
             </button>
@@ -504,16 +504,15 @@ function ExerciseGroupCard({
                 {/* Weight + unit */}
                 <div className="flex min-w-0 gap-1">
                   <input
-                    type="number"
-                    min="0"
-                    step="0.5"
-                    value={state.weight}
-                    onChange={(e) =>
-                      setSetState(set.id, {
-                        ...state,
-                        weight: parseFloat(e.target.value) || 0,
-                      })
-                    }
+                    type="text"
+                    inputMode="decimal"
+                    value={state.weight || ""}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === "" || v === ".") { setSetState(set.id, { ...state, weight: 0 }); return; }
+                      const n = parseFloat(v);
+                      if (!isNaN(n)) setSetState(set.id, { ...state, weight: n });
+                    }}
                     onFocus={(e) => e.target.select()}
                     className={inputClass}
                   />
@@ -532,15 +531,15 @@ function ExerciseGroupCard({
                   </select>
                 </div>
                 <input
-                  type="number"
-                  min="1"
-                  value={state.reps}
-                  onChange={(e) =>
-                    setSetState(set.id, {
-                      ...state,
-                      reps: parseInt(e.target.value) || 1,
-                    })
-                  }
+                  type="text"
+                  inputMode="numeric"
+                  value={state.reps || ""}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === "") { setSetState(set.id, { ...state, reps: 1 }); return; }
+                    const n = parseInt(v, 10);
+                    if (!isNaN(n) && n >= 0) setSetState(set.id, { ...state, reps: n });
+                  }}
                   onFocus={(e) => e.target.select()}
                   className={inputClass}
                 />
@@ -695,13 +694,15 @@ function ExerciseGroupCard({
             </span>
             <div className="flex min-w-0 gap-1">
               <input
-                type="number"
-                min="0"
-                step="0.5"
-                value={addingSet.weight}
-                onChange={(e) =>
-                  setAddingSet({ ...addingSet, weight: parseFloat(e.target.value) || 0 })
-                }
+                type="text"
+                inputMode="decimal"
+                value={addingSet.weight || ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === "" || v === ".") { setAddingSet({ ...addingSet, weight: 0 }); return; }
+                  const n = parseFloat(v);
+                  if (!isNaN(n)) setAddingSet({ ...addingSet, weight: n });
+                }}
                 onFocus={(e) => e.target.select()}
                 className={inputClass}
                 autoFocus
@@ -718,12 +719,15 @@ function ExerciseGroupCard({
               </select>
             </div>
             <input
-              type="number"
-              min="1"
-              value={addingSet.reps}
-              onChange={(e) =>
-                setAddingSet({ ...addingSet, reps: parseInt(e.target.value) || 1 })
-              }
+              type="text"
+              inputMode="numeric"
+              value={addingSet.reps || ""}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === "") { setAddingSet({ ...addingSet, reps: 1 }); return; }
+                const n = parseInt(v, 10);
+                if (!isNaN(n) && n >= 0) setAddingSet({ ...addingSet, reps: n });
+              }}
               onFocus={(e) => e.target.select()}
               className={inputClass}
             />
@@ -965,9 +969,9 @@ export function SessionExercises({ sessionId, sets, videoUrls = {}, tagsMap = {}
         rg.type === "superset" ? (
           <div
             key={rg.groupId}
-            className="rounded-xl border-2 border-dashed border-indigo-300 dark:border-indigo-700 p-1 flex flex-col gap-1 relative"
+            className="rounded-xl border-2 border-dashed border-primary/30 p-1 flex flex-col gap-1 relative"
           >
-            <span className="absolute -top-2.5 left-3 rounded-full bg-indigo-500 px-2 py-0.5 text-[10px] font-bold text-white">SS</span>
+            <span className="absolute -top-2.5 left-3 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">SS</span>
             {rg.exercises.map((ex) => (
               <ExerciseGroupCard
                 key={ex.name}

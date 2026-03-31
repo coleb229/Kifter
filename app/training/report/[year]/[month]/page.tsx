@@ -49,8 +49,8 @@ export default async function MonthlyReportPage({ params }: Props) {
             Pick Month
           </Link>
           <div className="flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-950/40">
-              <FileText className="size-5 text-indigo-600 dark:text-indigo-400" />
+            <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10">
+              <FileText className="size-5 text-primary" />
             </div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight">{title} Report</h1>

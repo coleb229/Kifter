@@ -91,7 +91,7 @@ const MODES: { id: ChartMode; label: string; color: string; activeClass: string 
     id: "weight",
     label: "Max Weight",
     color: "#6366f1",
-    activeClass: "bg-indigo-600 text-white shadow",
+    activeClass: "bg-primary text-primary-foreground shadow",
   },
   {
     id: "volume",
@@ -154,7 +154,7 @@ export function AnalyticsChart({ data, isPending }: Props) {
   }, null);
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
+    <div role="img" aria-label={`Strength progression chart showing ${activeMode.label}`} className="rounded-xl border border-border bg-card p-5">
       {/* Mode toggle */}
       <div className="mb-5 flex gap-1.5 flex-wrap">
         {MODES.map((m) => (

@@ -7,12 +7,9 @@ import { getStreak } from "@/actions/streak-actions";
 import { getInjuries } from "@/actions/injury-actions";
 import { getPrograms } from "@/actions/program-actions";
 import { SessionsView } from "@/components/training/sessions-view";
-import { RestDaySuggestions } from "@/components/training/rest-day-suggestions";
-import { OverloadSuggestions } from "@/components/training/overload-suggestions";
 import { InjuryLog } from "@/components/training/injury-log";
-import { StreakBanner } from "@/components/training/streak-banner";
-import { StartFromProgramCard } from "@/components/training/start-from-program-card";
 import { WeeklyPlanStrip } from "@/components/training/weekly-plan-strip";
+import { InsightsSection } from "@/components/training/insights-section";
 import { Button } from "@/components/ui/button";
 import { OnboardingTip } from "@/components/ui/onboarding-tip";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -50,23 +47,23 @@ export default async function TrainingPage() {
             <Plus className="size-4" />
             Log Workout
           </Button>
-          <div className="flex flex-wrap gap-2 sm:flex-nowrap">
-            <Button size="sm" variant="outline" render={<Link href="/training/analytics" />}>
+          <nav className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
+            <Button size="sm" variant="outline" className="shrink-0" render={<Link href="/training/analytics" />}>
               Analytics
             </Button>
-            <Button size="sm" variant="outline" render={<Link href="/training/exercises" />}>
+            <Button size="sm" variant="outline" className="shrink-0" render={<Link href="/training/exercises" />}>
               Exercises
             </Button>
-            <Button size="sm" variant="outline" render={<Link href="/training/programs" />}>
+            <Button size="sm" variant="outline" className="shrink-0" render={<Link href="/training/programs" />}>
               Programs
             </Button>
-            <Button size="sm" variant="outline" render={<Link href="/training/1rm" />}>
+            <Button size="sm" variant="outline" className="shrink-0" render={<Link href="/training/1rm" />}>
               1RM
             </Button>
-            <Button size="sm" variant="outline" render={<Link href="/training/report" />}>
+            <Button size="sm" variant="outline" className="shrink-0" render={<Link href="/training/report" />}>
               Report
             </Button>
-          </div>
+          </nav>
         </div>
       </div>
 
@@ -78,14 +75,7 @@ export default async function TrainingPage() {
           className="mb-6"
         />
       )}
-      {streak && <StreakBanner streak={streak} />}
-      <WeeklyPlanStrip sessions={sessions} />
-      {suggestions.length > 0 && <RestDaySuggestions suggestions={suggestions} />}
-      {overloadSuggestions.length > 0 && <OverloadSuggestions suggestions={overloadSuggestions} />}
-      <InjuryLog injuries={injuries} />
-
-      <StartFromProgramCard programs={programs} />
-
+      <WeeklyPlanStrip sessions={sessions} streak={streak} />
 
       {sessions.length === 0 ? (
         <EmptyState
@@ -101,6 +91,13 @@ export default async function TrainingPage() {
       ) : (
         <SessionsView sessions={sessions} tagsMap={tagsMap} />
       )}
+
+      <InsightsSection
+        suggestions={suggestions}
+        overloadSuggestions={overloadSuggestions}
+        programs={programs}
+      />
+      <InjuryLog injuries={injuries} />
     </div>
   );
 }

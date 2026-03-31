@@ -139,7 +139,7 @@ export function SessionsView({ sessions, tagsMap = {} }: Props) {
                     onClick={() => setPage(n)}
                     className={`min-w-8 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${
                       n === page
-                        ? "bg-indigo-600 text-white"
+                        ? "bg-primary text-primary-foreground"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     }`}
                   >

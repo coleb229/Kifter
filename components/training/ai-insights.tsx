@@ -20,9 +20,9 @@ const insightConfig: Record<
 > = {
   achievement: {
     icon: Trophy,
-    iconBg: "bg-indigo-100 dark:bg-indigo-950/40",
-    iconColor: "text-indigo-600 dark:text-indigo-400",
-    badgeClass: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300",
+    iconBg: "bg-primary/10",
+    iconColor: "text-primary",
+    badgeClass: "bg-primary/10 text-primary",
   },
   progress: {
     icon: TrendingUp,
@@ -118,9 +118,9 @@ export function AIInsights() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
-          <Sparkles className="size-4 text-indigo-500" />
+          <Sparkles className="size-4 text-primary" />
           <h2 className="text-base font-semibold">AI Coaching Insights</h2>
-          <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-medium text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">
+          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
             Last 60 days
           </span>
         </div>
@@ -128,7 +128,7 @@ export function AIInsights() {
           type="button"
           onClick={handleGenerate}
           disabled={isPending}
-          className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-60"
+          className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60"
         >
           {isPending ? (
             <>

@@ -23,8 +23,8 @@ const TYPE_META: Record<GuideType, { icon: React.ReactNode; label: string; bg: s
   form_guide: {
     icon: <BookOpen className="size-3.5" />,
     label: "Form Guide",
-    bg: "bg-indigo-100 dark:bg-indigo-950/40",
-    text: "text-indigo-700 dark:text-indigo-300",
+    bg: "bg-primary/10",
+    text: "text-primary",
   },
 };
 
@@ -44,7 +44,7 @@ function GuideCard({ guide, draft }: { guide: PublishedGuide; draft?: boolean })
     <Link
       href={`/training/guides/${guide.slug}`}
       className={`group flex flex-col overflow-hidden rounded-2xl border bg-card transition-all hover:shadow-md hover:-translate-y-0.5 ${
-        draft ? "border-dashed border-border opacity-80" : "border-border hover:border-indigo-400/50"
+        draft ? "border-dashed border-border opacity-80" : "border-border hover:border-primary/50"
       }`}
     >
       {/* Thumbnail */}
@@ -96,7 +96,7 @@ function GuideCard({ guide, draft }: { guide: PublishedGuide; draft?: boolean })
         </p>
 
         {/* Footer CTA */}
-        <div className="flex items-center gap-1 text-sm font-medium text-indigo-600 dark:text-indigo-400 group-hover:gap-2 transition-all">
+        <div className="flex items-center gap-1 text-sm font-medium text-primary group-hover:gap-2 transition-all">
           Read Guide
           <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
         </div>
@@ -117,8 +117,8 @@ export default async function GuidesPage() {
   return (
     <div className="animate-fade-up">
       <div className="mb-8 flex items-center gap-3">
-        <div className="flex size-9 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-950/40">
-          <BookOpen className="size-5 text-indigo-600 dark:text-indigo-400" />
+        <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10">
+          <BookOpen className="size-5 text-primary" />
         </div>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Training Guides</h1>
@@ -145,7 +145,7 @@ export default async function GuidesPage() {
           action={isAdmin ? (
             <Link
               href="/admin"
-              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
             >
               Go to Admin Panel
               <ArrowRight className="size-4" />

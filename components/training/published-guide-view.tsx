@@ -20,9 +20,9 @@ const TYPE_META: Record<GuideType, { icon: React.ReactNode; label: string; bg: s
   form_guide: {
     icon: <BookOpen className="size-4" />,
     label: "Form Guide",
-    bg: "bg-indigo-100 dark:bg-indigo-950/40",
-    text: "text-indigo-700 dark:text-indigo-300",
-    border: "border-indigo-200 dark:border-indigo-900/50",
+    bg: "bg-primary/10",
+    text: "text-primary",
+    border: "border-primary/20",
   },
 };
 
@@ -139,7 +139,7 @@ export function PublishedGuideView({ guide, isDraft }: Props) {
             <div className="mt-4 space-y-2 rounded-xl border border-border bg-muted/30 p-4">
               {sec.tips.map((tip, j) => (
                 <div key={j} className="flex gap-2.5 text-sm text-muted-foreground">
-                  <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-indigo-400" />
+                  <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
                   {tip}
                 </div>
               ))}
@@ -155,7 +155,7 @@ export function PublishedGuideView({ guide, isDraft }: Props) {
           <ol className="space-y-5">
             {guide.content.steps.map((s) => (
               <li key={s.step} className="flex gap-4">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
                   {s.step}
                 </span>
                 <div className="pt-1">
@@ -252,7 +252,7 @@ export function PublishedGuideView({ guide, isDraft }: Props) {
                   href={src.youtubeUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group flex items-center gap-3 overflow-hidden rounded-xl border border-border bg-background p-2 transition-all hover:border-indigo-400 hover:shadow-sm"
+                  className="group flex items-center gap-3 overflow-hidden rounded-xl border border-border bg-background p-2 transition-all hover:border-primary/40 hover:shadow-sm"
                 >
                   <img
                     src={`https://img.youtube.com/vi/${src.youtubeId}/mqdefault.jpg`}
@@ -265,7 +265,7 @@ export function PublishedGuideView({ guide, isDraft }: Props) {
                       <p className="mt-0.5 text-xs text-muted-foreground">{src.channelName}</p>
                     )}
                   </div>
-                  <ExternalLink className="mr-1 size-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-indigo-500" />
+                  <ExternalLink className="mr-1 size-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
                 </a>
               ))}
             </div>
@@ -278,7 +278,7 @@ export function PublishedGuideView({ guide, isDraft }: Props) {
                   href={`https://www.youtube.com/watch?v=${ytId}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group overflow-hidden rounded-xl border border-border transition-all hover:border-indigo-400 hover:shadow-md"
+                  className="group overflow-hidden rounded-xl border border-border transition-all hover:border-primary/40 hover:shadow-md"
                 >
                   <img
                     src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`}
