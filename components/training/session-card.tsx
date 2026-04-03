@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Dumbbell, Trash2, Heart, Clock, Flame, RotateCcw } from "lucide-react";
 import { deleteSession, replaySession } from "@/actions/workout-actions";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { Button } from "@/components/ui/button";
 import type { WorkoutSession } from "@/types";
 import { BODY_TARGET_STYLES } from "@/lib/label-colors";
 
@@ -18,8 +20,9 @@ export function SessionCard({ session, index }: SessionCardProps) {
   const [isPending, startTransition] = useTransition();
   const [confirming, setConfirming] = useState(false);
   const [replayMode, setReplayMode] = useState(false);
-  const [replayDate, setReplayDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [replayDate, setReplayDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [replayPending, startReplayTransition] = useTransition();
+  const [replaySheet, setReplaySheet] = useState(false);
   const date = new Date(session.date.slice(0, 10) + "T00:00:00");
 
   function handleDelete(e: React.MouseEvent) {
@@ -38,16 +41,22 @@ export function SessionCard({ session, index }: SessionCardProps) {
   function handleReplay(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    setReplayMode(true);
+    if (window.matchMedia("(max-width: 639px)").matches) {
+      setReplaySheet(true);
+    } else {
+      setReplayMode(true);
+    }
     setConfirming(false);
   }
 
-  function handleReplayConfirm(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
+  function handleReplayConfirm(e?: React.MouseEvent) {
+    e?.preventDefault();
+    e?.stopPropagation();
     startReplayTransition(async () => {
       const result = await replaySession(session.id, replayDate);
       if (result.success) {
+        setReplaySheet(false);
+        setReplayMode(false);
         router.push(`/training/${result.data.newSessionId}`);
       }
     });
@@ -135,13 +144,14 @@ export function SessionCard({ session, index }: SessionCardProps) {
             <input
               type="date"
               value={replayDate}
+              suppressHydrationWarning
               onChange={(e) => { e.stopPropagation(); setReplayDate(e.target.value); }}
               onClick={(e) => e.stopPropagation()}
               className="rounded border border-border bg-background px-2 py-0.5 text-xs outline-none focus:border-ring"
             />
             <button
               type="button"
-              onClick={handleReplayConfirm}
+              onClick={(e) => handleReplayConfirm(e)}
               disabled={replayPending}
               className="text-xs font-medium text-primary transition-colors hover:underline disabled:opacity-50"
             >
@@ -182,7 +192,7 @@ export function SessionCard({ session, index }: SessionCardProps) {
               type="button"
               onClick={handleReplay}
               aria-label="Replay session"
-              className="rounded p-1 text-muted-foreground opacity-0 transition-all hover:text-primary group-hover:opacity-100"
+              className="rounded p-2 sm:p-1 text-muted-foreground sm:opacity-0 transition-all hover:text-primary sm:group-hover:opacity-100"
             >
               <RotateCcw className="size-3.5" />
             </button>
@@ -190,13 +200,68 @@ export function SessionCard({ session, index }: SessionCardProps) {
               type="button"
               onClick={handleDelete}
               aria-label="Delete session"
-              className="rounded p-1 text-muted-foreground opacity-0 transition-all hover:text-destructive group-hover:opacity-100"
+              className="rounded p-2 sm:p-1 text-muted-foreground sm:opacity-0 transition-all hover:text-destructive sm:group-hover:opacity-100"
             >
               <Trash2 className="size-3.5" />
             </button>
           </>
         )}
       </div>
+
+      {/* Mobile replay bottom sheet */}
+      <BottomSheet open={replaySheet} onClose={() => setReplaySheet(false)} title="Replay Workout">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-2">
+            <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${BODY_TARGET_STYLES[session.bodyTarget].badge}`}>
+              {session.bodyTarget}
+            </span>
+            <span className="text-sm text-foreground truncate">
+              {session.name ?? format(date, "EEEE, MMM d")}
+            </span>
+          </div>
+
+          {session.exerciseNames && session.exerciseNames.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {session.exerciseNames.map((name) => (
+                <span key={name} className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                  {name}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <div>
+            <label htmlFor={`replay-date-${session.id}`} className="mb-1.5 block text-sm font-medium text-foreground">
+              Date
+            </label>
+            <input
+              id={`replay-date-${session.id}`}
+              type="date"
+              value={replayDate}
+              onChange={(e) => setReplayDate(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring"
+            />
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              className="flex-1"
+              onClick={() => handleReplayConfirm()}
+              disabled={replayPending || !replayDate}
+            >
+              {replayPending ? "Creating…" : "Create Session"}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setReplaySheet(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </BottomSheet>
     </div>
   );
 }

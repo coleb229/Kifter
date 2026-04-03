@@ -118,7 +118,7 @@ export function SessionsView({ sessions, tagsMap = {} }: Props) {
           {totalPages > 1 && (
             <div className="mt-6 flex items-center justify-between text-sm">
               <p className="text-xs text-muted-foreground">
-                {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, sessions.length)} of {sessions.length} sessions
+                {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, filteredSessions.length)} of {filteredSessions.length} sessions
               </p>
 
               <div className="flex items-center gap-1">

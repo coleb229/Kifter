@@ -41,7 +41,11 @@ export default async function SessionPage({
       </Link>
 
       {/* Session header — editable */}
-      <EditableSessionHeader session={session} />
+      <EditableSessionHeader
+        session={session}
+        exerciseCount={new Set(sets.map((s) => s.exercise)).size}
+        setCount={sets.length}
+      />
 
       {/* Two-column on desktop: exercises left, logger right (sticky) */}
       <div className="lg:grid lg:grid-cols-[1fr_400px] lg:gap-8">
@@ -49,7 +53,7 @@ export default async function SessionPage({
         <SessionExercises sessionId={id} sets={sets} videoUrls={videoUrls} tagsMap={tagsMap} allUserTags={allUserTags} />
 
         {/* Log another exercise */}
-        <div id="exercise-logger" className="lg:sticky lg:top-24 lg:self-start">
+        <div id="exercise-logger" className="scroll-mt-20 lg:sticky lg:top-24 lg:self-start">
           <ExerciseLogger sessionId={id} exercises={exercises} />
         </div>
       </div>

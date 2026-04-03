@@ -8,6 +8,7 @@ import { z } from "zod";
 import { format } from "date-fns";
 import { Pencil, Trash2, X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 import { BODY_TARGETS } from "@/types";
 import { updateSession, deleteSession } from "@/actions/workout-actions";
 import type { WorkoutSession } from "@/types";
@@ -30,10 +31,13 @@ const textareaClass =
 
 interface Props {
   session: WorkoutSession;
+  exerciseCount?: number;
+  setCount?: number;
 }
 
-export function EditableSessionHeader({ session }: Props) {
+export function EditableSessionHeader({ session, exerciseCount, setCount }: Props) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [mode, setMode] = useState<"view" | "edit" | "confirm-delete">("view");
   const date = new Date(session.date.slice(0, 10) + "T00:00:00");
@@ -63,9 +67,10 @@ export function EditableSessionHeader({ session }: Props) {
       const result = await updateSession(session.id, values);
       if (result.success) {
         setMode("view");
+        showToast("Session updated", "success");
         router.refresh();
       } else {
-        form.setError("root", { message: result.error });
+        showToast(result.error, "error");
       }
     });
   }
@@ -82,14 +87,14 @@ export function EditableSessionHeader({ session }: Props) {
       <form onSubmit={form.handleSubmit(handleSave)} className="flex flex-col gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">
+            <label htmlFor="session-name" className="text-sm font-medium">
               Name <span className="text-muted-foreground">(optional)</span>
             </label>
-            <input {...form.register("name")} placeholder="e.g. Push Day" className={inputClass} />
+            <input id="session-name" {...form.register("name")} placeholder="e.g. Push Day" className={inputClass} />
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">Date</label>
-            <input {...form.register("date")} type="date" className={inputClass} />
+            <label htmlFor="session-date" className="text-sm font-medium">Date</label>
+            <input id="session-date" {...form.register("date")} type="date" suppressHydrationWarning className={inputClass} />
             {form.formState.errors.date && (
               <p className="text-xs text-destructive">{form.formState.errors.date.message}</p>
             )}
@@ -114,10 +119,10 @@ export function EditableSessionHeader({ session }: Props) {
             </div>
           </div>
           <div className="flex flex-col gap-1.5 sm:col-span-2">
-            <label className="text-sm font-medium">
+            <label htmlFor="session-notes" className="text-sm font-medium">
               Notes <span className="text-muted-foreground">(optional)</span>
             </label>
-            <textarea {...form.register("notes")} className={textareaClass} />
+            <textarea id="session-notes" {...form.register("notes")} className={textareaClass} />
           </div>
         </div>
         {form.formState.errors.root && (
@@ -147,6 +152,11 @@ export function EditableSessionHeader({ session }: Props) {
           <p className="mt-1 text-sm text-muted-foreground">
             {format(date, "MMMM d, yyyy")}
           </p>
+          {exerciseCount && setCount ? (
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {exerciseCount} exercise{exerciseCount !== 1 ? "s" : ""} · {setCount} set{setCount !== 1 ? "s" : ""}
+            </p>
+          ) : null}
         </div>
         <div className="flex items-center gap-2">
           <span className={`rounded-full px-3 py-1 text-xs font-medium ${BODY_TARGET_STYLES[session.bodyTarget].badge}`}>

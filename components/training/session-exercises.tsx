@@ -969,7 +969,7 @@ export function SessionExercises({ sessionId, sets, videoUrls = {}, tagsMap = {}
         rg.type === "superset" ? (
           <div
             key={rg.groupId}
-            className="rounded-xl border-2 border-dashed border-primary/30 p-1 flex flex-col gap-1 relative"
+            className="rounded-xl border-2 border-dashed border-primary/30 border-l-4 border-l-primary/50 p-1 pl-2 flex flex-col gap-1 relative"
           >
             <span className="absolute -top-2.5 left-3 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">SS</span>
             {rg.exercises.map((ex) => (

@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { addExerciseToSession, getLastWeightForExercise, getLastSessionSetsForExercise, getRecentSessionsForExercise } from "@/actions/workout-actions";
 import { format } from "date-fns";
 import type { WeightUnit } from "@/lib/weight";
@@ -49,6 +50,9 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
   const [restTimer, setRestTimer] = useState<number | null>(null);
   const [restTotal, setRestTotal] = useState<number>(DEFAULT_REST);
   const [mounted, setMounted] = useState(false);
+  const [prefilled, setPrefilled] = useState(false);
+  const [exerciseSheet, setExerciseSheet] = useState(false);
+  const [sheetQuery, setSheetQuery] = useState("");
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -89,7 +93,7 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
     },
   });
 
-  const { fields, remove } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "sets",
   });
@@ -124,6 +128,8 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
         weight: s.weight,
         reps: s.reps,
       })));
+      setPrefilled(true);
+      setTimeout(() => setPrefilled(false), 1000);
     } else if (weightResult.success && weightResult.data) {
       const { weight } = weightResult.data;
       const currentSets = form.getValues("sets");
@@ -242,7 +248,15 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
                       aria-expanded={comboOpen}
                       aria-controls="exercise-listbox"
                       aria-activedescendant={activeIndex >= 0 ? `exercise-option-${activeIndex}` : undefined}
-                      onFocus={() => { setQuery(""); setComboOpen(true); setActiveIndex(-1); }}
+                      onFocus={(e) => {
+                        if (window.matchMedia("(max-width: 639px)").matches) {
+                          e.target.blur();
+                          setSheetQuery("");
+                          setExerciseSheet(true);
+                          return;
+                        }
+                        setQuery(""); setComboOpen(true); setActiveIndex(-1);
+                      }}
                       onChange={(e) => { setQuery(e.target.value); setComboOpen(true); setActiveIndex(-1); }}
                       onKeyDown={(e) => {
                         if (!comboOpen) return;
@@ -346,7 +360,7 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
             {fields.map((field, index) => (
               <div
                 key={field.id}
-                className="grid grid-cols-[1.75rem_1fr_auto] items-center gap-3"
+                className={`grid grid-cols-[1.75rem_1fr_auto] items-center gap-3 rounded-lg px-1 -mx-1 transition-colors duration-500 ${prefilled ? "bg-primary/5" : ""}`}
               >
                 <span className="text-center text-sm text-muted-foreground">
                   {index + 1}
@@ -358,7 +372,7 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
                     <button
                       type="button"
                       onClick={() => decrementWeight(index)}
-                      className="flex h-11 w-10 sm:h-10 sm:w-8 shrink-0 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95 touch-manipulation"
+                      className="flex h-11 w-8 sm:h-10 shrink-0 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95 touch-manipulation"
                       aria-label="Decrease weight"
                     >
                       <Minus className="size-3.5" />
@@ -380,7 +394,7 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
                     <button
                       type="button"
                       onClick={() => incrementWeight(index)}
-                      className="flex h-11 w-10 sm:h-10 sm:w-8 shrink-0 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95 touch-manipulation"
+                      className="flex h-11 w-8 sm:h-10 shrink-0 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95 touch-manipulation"
                       aria-label="Increase weight"
                     >
                       <Plus className="size-3.5" />
@@ -392,7 +406,7 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
                     <button
                       type="button"
                       onClick={() => decrementReps(index)}
-                      className="flex h-11 w-10 sm:h-10 sm:w-8 shrink-0 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95 touch-manipulation"
+                      className="flex h-11 w-8 sm:h-10 shrink-0 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95 touch-manipulation"
                       aria-label="Decrease reps"
                     >
                       <Minus className="size-3.5" />
@@ -414,7 +428,7 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
                     <button
                       type="button"
                       onClick={() => incrementReps(index)}
-                      className="flex h-11 w-10 sm:h-10 sm:w-8 shrink-0 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95 touch-manipulation"
+                      className="flex h-11 w-8 sm:h-10 shrink-0 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95 touch-manipulation"
                       aria-label="Increase reps"
                     >
                       <Plus className="size-3.5" />
@@ -435,6 +449,18 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
                 </Button>
               </div>
             ))}
+
+            <button
+              type="button"
+              onClick={() => {
+                const last = form.getValues(`sets.${fields.length - 1}`);
+                append({ weight: last?.weight ?? 0, reps: last?.reps ?? 0 });
+              }}
+              className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
+            >
+              <Plus className="size-3.5" />
+              Add Set
+            </button>
           </div>
 
           {form.formState.errors.root && (
@@ -449,15 +475,54 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
         </form>
       </div>
 
+      {/* Mobile exercise picker bottom sheet */}
+      <BottomSheet open={exerciseSheet} onClose={() => setExerciseSheet(false)} title="Select Exercise">
+        <div className="flex flex-col gap-2">
+          <input
+            type="text"
+            value={sheetQuery}
+            onChange={(e) => setSheetQuery(e.target.value)}
+            placeholder="Search exercises…"
+            autoFocus
+            className={inputClass}
+          />
+          <ul className="max-h-[50dvh] overflow-y-auto -mx-1">
+            {exercises
+              .filter((name) => name.toLowerCase().includes(sheetQuery.toLowerCase()))
+              .map((name) => (
+                <li key={name}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setExerciseSheet(false);
+                      setSheetQuery("");
+                      handleExerciseChange(name);
+                    }}
+                    className="w-full rounded-lg px-3 py-2.5 text-left text-sm transition-colors hover:bg-muted active:bg-muted"
+                  >
+                    {name}
+                  </button>
+                </li>
+              ))}
+            {exercises.filter((name) => name.toLowerCase().includes(sheetQuery.toLowerCase())).length === 0 && (
+              <li className="px-3 py-2.5 text-sm text-muted-foreground">No matches</li>
+            )}
+          </ul>
+        </div>
+      </BottomSheet>
+
       {/* Sticky rest timer — rendered via portal so it floats above everything */}
       {mounted && restTimer !== null && createPortal(
-        <div role="timer" aria-live="assertive" aria-label="Rest timer" className="fixed bottom-24 inset-x-4 z-40 rounded-2xl border border-border bg-card px-4 py-3 shadow-xl sm:inset-x-auto sm:right-6 sm:w-72">
+        <div role="timer" aria-live="assertive" aria-label="Rest timer" className={`fixed bottom-24 inset-x-4 z-40 rounded-2xl border border-border bg-card px-4 py-3 shadow-xl sm:inset-x-auto sm:right-6 sm:w-72 transition-all ${restTimer === 0 ? "animate-pulse ring-2 ring-emerald-500/30 bg-linear-to-r from-emerald-500/5 to-transparent" : ""}`}>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Rest Timer</p>
               <p className={`text-2xl font-bold tabular-nums transition-colors ${restTimer > 0 && restTimer <= 10 ? "text-destructive" : restTimer === 0 ? "text-emerald-500" : ""}`}>
                 {restTimer > 0 ? `${restTimer}s` : "Go!"}
               </p>
+              {restTimer === 0 && (
+                <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Next Set</p>
+              )}
             </div>
             <button
               type="button"
