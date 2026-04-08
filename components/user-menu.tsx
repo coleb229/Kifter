@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { Menu } from "@base-ui/react/menu";
 import { Avatar } from "@base-ui/react/avatar";
 import { ChevronDown, Dumbbell, LogOut, Settings, Users, ShieldCheck } from "lucide-react";
@@ -29,9 +30,11 @@ const menuItem =
   "flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm outline-none hover:bg-muted focus-visible:bg-muted";
 
 export function UserMenu({ name, email, image, role }: UserMenuProps) {
+  const triggerId = useId();
   return (
     <Menu.Root>
       <Menu.Trigger
+        id={triggerId}
         className="flex items-center gap-2 rounded-lg px-2 py-1 text-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         aria-label="User menu"
       >

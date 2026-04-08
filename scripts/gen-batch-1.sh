@@ -1,5 +1,5 @@
 #!/bin/bash
-export GEMINI_API_KEY=AIzaSyCbxvYvFpTwC9Bc2-OdXvLoNNgr9HdmXoY
+# GEMINI_API_KEY must be set in environment before running
 OUT="/Users/coleb/dev/kifted-builds/kifted/public/images/recipes"
 WORKDIR=$(mktemp -d)
 cd "$WORKDIR"

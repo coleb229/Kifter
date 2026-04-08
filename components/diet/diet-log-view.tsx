@@ -458,22 +458,24 @@ export function DietLogView({ initialEntries, initialTargets, initialHistory, in
 
               {/* Right column */}
               <div className="flex flex-col gap-5">
-                {/* Scan + Templates buttons */}
+                {/* Scan + Templates buttons — sticky on mobile so they float over meal groups */}
                 {!showAddForm && !editingEntry && (
-                  <div id="add-food-section" className="flex flex-wrap items-center gap-2 animate-fade-up" style={{ animationDelay: "100ms" }}>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => { setShowBarcode((v) => !v); setShowAddForm(false); setEditingEntry(undefined); }}
-                      className="gap-1.5"
-                    >
-                      <Camera className="size-3.5" />
-                      Scan
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={openTemplates} className="gap-1.5">
-                      <BookTemplate className="size-3.5" />
-                      Templates
-                    </Button>
+                  <div id="add-food-section" className="sticky top-14 z-10 -mx-4 px-4 py-2 bg-background/90 backdrop-blur-sm sm:static sm:mx-0 sm:px-0 sm:py-0 sm:bg-transparent sm:backdrop-blur-none lg:static lg:mx-0 lg:px-0 lg:py-0 lg:bg-transparent lg:backdrop-blur-none animate-fade-up" style={{ animationDelay: "100ms" }}>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => { setShowBarcode((v) => !v); setShowAddForm(false); setEditingEntry(undefined); }}
+                        className="gap-1.5"
+                      >
+                        <Camera className="size-3.5" />
+                        Scan
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={openTemplates} className="gap-1.5">
+                        <BookTemplate className="size-3.5" />
+                        Templates
+                      </Button>
+                    </div>
                   </div>
                 )}
 

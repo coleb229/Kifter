@@ -362,26 +362,26 @@ function ExerciseGroupCard({
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={`Watch ${group.name} demo`}
-                className="rounded p-1 text-red-500 transition-colors hover:text-red-600"
+                className="rounded-md p-2 text-red-500 transition-colors hover:text-red-600 active:bg-muted"
               >
-                <PlayCircle className="size-3.5" />
+                <PlayCircle className="size-4" />
               </a>
             )}
             <button
               type="button"
               onClick={() => { setVideoUrlInput(videoUrl ?? ""); setEditingVideo(true); }}
               aria-label="Set video URL"
-              className="rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+              className="rounded-md p-2 text-muted-foreground transition-colors hover:text-foreground active:bg-muted"
             >
-              <Link2 className="size-3.5" />
+              <Link2 className="size-4" />
             </button>
             <button
               type="button"
               onClick={handleGetSubstitutes}
               aria-label="Get AI exercise substitutes"
-              className="rounded p-1 text-muted-foreground transition-colors hover:text-primary"
+              className="rounded-md p-2 text-muted-foreground transition-colors hover:text-primary active:bg-muted"
             >
-              {isLoadingSubs ? <Loader2 className="size-3.5 animate-spin" /> : <Wand2 className="size-3.5" />}
+              {isLoadingSubs ? <Loader2 className="size-4 animate-spin" /> : <Wand2 className="size-4" />}
             </button>
             <button
               type="button"
@@ -389,17 +389,17 @@ function ExerciseGroupCard({
                 setExerciseState({ type: "renaming", value: group.name })
               }
               aria-label="Rename exercise"
-              className="rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+              className="rounded-md p-2 text-muted-foreground transition-colors hover:text-foreground active:bg-muted"
             >
-              <Pencil className="size-3.5" />
+              <Pencil className="size-4" />
             </button>
             <button
               type="button"
               onClick={() => setExerciseState({ type: "confirm-delete" })}
               aria-label="Delete exercise"
-              className="rounded p-1 text-muted-foreground transition-colors hover:text-destructive"
+              className="rounded-md p-2 text-muted-foreground transition-colors hover:text-destructive active:bg-muted"
             >
-              <Trash2 className="size-3.5" />
+              <Trash2 className="size-4" />
             </button>
           </>
         )}
@@ -667,9 +667,9 @@ function ExerciseGroupCard({
                     })
                   }
                   aria-label="Edit set"
-                  className="rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+                  className="rounded-md p-2 text-muted-foreground transition-colors hover:text-foreground active:bg-muted"
                 >
-                  <Pencil className="size-3.5" />
+                  <Pencil className="size-4" />
                 </button>
                 <button
                   type="button"
@@ -677,9 +677,9 @@ function ExerciseGroupCard({
                     setSetState(set.id, { type: "confirm-delete" })
                   }
                   aria-label="Delete set"
-                  className="rounded p-1 text-muted-foreground transition-colors hover:text-destructive"
+                  className="rounded-md p-2 text-muted-foreground transition-colors hover:text-destructive active:bg-muted"
                 >
-                  <Trash2 className="size-3.5" />
+                  <Trash2 className="size-4" />
                 </button>
               </div>
             </div>

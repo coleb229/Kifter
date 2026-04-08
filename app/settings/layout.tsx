@@ -1,8 +1,8 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Navbar } from "@/components/navbar";
 import { User, Sliders, Database } from "lucide-react";
@@ -20,9 +20,16 @@ export default function SettingsLayout({
 }) {
   const { status } = useSession();
   const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.replace("/");
+    }
+  }, [status, router]);
 
   if (status === "unauthenticated") {
-    redirect("/");
+    return null;
   }
 
   return (

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Generate food photography for all watermarked MyProtein recipes
-export GEMINI_API_KEY=AIzaSyCbxvYvFpTwC9Bc2-OdXvLoNNgr9HdmXoY
+# GEMINI_API_KEY must be set in environment before running
 
 OUT="public/images/recipes"
 mkdir -p "$OUT"
