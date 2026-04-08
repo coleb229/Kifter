@@ -4,6 +4,7 @@ import { ObjectId } from "mongodb";
 import { auth } from "@/auth";
 import { getCommunityFoodsCollection, getFavoriteFoodsCollection } from "@/lib/db";
 import { searchFoodDatabase } from "@/lib/food-database";
+import { searchUSDADatabase } from "@/lib/usda-database";
 import type { ActionResult, CommunityFood, FavoriteFood, SubmitCommunityFoodInput } from "@/types";
 
 // ── searchFoods ───────────────────────────────────────────────────────────────
@@ -52,7 +53,7 @@ export async function searchFoods(
   }));
   const favNames = new Set(favorites.map((f) => f.name.toLowerCase()));
 
-  // Static presets (client-side fast filter, already loaded)
+  // Static presets (curated Kifted foods)
   const presets = searchFoodDatabase(q, 8)
     .filter((f) => !favNames.has(f.name.toLowerCase()))
     .map((f) => ({
@@ -67,6 +68,27 @@ export async function searchFoods(
       source: "preset" as const,
       category: f.category,
     }));
+
+  const seen = new Set([...favNames, ...presets.map((p) => p.name.toLowerCase())]);
+
+  // USDA database (7,000+ foods from Foundation Foods + SR Legacy)
+  const usdaResults = (await searchUSDADatabase(q, 10))
+    .filter((f) => !seen.has(f.name.toLowerCase()))
+    .map((f) => {
+      seen.add(f.name.toLowerCase());
+      return {
+        id: f.id,
+        name: f.name,
+        calories: f.calories,
+        protein: f.protein,
+        carbs: f.carbs,
+        fat: f.fat,
+        servingSize: f.servingSize,
+        servingUnit: f.servingUnit,
+        source: "preset" as const,
+        category: f.category,
+      };
+    });
 
   // Community foods from DB (case-insensitive prefix/contains search)
   const col = await getCommunityFoodsCollection();
@@ -89,11 +111,9 @@ export async function searchFoods(
     submittedBy: d.submittedBy,
   }));
 
-  // Deduplicate by name (case-insensitive), preferring presets over community
-  const seen = new Set([...favNames, ...presets.map((p) => p.name.toLowerCase())]);
   const uniqueCommunity = community.filter((c) => !seen.has(c.name.toLowerCase()));
 
-  return { success: true, data: [...favorites, ...presets, ...uniqueCommunity] };
+  return { success: true, data: [...favorites, ...presets, ...usdaResults, ...uniqueCommunity] };
 }
 
 // ── getFavoriteFoods ──────────────────────────────────────────────────────────
