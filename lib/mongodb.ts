@@ -16,11 +16,16 @@ const options: MongoClientOptions = {
 declare global {
   // eslint-disable-next-line no-var
   var _mongoClientPromise: Promise<MongoClient> | undefined;
+  // eslint-disable-next-line no-var
+  var _mongoClient: MongoClient | undefined;
+}
+
+if (!global._mongoClient) {
+  global._mongoClient = new MongoClient(uri, options);
 }
 
 if (!global._mongoClientPromise) {
-  const client = new MongoClient(uri, options);
-  global._mongoClientPromise = client.connect().catch((err) => {
+  global._mongoClientPromise = global._mongoClient.connect().catch((err) => {
     // Clear cached rejected promise so the next request retries
     global._mongoClientPromise = undefined;
     return Promise.reject(err);
@@ -28,5 +33,11 @@ if (!global._mongoClientPromise) {
 }
 
 const clientPromise: Promise<MongoClient> = global._mongoClientPromise;
+
+/**
+ * Non-connected MongoClient instance for MongoDBAdapter.
+ * The adapter handles connection internally and avoids unhandled rejections.
+ */
+export const mongoClient: MongoClient = global._mongoClient;
 
 export default clientPromise;

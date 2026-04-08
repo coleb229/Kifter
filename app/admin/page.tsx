@@ -1,9 +1,11 @@
-import { ShieldCheck, Settings2 } from "lucide-react";
+import { ShieldCheck, Settings2, ChefHat } from "lucide-react";
 import { getAllUsers } from "@/actions/admin-actions";
 import { getSiteSettings } from "@/actions/settings-actions";
+import { getRecipeSubmissions } from "@/actions/pantry-actions";
 import { UserTable } from "@/components/admin/user-table";
 import { AISiteInsights } from "@/components/admin/ai-site-insights";
 import { GlobalSettingsPanel } from "@/components/admin/global-settings-panel";
+import { RecipeSubmissionsPanel } from "@/components/admin/recipe-submissions-panel";
 import { SectionSubnav } from "@/components/ui/section-subnav";
 import { auth } from "@/auth";
 
@@ -13,14 +15,16 @@ export default async function AdminPage() {
   const perms = session?.user?.adminPermissions ?? {};
   const canManageUsers = isAdmin || perms.manageUsers;
 
-  const [result, settingsResult] = await Promise.all([
+  const [result, settingsResult, submissionsResult] = await Promise.all([
     canManageUsers ? getAllUsers() : Promise.resolve({ success: true as const, data: [] }),
     getSiteSettings(),
+    isAdmin ? getRecipeSubmissions() : Promise.resolve({ success: true as const, data: [] }),
   ]);
   const users = result.success ? result.data : [];
   const settings = settingsResult.success
     ? settingsResult.data
     : { _id: "global", maintenanceMode: false, features: { training: true, nutrition: true, cardio: true, community: true } };
+  const submissions = submissionsResult.success ? submissionsResult.data : [];
 
   return (
     <div>
@@ -38,6 +42,7 @@ export default async function AdminPage() {
 
       <SectionSubnav stickyTop="top-28" items={[
         { label: "Users", id: "users" },
+        { label: "Recipe Submissions", id: "recipe-submissions" },
         { label: "Settings", id: "settings" },
       ]} />
 
@@ -61,6 +66,22 @@ export default async function AdminPage() {
       </section>
 
       <div className="my-12 border-t border-border" />
+
+      {isAdmin && (
+        <section id="recipe-submissions" className="scroll-mt-28">
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-950/40">
+              <ChefHat className="size-4 text-orange-600 dark:text-orange-400" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold">Recipe Submissions</h2>
+              <p className="text-xs text-muted-foreground">{submissions.length} submission{submissions.length !== 1 ? "s" : ""}</p>
+            </div>
+          </div>
+          <RecipeSubmissionsPanel submissions={submissions} />
+          <div className="my-12 border-t border-border" />
+        </section>
+      )}
 
       <section id="settings" className="scroll-mt-28">
         <div className="mb-4 flex items-center gap-3">

@@ -26,6 +26,26 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
     }
   }, [open]);
 
+  // Track visual viewport height so content stays above the iOS virtual keyboard
+  useEffect(() => {
+    if (!open) return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      if (contentRef.current) {
+        contentRef.current.style.maxHeight = `${vv.height * 0.85}px`;
+      }
+    };
+    update();
+    vv.addEventListener("resize", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      if (contentRef.current) {
+        contentRef.current.style.maxHeight = "";
+      }
+    };
+  }, [open]);
+
   // Close on Escape (native dialog behavior) + backdrop click
   useEffect(() => {
     const el = dialogRef.current;
@@ -78,7 +98,7 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
     >
       <div
         ref={contentRef}
-        className="w-full max-h-[85dvh] overflow-y-auto rounded-t-2xl bg-background shadow-xl transition-transform duration-150 sm:max-w-lg sm:rounded-2xl sm:max-h-[80vh]"
+        className="flex w-full flex-col max-h-[85dvh] overflow-hidden rounded-t-2xl bg-background shadow-xl transition-transform duration-150 sm:max-w-lg sm:rounded-2xl sm:max-h-[80vh]"
       >
         {/* Drag handle — mobile only */}
         <div
@@ -105,7 +125,7 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
         )}
 
         {/* Content */}
-        <div className={title ? "px-4 pb-4" : "p-4"}>
+        <div className={`min-h-0 flex-1 flex flex-col overflow-y-auto ${title ? "px-4 pb-4" : "p-4"}`}>
           {children}
         </div>
       </div>

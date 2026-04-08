@@ -1200,3 +1200,38 @@ export interface ClaudeIdea {
   complexityReason?: string;
   implementationNotes?: ImplementationNote[];
 }
+
+// ── Pantry / Recipes ─────────────────────────────────────────────────────────
+
+export interface SavedRecipeDoc {
+  _id: ObjectId;
+  userId: string;
+  recipeId: string; // references RecipePreset.id from static recipe database
+  createdAt: Date;
+}
+
+export interface SavedRecipe {
+  id: string;
+  recipeId: string;
+  createdAt: string;
+}
+
+export type RecipeSubmissionStatus = "pending" | "approved" | "rejected";
+
+export interface RecipeSubmissionDoc {
+  _id: ObjectId;
+  userId: string;
+  url: string;
+  notes?: string;
+  status: RecipeSubmissionStatus;
+  createdAt: Date;
+}
+
+export interface RecipeSubmission {
+  id: string;
+  userId: string;
+  url: string;
+  notes?: string;
+  status: RecipeSubmissionStatus;
+  createdAt: string;
+}

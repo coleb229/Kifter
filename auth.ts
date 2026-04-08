@@ -1,13 +1,13 @@
 import NextAuth from "next-auth";
 import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import { ObjectId } from "mongodb";
-import clientPromise from "@/lib/mongodb";
+import { mongoClient } from "@/lib/mongodb";
 import { authConfig } from "./auth.config";
 import { getUsersCollection } from "@/lib/db";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
-  adapter: MongoDBAdapter(clientPromise),
+  adapter: MongoDBAdapter(mongoClient),
   session: {
     strategy: "jwt",
   },

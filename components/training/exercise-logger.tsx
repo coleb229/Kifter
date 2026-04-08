@@ -477,7 +477,7 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
 
       {/* Mobile exercise picker bottom sheet */}
       <BottomSheet open={exerciseSheet} onClose={() => setExerciseSheet(false)} title="Select Exercise">
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 min-h-0">
           <input
             type="text"
             value={sheetQuery}
@@ -486,7 +486,7 @@ export function ExerciseLogger({ sessionId, exercises }: ExerciseLoggerProps) {
             autoFocus
             className={inputClass}
           />
-          <ul className="max-h-[50dvh] overflow-y-auto -mx-1">
+          <ul className="min-h-0 flex-1 overflow-y-auto -mx-1">
             {exercises
               .filter((name) => name.toLowerCase().includes(sheetQuery.toLowerCase()))
               .map((name) => (

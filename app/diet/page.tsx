@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import Link from "next/link";
-import { Utensils, Pill } from "lucide-react";
+import { Utensils, Pill, ChefHat } from "lucide-react";
 import { format } from "date-fns";
 import { getDietEntries, getMacroTargets, getDietHistory } from "@/actions/diet-actions";
 import { getWorkoutSessions } from "@/actions/workout-actions";
@@ -52,6 +52,10 @@ export default async function DietPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" render={<Link href="/diet/pantry" />}>
+            <ChefHat className="size-4" />
+            Pantry
+          </Button>
           <Button size="sm" variant="outline" render={<Link href="/diet/report" />}>
             Report
           </Button>

@@ -1,4 +1,5 @@
 import type { BodyTarget, MealType } from "@/types";
+import type { RecipeCategory } from "@/lib/recipe-database";
 
 export type MacroKey = "calories" | "protein" | "carbs" | "fat";
 
@@ -35,4 +36,18 @@ export const MEAL_TYPE_STYLES: Record<
   lunch:     { pill: { active: "bg-emerald-500 border-emerald-500 text-white", inactive: "border-emerald-200 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/40" }, icon: "text-emerald-500", header: "text-emerald-600 dark:text-emerald-400", borderLeft: "border-l-emerald-500" },
   dinner:    { pill: { active: "bg-indigo-500 border-indigo-500 text-white",  inactive: "border-indigo-200 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-400 dark:hover:bg-indigo-950/40" }, icon: "text-indigo-500",  header: "text-indigo-600 dark:text-indigo-400",  borderLeft: "border-l-indigo-500"  },
   snack:     { pill: { active: "bg-orange-500 border-orange-500 text-white",  inactive: "border-orange-200 text-orange-600 hover:bg-orange-50 dark:border-orange-800 dark:text-orange-400 dark:hover:bg-orange-950/40" }, icon: "text-orange-500",  header: "text-orange-600 dark:text-orange-400",  borderLeft: "border-l-orange-500"  },
+};
+
+export const RECIPE_CATEGORY_STYLES: Record<
+  RecipeCategory,
+  { pill: { active: string; inactive: string }; badge: string }
+> = {
+  "Poultry":      { pill: { active: "bg-amber-500 border-amber-500 text-white",     inactive: "border-amber-200 text-amber-600 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/40"         }, badge: "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400"      },
+  "Fish":         { pill: { active: "bg-sky-500 border-sky-500 text-white",          inactive: "border-sky-200 text-sky-600 hover:bg-sky-50 dark:border-sky-800 dark:text-sky-400 dark:hover:bg-sky-950/40"                     }, badge: "bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-400"               },
+  "Beef":         { pill: { active: "bg-rose-500 border-rose-500 text-white",        inactive: "border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-950/40"               }, badge: "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400"           },
+  "Vegetarian":   { pill: { active: "bg-emerald-500 border-emerald-500 text-white",  inactive: "border-emerald-200 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/40" }, badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400" },
+  "Plant-based":  { pill: { active: "bg-lime-500 border-lime-500 text-white",        inactive: "border-lime-200 text-lime-600 hover:bg-lime-50 dark:border-lime-800 dark:text-lime-400 dark:hover:bg-lime-950/40"               }, badge: "bg-lime-100 text-lime-700 dark:bg-lime-950/50 dark:text-lime-400"           },
+  "Sweet":        { pill: { active: "bg-pink-500 border-pink-500 text-white",        inactive: "border-pink-200 text-pink-600 hover:bg-pink-50 dark:border-pink-800 dark:text-pink-400 dark:hover:bg-pink-950/40"               }, badge: "bg-pink-100 text-pink-700 dark:bg-pink-950/50 dark:text-pink-400"           },
+  "Breakfast":    { pill: { active: "bg-orange-500 border-orange-500 text-white",    inactive: "border-orange-200 text-orange-600 hover:bg-orange-50 dark:border-orange-800 dark:text-orange-400 dark:hover:bg-orange-950/40"   }, badge: "bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-400"   },
+  "Air Fryer":    { pill: { active: "bg-violet-500 border-violet-500 text-white",    inactive: "border-violet-200 text-violet-600 hover:bg-violet-50 dark:border-violet-800 dark:text-violet-400 dark:hover:bg-violet-950/40"   }, badge: "bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-400"   },
 };
