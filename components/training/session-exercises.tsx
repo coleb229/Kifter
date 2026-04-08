@@ -288,18 +288,18 @@ function ExerciseGroupCard({
               type="button"
               onClick={handleRenameSubmit}
               disabled={isPending}
-              className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+              className="shrink-0 rounded-md p-2 text-emerald-600 transition-colors hover:bg-emerald-50 active:bg-emerald-100 dark:text-emerald-400 dark:hover:bg-emerald-950/40 dark:active:bg-emerald-950/60"
               aria-label="Save name"
             >
-              <Check className="size-3.5" />
+              <Check className="size-5" />
             </button>
             <button
               type="button"
               onClick={() => setExerciseState({ type: "none" })}
-              className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+              className="shrink-0 rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted active:bg-muted/80"
               aria-label="Cancel rename"
             >
-              <X className="size-3.5" />
+              <X className="size-5" />
             </button>
           </div>
         ) : exerciseState.type === "confirm-delete" ? (
@@ -339,18 +339,18 @@ function ExerciseGroupCard({
               type="button"
               onClick={handleVideoSave}
               disabled={isPending}
-              className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+              className="shrink-0 rounded-md p-2 text-emerald-600 transition-colors hover:bg-emerald-50 active:bg-emerald-100 dark:text-emerald-400 dark:hover:bg-emerald-950/40 dark:active:bg-emerald-950/60"
               aria-label="Save video URL"
             >
-              <Check className="size-3.5" />
+              <Check className="size-5" />
             </button>
             <button
               type="button"
               onClick={() => setEditingVideo(false)}
-              className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+              className="shrink-0 rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted active:bg-muted/80"
               aria-label="Cancel"
             >
-              <X className="size-3.5" />
+              <X className="size-5" />
             </button>
           </div>
         ) : (
@@ -543,23 +543,23 @@ function ExerciseGroupCard({
                   onFocus={(e) => e.target.select()}
                   className={inputClass}
                 />
-                <div className="flex items-center gap-0.5">
+                <div className="flex items-center gap-1">
                   <button
                     type="button"
                     onClick={() => handleSetSave(set)}
                     disabled={isPending}
                     aria-label="Save set"
-                    className="rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+                    className="rounded-md p-2.5 text-emerald-600 transition-colors hover:bg-emerald-50 active:bg-emerald-100 dark:text-emerald-400 dark:hover:bg-emerald-950/40 dark:active:bg-emerald-950/60"
                   >
-                    <Check className="size-3.5" />
+                    <Check className="size-5" />
                   </button>
                   <button
                     type="button"
                     onClick={() => setSetState(set.id, { type: "none" })}
                     aria-label="Cancel edit"
-                    className="rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+                    className="rounded-md p-2.5 text-muted-foreground transition-colors hover:bg-muted active:bg-muted/80"
                   >
-                    <X className="size-3.5" />
+                    <X className="size-5" />
                   </button>
                 </div>
               </div>
