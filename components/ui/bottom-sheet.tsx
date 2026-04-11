@@ -35,13 +35,23 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
       if (contentRef.current) {
         contentRef.current.style.maxHeight = `${vv.height * 0.85}px`;
       }
+      // Push the bottom-aligned sheet above the keyboard
+      if (dialogRef.current) {
+        const keyboardHeight = window.innerHeight - vv.height - vv.offsetTop;
+        dialogRef.current.style.paddingBottom = keyboardHeight > 0 ? `${keyboardHeight}px` : "";
+      }
     };
     update();
     vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
     return () => {
       vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
       if (contentRef.current) {
         contentRef.current.style.maxHeight = "";
+      }
+      if (dialogRef.current) {
+        dialogRef.current.style.paddingBottom = "";
       }
     };
   }, [open]);

@@ -53,9 +53,39 @@ export async function searchFoods(
   }));
   const favNames = new Set(favorites.map((f) => f.name.toLowerCase()));
 
+  // Community foods — user's own first, then others
+  const col = await getCommunityFoodsCollection();
+  const nameFilter = { name: { $regex: q, $options: "i" } };
+  const [myDocs, otherDocs] = await Promise.all([
+    col.find({ ...nameFilter, submittedBy: userId }).sort({ name: 1 }).limit(5).toArray(),
+    col.find({ ...nameFilter, submittedBy: { $ne: userId } }).sort({ name: 1 }).limit(6).toArray(),
+  ]);
+
+  const mapCommunity = (d: (typeof myDocs)[number]): FoodSearchResult => ({
+    id: d._id.toHexString(),
+    name: d.name,
+    calories: d.calories,
+    protein: d.protein,
+    carbs: d.carbs,
+    fat: d.fat,
+    servingSize: d.servingSize,
+    servingUnit: d.servingUnit,
+    source: "community" as const,
+    submittedBy: d.submittedBy,
+  });
+
+  const myCommunity = myDocs.map(mapCommunity).filter((c) => !favNames.has(c.name.toLowerCase()));
+  const othersCommunity = otherDocs.map(mapCommunity).filter((c) => !favNames.has(c.name.toLowerCase()));
+
+  const seen = new Set([
+    ...favNames,
+    ...myCommunity.map((c) => c.name.toLowerCase()),
+    ...othersCommunity.map((c) => c.name.toLowerCase()),
+  ]);
+
   // Static presets (curated Kifted foods)
   const presets = searchFoodDatabase(q, 8)
-    .filter((f) => !favNames.has(f.name.toLowerCase()))
+    .filter((f) => !seen.has(f.name.toLowerCase()))
     .map((f) => ({
       id: f.id,
       name: f.name,
@@ -69,7 +99,7 @@ export async function searchFoods(
       category: f.category,
     }));
 
-  const seen = new Set([...favNames, ...presets.map((p) => p.name.toLowerCase())]);
+  presets.forEach((p) => seen.add(p.name.toLowerCase()));
 
   // USDA database (7,000+ foods from Foundation Foods + SR Legacy)
   const usdaResults = (await searchUSDADatabase(q, 10))
@@ -90,30 +120,7 @@ export async function searchFoods(
       };
     });
 
-  // Community foods from DB (case-insensitive prefix/contains search)
-  const col = await getCommunityFoodsCollection();
-  const communityDocs = await col
-    .find({ name: { $regex: q, $options: "i" } })
-    .sort({ name: 1 })
-    .limit(6)
-    .toArray();
-
-  const community: FoodSearchResult[] = communityDocs.map((d) => ({
-    id: d._id.toHexString(),
-    name: d.name,
-    calories: d.calories,
-    protein: d.protein,
-    carbs: d.carbs,
-    fat: d.fat,
-    servingSize: d.servingSize,
-    servingUnit: d.servingUnit,
-    source: "community" as const,
-    submittedBy: d.submittedBy,
-  }));
-
-  const uniqueCommunity = community.filter((c) => !seen.has(c.name.toLowerCase()));
-
-  return { success: true, data: [...favorites, ...presets, ...usdaResults, ...uniqueCommunity] };
+  return { success: true, data: [...favorites, ...myCommunity, ...othersCommunity, ...presets, ...usdaResults] };
 }
 
 // ── getFavoriteFoods ──────────────────────────────────────────────────────────
